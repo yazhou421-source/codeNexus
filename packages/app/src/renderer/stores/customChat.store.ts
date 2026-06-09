@@ -8,7 +8,10 @@
 // 仍用最简消息列表（不复用 Codex 时间线渲染——其事件形状与 Codex 协议耦合）。
 import { defineStore } from "pinia";
 import { codexDesktop } from "../api/codexDesktopClient";
-import type { CustomSession, CustomSessionMessage } from "@codenexus/shared/ipc/contracts";
+import { useDebugTimelineStore } from "./debugTimeline.store";
+import { safeJsonStringify } from "../utils/safeJson";
+import type { TimelineEventLevel } from "../domain/types";
+import type { CustomAgentStreamEvent, CustomSession, CustomSessionMessage } from "@codenexus/shared/ipc/contracts";
 
 export type CustomChatRole = "user" | "assistant";
 
@@ -79,6 +82,126 @@ function nextPartId(prefix: string): string {
   return `${prefix}-${Date.now()}-${partSeq}`;
 }
 
+const CANCELLED_MARKER = "[已取消]";
+const CUSTOM_DEBUG_THREAD_FALLBACK = "__custom__";
+const DEBUG_TEXT_PREVIEW_MAX = 2_000;
+const DEBUG_HISTORY_TAIL_MAX = 24;
+
+export function customDebugThreadId(sessionIdValue: string | null | undefined): string {
+  const sessionId = String(sessionIdValue ?? "").trim();
+  return sessionId ? `custom:${sessionId}` : CUSTOM_DEBUG_THREAD_FALLBACK;
+}
+
+function summarizeDebugText(value: unknown, maxChars = DEBUG_TEXT_PREVIEW_MAX) {
+  const text = String(value ?? "");
+  const limit = Math.max(0, Math.round(maxChars));
+  const truncated = text.length > limit;
+  return {
+    text: truncated ? text.slice(0, limit) : text,
+    length: text.length,
+    truncated,
+  };
+}
+
+function summarizeDebugMessages(messages: Array<{ role: string; content: string }>) {
+  const tail = messages.slice(Math.max(0, messages.length - DEBUG_HISTORY_TAIL_MAX));
+  return {
+    count: messages.length,
+    omittedHeadCount: Math.max(0, messages.length - tail.length),
+    tail: tail.map((message, index) => ({
+      index: messages.length - tail.length + index,
+      role: message.role,
+      content: summarizeDebugText(message.content, 1_000),
+    })),
+  };
+}
+
+function summarizeDebugMessage(message: CustomChatMessage | undefined) {
+  if (!message) return null;
+  const parts = Array.isArray(message.parts) ? message.parts : [];
+  return {
+    id: message.id,
+    role: message.role,
+    error: Boolean(message.error),
+    streaming: Boolean(message.streaming),
+    content: summarizeDebugText(message.content),
+    reasoning: message.reasoning ? summarizeDebugText(message.reasoning) : null,
+    parts: {
+      count: parts.length,
+      textCount: parts.filter((part) => part.type === "text").length,
+      toolCount: parts.filter((part) => part.type === "tool").length,
+    },
+  };
+}
+
+function summarizeStreamEventForDebug(event: CustomAgentStreamEvent): Record<string, unknown> {
+  switch (event.type) {
+    case "delta":
+      return {
+        type: event.type,
+        runId: event.runId,
+        text: summarizeDebugText(event.text),
+      };
+    case "reasoning":
+      return {
+        type: event.type,
+        runId: event.runId,
+        text: summarizeDebugText(event.text),
+      };
+    case "tool_call":
+      return {
+        type: event.type,
+        runId: event.runId,
+        callId: event.callId,
+        name: event.name,
+        argsText: summarizeDebugText(event.argsText),
+      };
+    case "tool_result":
+      return {
+        type: event.type,
+        runId: event.runId,
+        callId: event.callId,
+        name: event.name,
+        resultText: summarizeDebugText(event.resultText),
+      };
+    case "tool_error":
+      return {
+        type: event.type,
+        runId: event.runId,
+        callId: event.callId,
+        name: event.name,
+        error: summarizeDebugText(event.error),
+      };
+    case "approval_request":
+      return {
+        type: event.type,
+        runId: event.runId,
+        approvalId: event.approvalId,
+        kind: event.kind,
+        title: event.title,
+        detail: summarizeDebugText(event.detail),
+      };
+  }
+}
+
+function markMessageCancelled(message: CustomChatMessage): void {
+  if (!message.content || message.content.trim().length === 0) {
+    message.content = CANCELLED_MARKER;
+  } else if (!message.content.includes(CANCELLED_MARKER)) {
+    message.content += `\n\n${CANCELLED_MARKER}`;
+  }
+
+  if (!message.parts) message.parts = [];
+  const lastPart = message.parts[message.parts.length - 1];
+  if (lastPart?.type === "text") {
+    if (!lastPart.text.includes(CANCELLED_MARKER)) {
+      lastPart.text = lastPart.text.trim().length > 0 ? `${lastPart.text}\n\n${CANCELLED_MARKER}` : CANCELLED_MARKER;
+    }
+    return;
+  }
+  message.parts.push({ id: nextPartId("text"), type: "text", text: CANCELLED_MARKER });
+}
+
 // 模块级：流式订阅只装一次。
 let streamUnsubscribe: (() => void) | null = null;
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -108,7 +231,39 @@ function deserializeMessage(message: CustomSessionMessage): CustomChatMessage {
   };
 }
 
+function cloneCustomChatParts(parts: CustomChatPart[] | undefined): CustomChatPart[] | undefined {
+  if (!Array.isArray(parts)) return undefined;
+  return parts
+    .map((part) => {
+      if (part?.type === "text") {
+        return {
+          id: String(part.id ?? ""),
+          type: "text" as const,
+          text: String(part.text ?? ""),
+        };
+      }
+      if (part?.type === "tool") {
+        const tool = part.tool;
+        return {
+          id: String(part.id ?? ""),
+          type: "tool" as const,
+          tool: {
+            callId: String(tool?.callId ?? ""),
+            name: String(tool?.name ?? ""),
+            argsText: String(tool?.argsText ?? ""),
+            status: tool?.status === "done" || tool?.status === "error" ? tool.status : "running",
+            ...(tool?.resultText !== undefined ? { resultText: String(tool.resultText) } : {}),
+            ...(tool?.error !== undefined ? { error: String(tool.error) } : {}),
+          },
+        };
+      }
+      return null;
+    })
+    .filter((part): part is CustomChatPart => Boolean(part));
+}
+
 function serializeMessage(message: CustomChatMessage): CustomSessionMessage {
+  const parts = cloneCustomChatParts(message.parts);
   return {
     id: message.id,
     role: message.role,
@@ -116,7 +271,7 @@ function serializeMessage(message: CustomChatMessage): CustomSessionMessage {
     createdAt: message.createdAt ?? Date.now(),
     ...(message.error ? { error: true } : {}),
     ...(message.reasoning ? { reasoning: message.reasoning } : {}),
-    ...(message.parts ? { parts: message.parts } : {}),
+    ...(parts ? { parts } : {}),
   };
 }
 
@@ -128,6 +283,7 @@ export const useCustomChatStore = defineStore("customChat", {
     currentSessionId: "",
     loadingSessions: false,
     sending: false,
+    currentRunId: "" as string,
   }),
   actions: {
     reset() {
@@ -141,6 +297,7 @@ export const useCustomChatStore = defineStore("customChat", {
       this.currentSessionId = "";
       this.loadingSessions = false;
       this.sending = false;
+      this.currentRunId = "";
     },
     hydrateSession(session: CustomSession) {
       this.currentSessionId = session.id;
@@ -167,6 +324,37 @@ export const useCustomChatStore = defineStore("customChat", {
             : (existing?.workspaceRoot ?? null),
         messages: this.messages.map(serializeMessage),
       };
+    },
+    debugThreadId(sessionIdValue?: string | null): string {
+      return customDebugThreadId(sessionIdValue ?? this.currentSessionId);
+    },
+    currentWorkspaceRootForDebug(): string {
+      const existing = this.sessions.find((session) => session.id === this.currentSessionId);
+      return String(existing?.workspaceRoot ?? "").trim();
+    },
+    appendDebugEvent(params: {
+      method: string;
+      payload?: unknown;
+      runId?: string;
+      sessionId?: string | null;
+      level?: TimelineEventLevel;
+      createdAt?: number;
+    }) {
+      const method = String(params.method ?? "").trim();
+      if (!method) return;
+      const mappedSessionId = params.runId ? runSessionById.get(params.runId) : undefined;
+      const sessionId = String(params.sessionId ?? mappedSessionId ?? this.currentSessionId).trim();
+      const payload = params.payload ?? {};
+      useDebugTimelineStore().appendEvent({
+        threadId: this.debugThreadId(sessionId),
+        method,
+        paramsText: safeJsonStringify(payload, { space: 2 }),
+        params: payload,
+        turnId: String(params.runId ?? "").trim() || undefined,
+        level: params.level ?? "info",
+        hidden: true,
+        createdAt: params.createdAt,
+      });
     },
     async initSessions(snapshot?: SessionSnapshotInput) {
       this.loadingSessions = true;
@@ -239,10 +427,46 @@ export const useCustomChatStore = defineStore("customChat", {
         void this.persistCurrentSession(snapshot);
       }, 800);
     },
+    async persistCurrentSessionBestEffort(
+      snapshot: SessionSnapshotInput | undefined,
+      context: { phase: "before_run" | "after_run"; runId: string; sessionId: string }
+    ): Promise<void> {
+      try {
+        await this.persistCurrentSession(snapshot);
+      } catch (error: unknown) {
+        this.appendDebugEvent({
+          method: "custom/session/persist_failed",
+          runId: context.runId,
+          sessionId: context.sessionId,
+          payload: {
+            phase: context.phase,
+            runId: context.runId,
+            sessionId: context.sessionId,
+            error,
+          },
+          level: "warn",
+        });
+        console.warn("[customChat] persist current session failed", error);
+      }
+    },
     // 幂等订阅主进程的流式事件。
     ensureStreamSubscription() {
       if (streamUnsubscribe) return;
       streamUnsubscribe = codexDesktop.agent.onEvent((event) => {
+        const streamMethodByType: Record<CustomAgentStreamEvent["type"], string> = {
+          delta: "custom/stream/delta",
+          reasoning: "custom/stream/reasoning",
+          tool_call: "custom/tool/call",
+          tool_result: "custom/tool/result",
+          tool_error: "custom/tool/error",
+          approval_request: "custom/approval/requested",
+        };
+        this.appendDebugEvent({
+          method: streamMethodByType[event.type],
+          runId: event.runId,
+          payload: summarizeStreamEventForDebug(event),
+          level: event.type === "tool_error" ? "error" : "info",
+        });
         switch (event.type) {
           case "delta":
             this.applyDelta(event.runId, event.text);
@@ -330,8 +554,46 @@ export const useCustomChatStore = defineStore("customChat", {
       const idx = this.pendingApprovals.findIndex((item) => item.approvalId === approvalId);
       if (idx < 0) return;
       const request = this.pendingApprovals[idx];
+      this.appendDebugEvent({
+        method: "custom/approval/responding",
+        runId: request.runId,
+        payload: {
+          runId: request.runId,
+          approvalId,
+          approved,
+          kind: request.kind,
+          title: request.title,
+          detail: summarizeDebugText(request.detail),
+        },
+      });
       this.pendingApprovals.splice(idx, 1);
-      await codexDesktop.agent.approve({ runId: request.runId, approvalId, approved });
+      try {
+        const result = await codexDesktop.agent.approve({ runId: request.runId, approvalId, approved });
+        this.appendDebugEvent({
+          method: "custom/approval/resolved",
+          runId: request.runId,
+          payload: {
+            runId: request.runId,
+            approvalId,
+            approved,
+            ok: result.ok,
+          },
+          level: result.ok ? "info" : "warn",
+        });
+      } catch (error: unknown) {
+        this.appendDebugEvent({
+          method: "custom/approval/failed",
+          runId: request.runId,
+          payload: {
+            runId: request.runId,
+            approvalId,
+            approved,
+            error,
+          },
+          level: "error",
+        });
+        throw error;
+      }
     },
     async send(text: string, opts?: SessionSnapshotInput): Promise<void> {
       const content = String(text ?? "").trim();
@@ -349,6 +611,7 @@ export const useCustomChatStore = defineStore("customChat", {
         .map((item) => ({ role: item.role, content: item.content }));
 
       const runId = nextRunId();
+      this.currentRunId = runId;
       const assistantId = nextMessageId("assistant");
       this.messages.push({
         id: assistantId,
@@ -360,25 +623,70 @@ export const useCustomChatStore = defineStore("customChat", {
       });
       if (this.currentSessionId) runSessionById.set(runId, this.currentSessionId);
       this.sending = true;
-      await this.persistCurrentSession(opts);
+      const runSessionId = this.currentSessionId;
+      this.appendDebugEvent({
+        method: "custom/run/start",
+        runId,
+        sessionId: runSessionId,
+        payload: {
+          runId,
+          sessionId: runSessionId,
+          providerId: providerId ?? null,
+          providerLabel: opts?.providerLabel ?? null,
+          workspaceRoot: opts?.workspaceRoot ?? null,
+          userMessage: summarizeDebugText(content),
+          history: summarizeDebugMessages(history),
+        },
+      });
       try {
+        await this.persistCurrentSessionBestEffort(opts, {
+          phase: "before_run",
+          runId,
+          sessionId: runSessionId,
+        });
         const result = await codexDesktop.agent.run({ runId, providerId, messages: history });
         const message = this.messages.find((item) => item.id === assistantId);
         if (message) {
           message.streaming = false;
           message.runId = undefined;
           if (result.ok) {
-            const hasTextPart = Boolean(message.parts?.some((part) => part.type === "text" && part.text.length > 0));
-            if (!hasTextPart) {
-              const text = result.finalText || "(模型返回了空内容)";
-              message.content = text;
-              message.parts = [...(message.parts ?? []), { id: nextPartId("text"), type: "text", text }];
+            if (result.cancelled) {
+              markMessageCancelled(message);
+            } else {
+              const hasTextPart = Boolean(message.parts?.some((part) => part.type === "text" && part.text.length > 0));
+              if (!hasTextPart) {
+                const text = result.finalText || "(模型返回了空内容)";
+                message.content = text;
+                message.parts = [...(message.parts ?? []), { id: nextPartId("text"), type: "text", text }];
+              }
             }
           } else {
             message.content = result.error;
             message.error = true;
           }
         }
+        this.appendDebugEvent({
+          method: result.ok ? (result.cancelled ? "custom/run/cancelled" : "custom/run/completed") : "custom/run/failed",
+          runId,
+          sessionId: runSessionId,
+          payload: {
+            runId,
+            sessionId: runSessionId,
+            providerId: providerId ?? null,
+            ok: result.ok,
+            ...(result.ok
+              ? {
+                  steps: result.steps,
+                  cancelled: Boolean(result.cancelled),
+                  finalText: summarizeDebugText(result.finalText),
+                }
+              : {
+                  error: summarizeDebugText(result.error),
+                }),
+            assistantMessage: summarizeDebugMessage(message),
+          },
+          level: result.ok ? "info" : "error",
+        });
       } catch (error: unknown) {
         const messageText = error instanceof Error ? error.message : String(error);
         const message = this.messages.find((item) => item.id === assistantId);
@@ -388,12 +696,90 @@ export const useCustomChatStore = defineStore("customChat", {
           message.content = messageText;
           message.error = true;
         }
+        this.appendDebugEvent({
+          method: "custom/run/thrown",
+          runId,
+          sessionId: runSessionId,
+          payload: {
+            runId,
+            sessionId: runSessionId,
+            providerId: providerId ?? null,
+            error,
+            assistantMessage: summarizeDebugMessage(message),
+          },
+          level: "error",
+        });
       } finally {
         // 本轮残留的挂起审批（理论上主进程已兜底拒绝）从队列清掉，避免悬挂卡片。
         this.pendingApprovals = this.pendingApprovals.filter((item) => item.runId !== runId);
         runSessionById.delete(runId);
+        this.currentRunId = "";
         this.sending = false;
-        await this.persistCurrentSession(opts);
+        await this.persistCurrentSessionBestEffort(opts, {
+          phase: "after_run",
+          runId,
+          sessionId: runSessionId,
+        });
+      }
+    },
+    async cancelCurrentRun(): Promise<boolean> {
+      if (!this.currentRunId || !this.sending) return false;
+      const runId = this.currentRunId;
+      const sessionId = runSessionById.get(runId) ?? this.currentSessionId;
+
+      this.appendDebugEvent({
+        method: "custom/run/cancel_requested",
+        runId,
+        sessionId,
+        payload: { runId, sessionId },
+      });
+
+      try {
+        const result = await codexDesktop.agent.cancel({ runId });
+        if (result.ok) {
+          // 找到当前流式消息并标记为已取消
+          const message = this.messages.find((item) => item.runId === runId && item.role === "assistant");
+          if (message) {
+            message.streaming = false;
+            message.runId = undefined;
+            markMessageCancelled(message);
+          }
+
+          this.currentRunId = "";
+          this.sending = false;
+          this.pendingApprovals = [];
+          await this.persistCurrentSession();
+          this.appendDebugEvent({
+            method: "custom/run/cancel_result",
+            runId,
+            sessionId,
+            payload: {
+              runId,
+              sessionId,
+              ok: true,
+              assistantMessage: summarizeDebugMessage(message),
+            },
+          });
+          return true;
+        }
+        this.appendDebugEvent({
+          method: "custom/run/cancel_result",
+          runId,
+          sessionId,
+          payload: { runId, sessionId, ok: false },
+          level: "warn",
+        });
+        return false;
+      } catch (error) {
+        this.appendDebugEvent({
+          method: "custom/run/cancel_failed",
+          runId,
+          sessionId,
+          payload: { runId, sessionId, error },
+          level: "error",
+        });
+        console.error("Failed to cancel run:", error);
+        return false;
       }
     },
   },

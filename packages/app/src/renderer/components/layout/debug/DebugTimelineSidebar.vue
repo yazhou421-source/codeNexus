@@ -21,18 +21,29 @@ import { computed, onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import TimelinePane from "../chat/TimelinePane.vue";
 import type { TimelineEventItem } from "../../../domain/types";
+import { useAppShellStore } from "../../../stores/appShell.store";
+import { useCustomChatStore } from "../../../stores/customChat.store";
 import { useDebugTimelineStore } from "../../../stores/debugTimeline.store";
 import { useRuntimeStore } from "../../../stores/runtime.store";
 import { useTimelineStore } from "../../../stores/timeline.store";
 
+const appShellStore = useAppShellStore();
+const customChatStore = useCustomChatStore();
 const runtimeStore = useRuntimeStore();
 const timelineStore = useTimelineStore();
 const debugTimelineStore = useDebugTimelineStore();
 const { t } = useI18n();
 
-const timelineKey = computed(() => String(runtimeStore.timelineKey ?? "__app__"));
-const workspaceRoot = computed(() => String(runtimeStore.workspacePath ?? "").trim());
-const contentTimelineEvents = computed<TimelineEventItem[]>(() => timelineStore.eventsForThread(timelineKey.value));
+const isCustomMode = computed(() => appShellStore.runtimeMode === "custom");
+const timelineKey = computed(() =>
+  isCustomMode.value ? customChatStore.debugThreadId() : String(runtimeStore.timelineKey ?? "__app__")
+);
+const workspaceRoot = computed(() =>
+  isCustomMode.value ? customChatStore.currentWorkspaceRootForDebug() : String(runtimeStore.workspacePath ?? "").trim()
+);
+const contentTimelineEvents = computed<TimelineEventItem[]>(() =>
+  isCustomMode.value ? [] : timelineStore.eventsForThread(timelineKey.value)
+);
 const debugTimelineEvents = computed<TimelineEventItem[]>(() => debugTimelineStore.eventsForThread(timelineKey.value));
 const debugOverlayEvents = computed<TimelineEventItem[]>(() => {
   const combined = [...contentTimelineEvents.value, ...debugTimelineEvents.value];

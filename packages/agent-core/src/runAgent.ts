@@ -1,6 +1,7 @@
 import type {
   AgentMessage,
   ChatClient,
+  ModelReply,
   RunAgentOptions,
   RunAgentResult,
   ToolCall,
@@ -28,12 +29,41 @@ function parseToolArguments(raw: string): Record<string, unknown> {
   }
 }
 
+function isAbortError(_error: unknown, signal?: AbortSignal): boolean {
+  return signal?.aborted === true;
+}
+
+function cancelledResult(
+  finalText: string,
+  messages: AgentMessage[],
+  steps: number,
+  onEvent: RunAgentOptions["onEvent"],
+): RunAgentResult {
+  onEvent?.({ type: "cancelled", steps });
+  return {
+    finalText,
+    messages,
+    steps,
+    stoppedByMaxSteps: false,
+    cancelled: true,
+  };
+}
+
 /** 执行单个工具调用，把成功结果或错误信息都转成喂回模型的字符串。 */
 async function executeToolCall(
   call: ToolCall,
   toolsByName: Map<string, ToolDefinition>,
   onEvent: RunAgentOptions["onEvent"],
+  signal?: AbortSignal,
 ): Promise<AgentMessage> {
+  if (signal?.aborted) {
+    throw signal.reason instanceof Error
+      ? signal.reason
+      : Object.assign(new Error("Operation was aborted"), {
+          name: "AbortError",
+        });
+  }
+
   const tool = toolsByName.get(call.name);
   if (!tool) {
     const error = `Unknown tool: ${call.name}`;
@@ -49,7 +79,7 @@ async function executeToolCall(
   onEvent?.({ type: "tool_call", call });
   try {
     const args = parseToolArguments(call.arguments);
-    const result = await tool.execute(args);
+    const result = await tool.execute(args, { signal });
     const text = typeof result === "string" ? result : JSON.stringify(result);
     onEvent?.({
       type: "tool_result",
@@ -59,6 +89,8 @@ async function executeToolCall(
     });
     return { role: "tool", toolCallId: call.id, content: text };
   } catch (error: unknown) {
+    if (isAbortError(error, signal)) throw error;
+
     const message = error instanceof Error ? error.message : String(error);
     onEvent?.({
       type: "tool_error",
@@ -79,11 +111,14 @@ async function executeToolCall(
  * 或达到 maxSteps 安全上限。
  *
  * 这里不含任何 HTTP / Provider 细节——换模型、换协议只需替换传入的 ChatClient。
+ *
+ * 支持通过 options.signal 外部取消：每轮开始前检查 signal.aborted，
+ * 若已取消则立即返回，触发 cancelled 事件。
  */
 export async function runAgent(
   options: RunAgentOptions,
 ): Promise<RunAgentResult> {
-  const { client, tools, onEvent } = options;
+  const { client, tools, onEvent, signal } = options;
   const maxSteps = options.maxSteps ?? DEFAULT_MAX_STEPS;
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
   // 复制一份，避免就地修改调用方传入的数组。
@@ -93,16 +128,38 @@ export async function runAgent(
   let finalText = "";
 
   while (steps < maxSteps) {
+    // 每轮开始前检查取消信号
+    if (signal?.aborted) {
+      return cancelledResult(finalText, messages, steps, onEvent);
+    }
+
     steps += 1;
     // 优先走流式（边产出边回吐文本/思考增量）；client 未实现 stream 时回退到非流式 send。
-    const reply = client.stream
-      ? await client.stream(messages, tools, {
-          onTextDelta: (delta) =>
-            onEvent?.({ type: "assistant_message_delta", delta }),
-          onReasoningDelta: (delta) =>
-            onEvent?.({ type: "assistant_reasoning_delta", delta }),
-        })
-      : await client.send(messages, tools);
+    let reply: ModelReply;
+    try {
+      reply = client.stream
+        ? await client.stream(
+            messages,
+            tools,
+            {
+              onTextDelta: (delta) =>
+                onEvent?.({ type: "assistant_message_delta", delta }),
+              onReasoningDelta: (delta) =>
+                onEvent?.({ type: "assistant_reasoning_delta", delta }),
+            },
+            { signal },
+          )
+        : await client.send(messages, tools, { signal });
+    } catch (error: unknown) {
+      if (isAbortError(error, signal)) {
+        return cancelledResult(finalText, messages, steps, onEvent);
+      }
+      throw error;
+    }
+
+    if (signal?.aborted) {
+      return cancelledResult(finalText, messages, steps, onEvent);
+    }
 
     if (reply.content) {
       onEvent?.({ type: "assistant_message", content: reply.content });
@@ -113,25 +170,51 @@ export async function runAgent(
       role: "assistant",
       content: reply.content,
       toolCalls: reply.toolCalls.length > 0 ? reply.toolCalls : undefined,
+      providerMetadata: reply.providerMetadata,
     });
 
     // 没有工具调用 = 模型认为任务完成，循环结束。
     if (reply.toolCalls.length === 0) {
       finalText = reply.content ?? "";
-      return { finalText, messages, steps, stoppedByMaxSteps: false };
+      return {
+        finalText,
+        messages,
+        steps,
+        stoppedByMaxSteps: false,
+        cancelled: false,
+      };
     }
 
     // 并行执行本轮所有工具调用，把每个结果作为独立的 tool 消息塞回历史。
-    const toolMessages = await Promise.all(
-      reply.toolCalls.map((call) =>
-        executeToolCall(call, toolsByName, onEvent),
-      ),
-    );
+    let toolMessages: AgentMessage[];
+    try {
+      toolMessages = await Promise.all(
+        reply.toolCalls.map((call) =>
+          executeToolCall(call, toolsByName, onEvent, signal),
+        ),
+      );
+    } catch (error: unknown) {
+      if (isAbortError(error, signal)) {
+        return cancelledResult(finalText, messages, steps, onEvent);
+      }
+      throw error;
+    }
+
+    if (signal?.aborted) {
+      return cancelledResult(finalText, messages, steps, onEvent);
+    }
+
     messages.push(...toolMessages);
   }
 
   onEvent?.({ type: "max_steps_reached", steps });
-  return { finalText, messages, steps, stoppedByMaxSteps: true };
+  return {
+    finalText,
+    messages,
+    steps,
+    stoppedByMaxSteps: true,
+    cancelled: false,
+  };
 }
 
 export type { ChatClient };

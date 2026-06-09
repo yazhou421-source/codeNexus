@@ -1,6 +1,7 @@
 import type {
   AgentMessage,
   ChatClient,
+  ChatRequestOptions,
   ChatStreamHandlers,
   ModelReply,
   ToolCall,
@@ -40,6 +41,9 @@ export type AnthropicClientOptions = {
 
 type Block = Record<string, unknown>;
 type WireMessage = { role: "user" | "assistant"; content: Block[] };
+type AnthropicMetadata = {
+  contentBlocks?: unknown;
+};
 
 function resolveEndpoint(baseUrl: string): string {
   const trimmed = baseUrl.trim().replace(/\/+$/g, "");
@@ -59,6 +63,23 @@ function safeParseObject(raw: string): Record<string, unknown> {
   }
 }
 
+function getAnthropicContentBlocks(
+  metadata: AgentMessage["providerMetadata"],
+): Block[] | null {
+  const blocks = (metadata as AnthropicMetadata | undefined)?.contentBlocks;
+  if (!Array.isArray(blocks)) return null;
+  const valid = blocks.filter(
+    (block): block is Block => Boolean(block) && typeof block === "object",
+  );
+  return valid.length > 0 ? valid : null;
+}
+
+function providerMetadataForBlocks(blocks: Block[]): Record<string, unknown> {
+  return {
+    contentBlocks: blocks.map((block) => ({ ...block })),
+  };
+}
+
 /** 把内核消息转成 Anthropic 的 user/assistant 块；system 在外部单独抽取，这里返回 null。 */
 function toWireMessage(message: AgentMessage): WireMessage | null {
   if (message.role === "system") return null;
@@ -75,6 +96,14 @@ function toWireMessage(message: AgentMessage): WireMessage | null {
     };
   }
   if (message.role === "assistant") {
+    const providerBlocks = getAnthropicContentBlocks(message.providerMetadata);
+    if (providerBlocks) {
+      return {
+        role: "assistant",
+        content: providerBlocks.map((block) => ({ ...block })),
+      };
+    }
+
     const content: Block[] = [];
     if (message.content) content.push({ type: "text", text: message.content });
     for (const call of message.toolCalls ?? []) {
@@ -156,6 +185,7 @@ export function createAnthropicClient(
     async send(
       messages: AgentMessage[],
       tools: ToolDefinition[],
+      request?: ChatRequestOptions,
     ): Promise<ModelReply> {
       const system = messages
         .filter((message) => message.role === "system")
@@ -184,6 +214,7 @@ export function createAnthropicClient(
         body,
         timeoutMs,
         errorLabel: "anthropic messages",
+        signal: request?.signal,
       });
 
       const json = (await response.json()) as Record<string, unknown>;
@@ -207,14 +238,17 @@ export function createAnthropicClient(
           .map((block) => block.thinking as string)
           .join("") || null;
       const toolCalls = extractToolCalls(content);
+      const providerMetadata =
+        blocks.length > 0 ? providerMetadataForBlocks(blocks) : undefined;
 
-      return { content: text || null, toolCalls, reasoning };
+      return { content: text || null, toolCalls, reasoning, providerMetadata };
     },
 
     async stream(
       messages: AgentMessage[],
       tools: ToolDefinition[],
       handlers: ChatStreamHandlers,
+      request?: ChatRequestOptions,
     ): Promise<ModelReply> {
       const system = messages
         .filter((message) => message.role === "system")
@@ -245,14 +279,12 @@ export function createAnthropicClient(
         timeoutMs,
         errorLabel: "anthropic messages stream",
         stream: true,
+        signal: request?.signal,
       });
 
       let content = "";
       let reasoning = "";
-      const toolBlocks = new Map<
-        number,
-        { id: string; name: string; json: string }
-      >();
+      const blocks = new Map<number, Block & { __json?: string }>();
       for await (const { data } of readSseBlocks(response)) {
         let evt: Record<string, unknown>;
         try {
@@ -264,16 +296,17 @@ export function createAnthropicClient(
           const block = evt.content_block as
             | Record<string, unknown>
             | undefined;
+          const index = typeof evt.index === "number" ? evt.index : blocks.size;
+          if (block) {
+            blocks.set(index, { ...block });
+          }
           if (block?.type === "tool_use") {
-            const index =
-              typeof evt.index === "number" ? evt.index : toolBlocks.size;
-            toolBlocks.set(index, {
-              id: typeof block.id === "string" ? block.id : `call_${index}`,
-              name: typeof block.name === "string" ? block.name : "",
-              json: "",
-            });
+            const existing = blocks.get(index) ?? { type: "tool_use" };
+            blocks.set(index, { ...existing, __json: "" });
           }
         } else if (evt.type === "content_block_delta") {
+          const index = typeof evt.index === "number" ? evt.index : 0;
+          const block = blocks.get(index);
           const delta = evt.delta as Record<string, unknown> | undefined;
           if (
             delta?.type === "text_delta" &&
@@ -281,6 +314,9 @@ export function createAnthropicClient(
             delta.text
           ) {
             content += delta.text;
+            if (block) {
+              block.text = `${typeof block.text === "string" ? block.text : ""}${delta.text}`;
+            }
             handlers.onTextDelta(delta.text);
           } else if (
             delta?.type === "thinking_delta" &&
@@ -288,31 +324,62 @@ export function createAnthropicClient(
             delta.thinking
           ) {
             reasoning += delta.thinking;
+            if (block) {
+              block.thinking = `${typeof block.thinking === "string" ? block.thinking : ""}${delta.thinking}`;
+            }
             handlers.onReasoningDelta?.(delta.thinking);
+          } else if (
+            delta?.type === "signature_delta" &&
+            typeof delta.signature === "string"
+          ) {
+            if (block) block.signature = delta.signature;
           } else if (
             delta?.type === "input_json_delta" &&
             typeof delta.partial_json === "string"
           ) {
-            const index = typeof evt.index === "number" ? evt.index : 0;
-            const block = toolBlocks.get(index);
-            if (block) block.json += delta.partial_json;
+            if (block) {
+              block.__json = `${typeof block.__json === "string" ? block.__json : ""}${delta.partial_json}`;
+            }
           }
         }
       }
 
-      const toolCalls: ToolCall[] = [...toolBlocks.entries()]
+      const contentBlocks = [...blocks.entries()]
         .sort((a, b) => a[0] - b[0])
-        .map(([, block]) => ({
-          id: block.id,
-          name: block.name,
-          arguments: block.json || "{}",
+        .map(([index, block]) => {
+          const { __json, ...wireBlock } = block;
+          if (wireBlock.type === "tool_use") {
+            wireBlock.id =
+              typeof wireBlock.id === "string" && wireBlock.id
+                ? wireBlock.id
+                : `call_${index}`;
+            if (typeof wireBlock.name !== "string") wireBlock.name = "";
+            wireBlock.input = safeParseObject(__json || "{}");
+          }
+          return wireBlock;
+        });
+
+      const toolCalls: ToolCall[] = contentBlocks
+        .filter((block) => block.type === "tool_use")
+        .map((block, index) => ({
+          id:
+            typeof block.id === "string" && block.id
+              ? block.id
+              : `call_${index}`,
+          name: typeof block.name === "string" ? block.name : "",
+          arguments: JSON.stringify(block.input ?? {}),
         }))
         .filter((call) => call.name);
+      const providerMetadata =
+        contentBlocks.length > 0
+          ? providerMetadataForBlocks(contentBlocks)
+          : undefined;
 
       return {
         content: content || null,
         toolCalls,
         reasoning: reasoning || null,
+        providerMetadata,
       };
     },
   };

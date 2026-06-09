@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { runAgent } from "./runAgent";
-import type { AgentEvent, ChatClient, ModelReply, ToolDefinition } from "./types";
+import type {
+  AgentEvent,
+  ChatClient,
+  ModelReply,
+  ToolDefinition,
+} from "./types";
 
 /**
  * 脚本化的假模型：按预设顺序逐轮返回 reply，不触网。
@@ -12,7 +17,10 @@ function scriptedClient(replies: ModelReply[]): ChatClient & { calls: number } {
     calls: 0,
     async send(): Promise<ModelReply> {
       client.calls += 1;
-      const reply = replies[index] ?? { content: "(no more scripted replies)", toolCalls: [] };
+      const reply = replies[index] ?? {
+        content: "(no more scripted replies)",
+        toolCalls: [],
+      };
       index += 1;
       return reply;
     },
@@ -21,7 +29,10 @@ function scriptedClient(replies: ModelReply[]): ChatClient & { calls: number } {
 }
 
 /** 一个简单的内存工具：记录被调用的参数，返回固定结果。 */
-function makeTool(name: string, result: string): ToolDefinition & { lastArgs?: Record<string, unknown> } {
+function makeTool(
+  name: string,
+  result: string,
+): ToolDefinition & { lastArgs?: Record<string, unknown> } {
   const tool: ToolDefinition & { lastArgs?: Record<string, unknown> } = {
     name,
     description: `test tool ${name}`,
@@ -34,11 +45,19 @@ function makeTool(name: string, result: string): ToolDefinition & { lastArgs?: R
   return tool;
 }
 
+function abortError(): Error {
+  return Object.assign(new Error("aborted"), { name: "AbortError" });
+}
+
 describe("runAgent", () => {
   it("returns final text immediately when model makes no tool call", async () => {
     const client = scriptedClient([{ content: "Hello, done.", toolCalls: [] }]);
 
-    const result = await runAgent({ client, tools: [], messages: [{ role: "user", content: "hi" }] });
+    const result = await runAgent({
+      client,
+      tools: [],
+      messages: [{ role: "user", content: "hi" }],
+    });
 
     expect(result.finalText).toBe("Hello, done.");
     expect(result.steps).toBe(1);
@@ -52,7 +71,13 @@ describe("runAgent", () => {
       // 第 1 轮：模型要求调用 read_file
       {
         content: null,
-        toolCalls: [{ id: "call_1", name: "read_file", arguments: '{"path":"package.json"}' }],
+        toolCalls: [
+          {
+            id: "call_1",
+            name: "read_file",
+            arguments: '{"path":"package.json"}',
+          },
+        ],
       },
       // 第 2 轮：拿到工具结果后，模型给出最终答复
       { content: "The version is 1.0.3.", toolCalls: [] },
@@ -92,22 +117,35 @@ describe("runAgent", () => {
       { content: "both done", toolCalls: [] },
     ]);
 
-    const result = await runAgent({ client, tools: [a, b], messages: [{ role: "user", content: "go" }] });
+    const result = await runAgent({
+      client,
+      tools: [a, b],
+      messages: [{ role: "user", content: "go" }],
+    });
 
     expect(result.finalText).toBe("both done");
     // user + assistant + 2×tool + assistant
     expect(result.messages.filter((m) => m.role === "tool")).toHaveLength(2);
-    const toolContents = result.messages.filter((m) => m.role === "tool").map((m) => m.content);
+    const toolContents = result.messages
+      .filter((m) => m.role === "tool")
+      .map((m) => m.content);
     expect(toolContents).toEqual(["result-a", "result-b"]);
   });
 
   it("feeds an error back to the model when an unknown tool is called", async () => {
     const client = scriptedClient([
-      { content: null, toolCalls: [{ id: "c1", name: "does_not_exist", arguments: "{}" }] },
+      {
+        content: null,
+        toolCalls: [{ id: "c1", name: "does_not_exist", arguments: "{}" }],
+      },
       { content: "ok, recovered", toolCalls: [] },
     ]);
 
-    const result = await runAgent({ client, tools: [], messages: [{ role: "user", content: "go" }] });
+    const result = await runAgent({
+      client,
+      tools: [],
+      messages: [{ role: "user", content: "go" }],
+    });
 
     expect(result.finalText).toBe("ok, recovered");
     const toolMessage = result.messages.find((m) => m.role === "tool");
@@ -124,11 +162,18 @@ describe("runAgent", () => {
       },
     };
     const client = scriptedClient([
-      { content: null, toolCalls: [{ id: "c1", name: "boom", arguments: "{}" }] },
+      {
+        content: null,
+        toolCalls: [{ id: "c1", name: "boom", arguments: "{}" }],
+      },
       { content: "handled", toolCalls: [] },
     ]);
 
-    const result = await runAgent({ client, tools: [boom], messages: [{ role: "user", content: "go" }] });
+    const result = await runAgent({
+      client,
+      tools: [boom],
+      messages: [{ role: "user", content: "go" }],
+    });
 
     expect(result.finalText).toBe("handled");
     const toolMessage = result.messages.find((m) => m.role === "tool");
@@ -138,11 +183,18 @@ describe("runAgent", () => {
   it("tolerates malformed JSON arguments by passing an empty object to the tool", async () => {
     const tool = makeTool("read_file", "ok");
     const client = scriptedClient([
-      { content: null, toolCalls: [{ id: "c1", name: "read_file", arguments: "not-json{" }] },
+      {
+        content: null,
+        toolCalls: [{ id: "c1", name: "read_file", arguments: "not-json{" }],
+      },
       { content: "done", toolCalls: [] },
     ]);
 
-    await runAgent({ client, tools: [tool], messages: [{ role: "user", content: "go" }] });
+    await runAgent({
+      client,
+      tools: [tool],
+      messages: [{ role: "user", content: "go" }],
+    });
 
     expect(tool.lastArgs).toEqual({});
   });
@@ -152,7 +204,10 @@ describe("runAgent", () => {
     // 一个永远要求继续调工具的模型
     const client: ChatClient = {
       async send(): Promise<ModelReply> {
-        return { content: null, toolCalls: [{ id: "c", name: "loop", arguments: "{}" }] };
+        return {
+          content: null,
+          toolCalls: [{ id: "c", name: "loop", arguments: "{}" }],
+        };
       },
     };
 
@@ -167,10 +222,69 @@ describe("runAgent", () => {
     expect(result.steps).toBe(3);
   });
 
+  it("passes the abort signal to streaming clients and returns cancelled when they abort", async () => {
+    const controller = new AbortController();
+    const events: AgentEvent[] = [];
+    const client: ChatClient = {
+      send: vi.fn(async () => ({ content: "unused", toolCalls: [] })),
+      stream: vi.fn(async (_messages, _tools, _handlers, request) => {
+        expect(request?.signal).toBe(controller.signal);
+        controller.abort();
+        throw abortError();
+      }),
+    };
+
+    const result = await runAgent({
+      client,
+      tools: [],
+      messages: [{ role: "user", content: "hi" }],
+      signal: controller.signal,
+      onEvent: (event) => events.push(event),
+    });
+
+    expect(result.cancelled).toBe(true);
+    expect(result.stoppedByMaxSteps).toBe(false);
+    expect(result.steps).toBe(1);
+    expect(events).toContainEqual({ type: "cancelled", steps: 1 });
+  });
+
+  it("passes the abort signal to tools and returns cancelled when a tool aborts", async () => {
+    const controller = new AbortController();
+    const tool: ToolDefinition = {
+      name: "slow_tool",
+      description: "aborts",
+      parameters: { type: "object", properties: {} },
+      execute: (_args, context) => {
+        expect(context?.signal).toBe(controller.signal);
+        controller.abort();
+        throw abortError();
+      },
+    };
+    const client = scriptedClient([
+      {
+        content: null,
+        toolCalls: [{ id: "c1", name: "slow_tool", arguments: "{}" }],
+      },
+    ]);
+
+    const result = await runAgent({
+      client,
+      tools: [tool],
+      messages: [{ role: "user", content: "go" }],
+      signal: controller.signal,
+    });
+
+    expect(result.cancelled).toBe(true);
+    expect(result.steps).toBe(1);
+  });
+
   it("emits observable events for assistant text, tool calls and results", async () => {
     const tool = makeTool("read_file", "file-contents");
     const client = scriptedClient([
-      { content: "let me read it", toolCalls: [{ id: "c1", name: "read_file", arguments: "{}" }] },
+      {
+        content: "let me read it",
+        toolCalls: [{ id: "c1", name: "read_file", arguments: "{}" }],
+      },
       { content: "the answer", toolCalls: [] },
     ]);
 

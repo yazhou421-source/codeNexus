@@ -837,7 +837,7 @@ export type CustomAgentRunArgs = {
 };
 
 export type CustomAgentRunResult =
-  | { ok: true; finalText: string; steps: number }
+  | { ok: true; finalText: string; steps: number; cancelled?: boolean }
   | { ok: false; error: string };
 
 // 自定义运行时的流式事件（main → renderer，经 agent:event 广播），按 runId 关联到某条助手消息。
@@ -884,6 +884,11 @@ export type CustomAgentApproveArgs = {
   runId: string;
   approvalId: string;
   approved: boolean;
+};
+
+// renderer → main：取消正在运行的 agent。
+export type CustomAgentCancelArgs = {
+  runId: string;
 };
 
 export type CustomSessionToolActivity = {
@@ -970,6 +975,7 @@ export type CustomSessionDeleteResult = {
 export type CodexDesktopAgentApi = {
   run(args: CustomAgentRunArgs): Promise<CustomAgentRunResult>;
   approve(args: CustomAgentApproveArgs): Promise<{ ok: boolean }>;
+  cancel(args: CustomAgentCancelArgs): Promise<{ ok: boolean }>;
   listSessions(): Promise<CustomSessionListResult>;
   getSession(args: CustomSessionGetArgs): Promise<CustomSessionGetResult>;
   createSession(

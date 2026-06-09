@@ -146,7 +146,10 @@ const showLeftSidebar = computed(
 );
 const showLeftPane = computed(() => Boolean(featureWorkspaceSidebar.value) || showLeftSidebar.value);
 const showDebugSidebar = computed(
-  () => !isCustomMode.value && !settingsOpen.value && mainView.value === "chat" && runtimeStore.timelineDebugEnabled
+  () =>
+    !settingsOpen.value &&
+    runtimeStore.timelineDebugEnabled &&
+    (isCustomMode.value || mainView.value === "chat")
 );
 const showFilesSidebar = computed(() => {
   return (
@@ -168,6 +171,8 @@ const applyWindowStateToDocument = (state: AppWindowState) => {
 };
 
 onMounted(() => {
+  window.addEventListener("keydown", onWindowKeydown);
+
   void (async () => {
     try {
       const state = await codexDesktop.window.getState();
@@ -181,6 +186,19 @@ onMounted(() => {
     });
   } catch {}
 });
+
+function onWindowKeydown(event: KeyboardEvent) {
+  if (!isCustomMode.value || !isToggleDebugTimelineShortcut(event)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  runtimeStore.toggleTimelineDebugEnabled();
+}
+
+function isToggleDebugTimelineShortcut(event: KeyboardEvent) {
+  if (event.isComposing) return false;
+  if (!(event.ctrlKey || event.metaKey) || !event.altKey) return false;
+  return event.code === "KeyJ";
+}
 
 watch(
   () => appClosingStore.phase,
@@ -370,6 +388,8 @@ const onEditorSashKeydown = (event: KeyboardEvent) => {
 };
 
 onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onWindowKeydown);
+
   try {
     stopWindowStateListener?.();
   } catch {}

@@ -46,6 +46,7 @@ flutter-app/
 
 # Workspace-local prompts / configs
 .codenexus/
+.claude/
 
 # Local diagrams (keep in publish but do not commit by default)
 publish/diagrams/

@@ -17,15 +17,26 @@ const agentCoreMocks = vi.hoisted(() => {
     createChatCompletionsClient: vi.fn(() => ({ kind: "openai-compatible-client" })),
     createAnthropicClient: vi.fn(() => ({ kind: "anthropic-client" })),
     createGeminiClient: vi.fn(() => ({ kind: "gemini-client" })),
-    createFileTools: vi.fn((_rootDir: string, _options: any) => [
+    createWorkspaceTools: vi.fn((_rootDir: string, _options: any) => [
+      { name: "search_files", description: "", parameters: {}, execute: vi.fn(async () => "files") },
+      { name: "grep", description: "", parameters: {}, execute: vi.fn(async () => "grep") },
+      { name: "read_file_range", description: "", parameters: {}, execute: vi.fn(async () => "range") },
       { name: "read_file", description: "", parameters: {}, execute: vi.fn(async () => "file") },
+      { name: "write_file", description: "", parameters: {}, execute: vi.fn(async () => "written") },
+      { name: "edit_file", description: "", parameters: {}, execute: vi.fn(async () => "edited") },
+      { name: "git_status", description: "", parameters: {}, execute: vi.fn(async () => "status") },
+      { name: "git_diff", description: "", parameters: {}, execute: vi.fn(async () => "diff") },
+      { name: "git_show", description: "", parameters: {}, execute: vi.fn(async () => "show") },
+      { name: "apply_patch", description: "", parameters: {}, execute: vi.fn(async () => "patch") },
+      { name: "delete_file", description: "", parameters: {}, execute: vi.fn(async () => "delete") },
+      { name: "move_file", description: "", parameters: {}, execute: vi.fn(async () => "move") },
+      { name: "mkdir", description: "", parameters: {}, execute: vi.fn(async () => "mkdir") },
+      { name: "web_search", description: "", parameters: {}, execute: vi.fn(async () => "search") },
+      { name: "web_fetch", description: "", parameters: {}, execute: vi.fn(async () => "fetch") },
     ]),
     createCommandTools: vi.fn((_options: any) => [
       { name: "run_command", description: "", parameters: {}, execute: vi.fn(async () => "command") },
     ]),
-    ProcessRegistry: vi.fn(function ProcessRegistryMock(this: { killAll: () => void }) {
-      this.killAll = vi.fn();
-    }),
   };
 });
 
@@ -34,9 +45,8 @@ vi.mock("@codenexus/agent-core", () => ({
   createChatCompletionsClient: agentCoreMocks.createChatCompletionsClient,
   createAnthropicClient: agentCoreMocks.createAnthropicClient,
   createGeminiClient: agentCoreMocks.createGeminiClient,
-  createFileTools: agentCoreMocks.createFileTools,
+  createWorkspaceTools: agentCoreMocks.createWorkspaceTools,
   createCommandTools: agentCoreMocks.createCommandTools,
-  ProcessRegistry: agentCoreMocks.ProcessRegistry,
 }));
 
 function buildSettings(workspaceRoot: string | null): UserLocalSettings {
@@ -84,10 +94,24 @@ describe("CustomAgentService tool routing", () => {
 
     await expect(runService(service)).resolves.toMatchObject({ ok: true, finalText: "ok" });
 
-    expect(agentCoreMocks.createFileTools).toHaveBeenCalledWith("D:\\repo", expect.any(Object));
+    expect(agentCoreMocks.createWorkspaceTools).toHaveBeenCalledWith("D:\\repo", expect.any(Object));
     expect(agentCoreMocks.createCommandTools).toHaveBeenCalledWith(expect.objectContaining({ cwd: "D:\\repo" }));
     expect(agentCoreMocks.state.runOptions?.tools.map((tool: { name: string }) => tool.name)).toEqual([
+      "search_files",
+      "grep",
+      "read_file_range",
       "read_file",
+      "write_file",
+      "edit_file",
+      "git_status",
+      "git_diff",
+      "git_show",
+      "apply_patch",
+      "delete_file",
+      "move_file",
+      "mkdir",
+      "web_search",
+      "web_fetch",
       "run_command",
     ]);
   });
@@ -98,14 +122,54 @@ describe("CustomAgentService tool routing", () => {
 
     await expect(runService(service)).resolves.toMatchObject({ ok: true, finalText: "ok" });
 
-    expect(agentCoreMocks.createFileTools).toHaveBeenCalledWith("D:\\Desktop\\codex\\electron", expect.any(Object));
+    expect(agentCoreMocks.createWorkspaceTools).toHaveBeenCalledWith("D:\\Desktop\\codex\\electron", expect.any(Object));
     expect(agentCoreMocks.createCommandTools).toHaveBeenCalledWith(
       expect.objectContaining({ cwd: "D:\\Desktop\\codex\\electron" })
     );
     expect(agentCoreMocks.state.runOptions?.tools.map((tool: { name: string }) => tool.name)).toEqual([
+      "search_files",
+      "grep",
+      "read_file_range",
       "read_file",
+      "write_file",
+      "edit_file",
+      "git_status",
+      "git_diff",
+      "git_show",
+      "apply_patch",
+      "delete_file",
+      "move_file",
+      "mkdir",
+      "web_search",
+      "web_fetch",
       "run_command",
     ]);
+  });
+
+  it("can run multiple turns on the same service instance", async () => {
+    const service = buildService(buildSettings("D:\\repo"));
+
+    await expect(
+      service.run({
+        runId: "run-1",
+        messages: [{ role: "user", content: "first" }],
+      })
+    ).resolves.toMatchObject({ ok: true, finalText: "ok" });
+    await expect(
+      service.run({
+        runId: "run-2",
+        messages: [
+          { role: "user", content: "first" },
+          { role: "assistant", content: "ok" },
+          { role: "user", content: "second" },
+        ],
+      })
+    ).resolves.toMatchObject({ ok: true, finalText: "ok" });
+
+    expect(agentCoreMocks.runAgent).toHaveBeenCalledTimes(2);
+    expect(
+      agentCoreMocks.runAgent.mock.calls[1]?.[0].messages.map((message: { content: string | null }) => message.content)
+    ).toEqual(["first", "ok", "second"]);
   });
 
   it("rejects approval-gated tool actions when approval cannot round-trip", async () => {
@@ -115,11 +179,9 @@ describe("CustomAgentService tool routing", () => {
       messages: [{ role: "user", content: "hello" }],
     });
 
-    const fileOptions = agentCoreMocks.createFileTools.mock.calls[0]![1];
+    const workspaceOptions = agentCoreMocks.createWorkspaceTools.mock.calls[0]![1];
     const commandOptions = agentCoreMocks.createCommandTools.mock.calls[0]![0];
-    await expect(fileOptions.requireApproval({ tool: "write_file", path: "./a.txt", preview: "body" })).resolves.toBe(
-      false
-    );
+    await expect(workspaceOptions.requireApproval({ tool: "apply_patch", details: "file.txt" })).resolves.toBe(false);
     await expect(commandOptions.requireConfirmation("node -v")).resolves.toBe(false);
   });
 });

@@ -3,9 +3,8 @@ import {
   createChatCompletionsClient,
   createAnthropicClient,
   createGeminiClient,
-  createFileTools,
+  createWorkspaceTools,
   createCommandTools,
-  ProcessRegistry,
   type AgentMessage,
   type ToolDefinition,
 } from "@codenexus/agent-core";
@@ -43,12 +42,19 @@ export class CustomAgentService {
   // 挂起中的审批：key=`${runId}:${approvalId}`，value 是等待用户决策的 Promise resolver。
   private readonly pendingApprovals = new Map<string, (approved: boolean) => void>();
 
+  // 当前活跃的运行：runId -> AbortController，用于支持外部取消。
+  private readonly activeRuns = new Map<string, AbortController>();
+
   constructor(private readonly localSettingsService: LocalSettingsService) {}
 
   async run(args: CustomAgentRunArgs, emit?: EmitFn): Promise<CustomAgentRunResult> {
     const runId = String(args?.runId ?? "").trim();
-    // 每次 run 一个独立的进程登记簿；run 结束统一 killAll，避免后台进程泄漏。
-    const registry = new ProcessRegistry();
+    const controller = new AbortController();
+
+    if (runId) {
+      this.activeRuns.set(runId, controller);
+    }
+
     try {
       const provider = await this.resolveProvider(args?.providerId);
       if (!provider) {
@@ -73,12 +79,13 @@ export class CustomAgentService {
             : createChatCompletionsClient(options);
 
       const toolRoot = await this.resolveToolRoot();
-      const tools = this.buildTools(toolRoot, runId, registry, emit);
+      const tools = this.buildTools(toolRoot, runId, emit);
 
       const result = await runAgent({
         client,
         tools,
         messages,
+        signal: controller.signal,
         // 把内核事件映射成渲染层的 CustomAgentStreamEvent（带上 runId 以便按消息关联）。
         onEvent:
           emit && runId
@@ -109,13 +116,21 @@ export class CustomAgentService {
               }
             : undefined,
       });
-      return { ok: true, finalText: result.finalText, steps: result.steps };
+      return {
+        ok: true,
+        finalText: result.finalText,
+        steps: result.steps,
+        cancelled: result.cancelled,
+      };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       logger.warn("custom-agent", "run failed", message);
       return { ok: false, error: message };
     } finally {
-      registry.killAll();
+      // 清理活跃运行记录
+      if (runId) {
+        this.activeRuns.delete(runId);
+      }
       // run 结束仍未决的审批一律解为「拒绝」，避免内核里 await 的工具永久挂起。
       this.rejectPendingApprovals(runId);
     }
@@ -134,10 +149,28 @@ export class CustomAgentService {
   }
 
   /**
-   * 按工具根构建工具集；未选择 workspace 时也使用系统工具根，保持工具可用。
-   * 写改文件 / 执行命令前调用 ask() 走审批回环；没有 runId/emit 无法回环时安全兜底为拒绝。
+   * 取消正在运行的 agent：触发对应的 AbortController，中止 runAgent 循环。
+   * 同时清理该 runId 的所有挂起审批。
    */
-  private buildTools(toolRoot: string, runId: string, registry: ProcessRegistry, emit?: EmitFn): ToolDefinition[] {
+  cancel(runId: string): { ok: boolean } {
+    const id = String(runId ?? "").trim();
+    if (!id) return { ok: false };
+
+    const controller = this.activeRuns.get(id);
+    if (!controller) return { ok: false };
+
+    controller.abort();
+    this.activeRuns.delete(id);
+    this.rejectPendingApprovals(id);
+
+    return { ok: true };
+  }
+
+  /**
+   * Build tool set for workspace. Tools are sandboxed to toolRoot.
+   * Write operations require approval via ask() callback; if runId/emit missing, safely defaults to rejection.
+   */
+  private buildTools(toolRoot: string, runId: string, emit?: EmitFn): ToolDefinition[] {
     const canApprove = Boolean(emit && runId);
     let approvalSeq = 0;
     const ask = (kind: "command" | "file", title: string, detail: string): Promise<boolean> => {
@@ -150,15 +183,14 @@ export class CustomAgentService {
       });
     };
 
-    const fileTools = createFileTools(toolRoot, {
-      requireApproval: (op) => ask("file", `${op.tool} · ${op.path}`, op.preview),
+    const workspaceTools = createWorkspaceTools(toolRoot, {
+      requireApproval: (op) => ask("file", op.tool, op.details),
     });
     const commandTools = createCommandTools({
       cwd: toolRoot,
-      registry,
-      requireConfirmation: (command) => ask("command", "执行命令", command),
+      requireConfirmation: (command) => ask("command", "run_command", command),
     });
-    return [...fileTools, ...commandTools];
+    return [...workspaceTools, ...commandTools];
   }
 
   private rejectPendingApprovals(runId: string): void {

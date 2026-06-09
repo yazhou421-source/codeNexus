@@ -2,6 +2,7 @@ import { ipcMain } from "electron";
 import { IPC_AGENT_CHANNELS } from "@codenexus/shared/ipc/channels";
 import type {
   CustomAgentApproveArgs,
+  CustomAgentCancelArgs,
   CustomAgentRunArgs,
   CustomAgentStreamEvent,
   CustomSessionCreateArgs,
@@ -28,6 +29,11 @@ export function registerAgentHandlers(deps: {
   // 回传一次审批决策，解开主进程里挂起的写改 / 命令确认。
   ipcMain.handle(IPC_AGENT_CHANNELS.agentApprove, async (_evt, args: CustomAgentApproveArgs) => {
     return customAgentService.resolveApproval(args);
+  });
+
+  // 取消正在运行的 agent。
+  ipcMain.handle(IPC_AGENT_CHANNELS.agentCancel, async (_evt, args: CustomAgentCancelArgs) => {
+    return customAgentService.cancel(args.runId);
   });
 
   ipcMain.handle(IPC_AGENT_CHANNELS.agentSessionList, async () => {

@@ -1,6 +1,7 @@
 import type {
   AgentMessage,
   ChatClient,
+  ChatRequestOptions,
   ChatStreamHandlers,
   ModelReply,
   ToolDefinition,
@@ -111,6 +112,7 @@ export function createChatCompletionsClient(
     async send(
       messages: AgentMessage[],
       tools: ToolDefinition[],
+      request?: ChatRequestOptions,
     ): Promise<ModelReply> {
       const body: Record<string, unknown> = {
         model: options.model,
@@ -125,6 +127,7 @@ export function createChatCompletionsClient(
         body,
         timeoutMs,
         errorLabel: "chat/completions",
+        signal: request?.signal,
       });
 
       const json = (await response.json()) as Record<string, unknown>;
@@ -146,6 +149,7 @@ export function createChatCompletionsClient(
       messages: AgentMessage[],
       tools: ToolDefinition[],
       handlers: ChatStreamHandlers,
+      request?: ChatRequestOptions,
     ): Promise<ModelReply> {
       const body: Record<string, unknown> = {
         model: options.model,
@@ -162,6 +166,7 @@ export function createChatCompletionsClient(
         timeoutMs,
         errorLabel: "chat/completions stream",
         stream: true,
+        signal: request?.signal,
       });
 
       let content = "";

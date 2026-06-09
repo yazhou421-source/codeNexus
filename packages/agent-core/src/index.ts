@@ -2,16 +2,18 @@ export { runAgent } from "./runAgent";
 export { createChatCompletionsClient } from "./chatCompletionsClient";
 export { createAnthropicClient } from "./anthropicClient";
 export { createGeminiClient } from "./geminiClient";
-export { createFileTools } from "./fileTools";
+export { createWorkspaceTools } from "./workspaceTools";
 export { createCommandTools } from "./commandTools";
 export { ProcessRegistry } from "./processRegistry";
 export type {
   AgentMessage,
   ToolCall,
   ToolDefinition,
+  ToolExecutionContext,
   ModelReply,
   ChatClient,
   ChatStreamHandlers,
+  ChatRequestOptions,
   RunAgentOptions,
   RunAgentResult,
   AgentEvent,
@@ -20,5 +22,5 @@ export type { ChatCompletionsClientOptions } from "./chatCompletionsClient";
 export type { AnthropicClientOptions } from "./anthropicClient";
 export type { GeminiClientOptions } from "./geminiClient";
 export type { CommandToolsOptions } from "./commandTools";
-export type { FileToolsOptions } from "./fileTools";
+export type { WorkspaceToolsOptions } from "./workspaceTools";
 export type { ProcessInfo } from "./processRegistry";

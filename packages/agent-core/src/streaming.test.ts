@@ -63,6 +63,44 @@ describe("streaming clients", () => {
     ]);
   });
 
+  it("openai-compatible: forwards abort signals to fetch", async () => {
+    let capturedSignal: AbortSignal | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async (_input?: unknown, init?: unknown) =>
+          await new Promise<Response>((_resolve, reject) => {
+            capturedSignal = (init as RequestInit).signal as AbortSignal;
+            capturedSignal.addEventListener("abort", () => {
+              reject(
+                Object.assign(new Error("aborted"), { name: "AbortError" }),
+              );
+            });
+          }),
+      ),
+    );
+    const client = createChatCompletionsClient({
+      baseUrl: "https://x/v1",
+      apiKey: "k",
+      model: "m",
+    });
+    const controller = new AbortController();
+    const promise = client.stream!(
+      [{ role: "user", content: "hi" }],
+      [],
+      {
+        onTextDelta: () => {},
+      },
+      { signal: controller.signal },
+    );
+
+    await Promise.resolve();
+    controller.abort();
+
+    await expect(promise).rejects.toMatchObject({ name: "AbortError" });
+    expect(capturedSignal?.aborted).toBe(true);
+  });
+
   it("anthropic: accumulates text_delta events", async () => {
     stubSse(
       [
@@ -176,6 +214,37 @@ describe("streaming clients", () => {
     expect(body.max_tokens).toBeGreaterThan(2048);
   });
 
+  it("anthropic: preserves streamed thinking signature and tool_use content blocks", async () => {
+    stubSse(
+      [
+        'event: content_block_start\ndata: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}',
+        'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"hmm"}}',
+        'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"sig-1"}}',
+        'event: content_block_start\ndata: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"tu1","name":"foo","input":{}}}',
+        'event: content_block_delta\ndata: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\\"a\\":1}"}}',
+      ].join("\n\n") + "\n\n",
+    );
+    const client = createAnthropicClient({
+      baseUrl: "https://api.anthropic.com",
+      apiKey: "k",
+      model: "m",
+      thinking: true,
+    });
+    const reply = await client.stream!([{ role: "user", content: "hi" }], [], {
+      onTextDelta: () => {},
+    });
+    expect(reply.reasoning).toBe("hmm");
+    expect(reply.toolCalls).toEqual([
+      { id: "tu1", name: "foo", arguments: '{"a":1}' },
+    ]);
+    expect(reply.providerMetadata).toEqual({
+      contentBlocks: [
+        { type: "thinking", thinking: "hmm", signature: "sig-1" },
+        { type: "tool_use", id: "tu1", name: "foo", input: { a: 1 } },
+      ],
+    });
+  });
+
   it("anthropic: omits thinking param when not enabled", async () => {
     const fetchMock = stubSse(
       'event: message_stop\ndata: {"type":"message_stop"}\n\n',
@@ -223,5 +292,29 @@ describe("streaming clients", () => {
     expect(body.generationConfig.thinkingConfig).toEqual({
       includeThoughts: true,
     });
+  });
+
+  it("gemini: preserves streamed functionCall id and thoughtSignature", async () => {
+    stubSse(
+      [
+        'data: {"candidates":[{"content":{"parts":[{"functionCall":{"id":"fc_stream","name":"foo","args":{"a":1},"thoughtSignature":"sig-stream"}}]}}]}',
+      ].join("\n\n") + "\n\n",
+    );
+    const client = createGeminiClient({
+      baseUrl: "https://gl.example.com",
+      apiKey: "k",
+      model: "m",
+    });
+    const reply = await client.stream!([{ role: "user", content: "hi" }], [], {
+      onTextDelta: () => {},
+    });
+    expect(reply.toolCalls).toEqual([
+      {
+        id: "fc_stream",
+        name: "foo",
+        arguments: '{"a":1}',
+        providerMetadata: { thoughtSignature: "sig-stream" },
+      },
+    ]);
   });
 });

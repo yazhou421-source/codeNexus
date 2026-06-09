@@ -9,7 +9,7 @@
       </div>
       <div v-if="customChatStore.loadingSessions" class="cw-sessions__empty">加载中...</div>
       <div v-else-if="customChatStore.sessions.length === 0" class="cw-sessions__empty">暂无历史会话</div>
-      <div v-else class="cw-session-list">
+      <div v-else class="cw-session-list app-scrollbar">
         <div
           v-for="session in customChatStore.sessions"
           :key="session.id"
@@ -31,7 +31,7 @@
             class="cw-session__delete"
             :disabled="customChatStore.sending && session.id === customChatStore.currentSessionId"
             title="删除会话"
-            @click="deleteSession(session.id)"
+            @click.stop="deleteSession(session.id)"
           >
             ×
           </button>
@@ -46,6 +46,9 @@
           <span class="cw-tag">实验 · 不依赖 codex-app-server</span>
         </div>
         <div class="cw-header__actions">
+          <button type="button" class="cw-btn" @click="runtimeStore.toggleTimelineDebugEnabled()">
+            {{ runtimeStore.timelineDebugEnabled ? "隐藏日志" : "日志" }}
+          </button>
           <button type="button" class="cw-btn" @click="showConfig = !showConfig">
             {{ showConfig ? "返回对话" : "配置 Provider" }}
           </button>
@@ -53,7 +56,7 @@
         </div>
       </header>
 
-      <section v-if="showConfig" class="cw-config">
+      <section v-if="showConfig" class="cw-config app-scrollbar">
         <div class="cw-config__list">
           <h2>Providers</h2>
           <p v-if="providers.length === 0" class="cw-config__hint">还没有配置任何 provider，点下方「新增」开始。</p>
@@ -137,8 +140,8 @@
         </form>
       </section>
 
-      <template v-else>
-        <div ref="listRef" class="cw-messages">
+      <div v-else class="cw-chat-container">
+        <div ref="listRef" class="cw-messages app-scrollbar">
           <div v-if="customChatStore.messages.length === 0" class="cw-empty">
             <p>这是一个直连自定义 provider 的极简对话。发送一条消息开始。</p>
           </div>
@@ -150,7 +153,16 @@
           >
             <div class="cw-msg__role">{{ message.role === "user" ? "你" : message.error ? "错误" : "助手" }}</div>
             <details v-if="message.role === 'assistant' && message.reasoning" class="cw-think">
-              <summary>💭 思考过程</summary>
+              <summary>
+                💭 思考过程
+                <ExecutionWaveText
+                  v-if="message.streaming"
+                  text="(生成中)"
+                  :enabled="true"
+                  :char-delay-sec="0.15"
+                  class="cw-think__status"
+                />
+              </summary>
               <pre class="cw-think__body mono">{{ message.reasoning }}</pre>
             </details>
             <div v-if="message.role === 'assistant' && !message.error && message.parts?.length" class="cw-msg__parts">
@@ -162,7 +174,13 @@
                 />
                 <div v-else class="cw-tool" :class="`cw-tool--${part.tool.status}`">
                   <div class="cw-tool__head">
-                    <span class="cw-tool__icon" aria-hidden="true">{{ toolIcon(part.tool.status) }}</span>
+                    <span
+                      class="cw-tool__icon"
+                      :class="`cw-tool__icon--${part.tool.status}`"
+                      :aria-label="toolStatusLabel(part.tool.status)"
+                      role="img"
+                    ></span>
+                    <span class="cw-tool__status">{{ toolStatusLabel(part.tool.status) }}</span>
                     <span class="cw-tool__name mono">{{ part.tool.name }}</span>
                     <span class="cw-tool__args mono">{{ toolArgsSummary(part.tool.argsText) }}</span>
                   </div>
@@ -178,7 +196,12 @@
               class="cw-msg__body"
               :class="{ 'cw-msg__body--pending': message.streaming && !message.content }"
             >
-              {{ message.content || (message.streaming ? "思考中…" : "") }}
+              <template v-if="message.streaming && !message.content">
+                <ExecutionWaveText text="思考中" :enabled="true" />
+              </template>
+              <template v-else>
+                {{ message.content }}
+              </template>
             </div>
           </div>
         </div>
@@ -194,8 +217,26 @@
               <div class="cw-approval__head">
                 <span class="cw-approval__kind">{{ ap.kind === "command" ? "命令审批" : "文件写改审批" }}</span>
                 <span class="cw-approval__title mono">{{ ap.title }}</span>
+                <button
+                  type="button"
+                  class="cw-approval__toggle"
+                  @click="toggleApprovalDetail(ap.approvalId)"
+                  :aria-label="isApprovalCollapsed(ap.approvalId) ? '展开详情' : '折叠详情'"
+                >
+                  {{ isApprovalCollapsed(ap.approvalId) ? '▶' : '▼' }}
+                </button>
               </div>
-              <pre class="cw-approval__detail mono">{{ ap.detail }}</pre>
+              <template v-if="!isApprovalCollapsed(ap.approvalId)">
+                <template v-if="isDiffContent(ap.detail)">
+                  <UnifiedDiffViewer
+                    :diffText="ap.detail"
+                    :filename="extractFilenameFromDetail(ap.detail)"
+                    :showLineNumbers="true"
+                    class="cw-approval__diff-viewer"
+                  />
+                </template>
+                <pre v-else class="cw-approval__detail mono">{{ ap.detail }}</pre>
+              </template>
               <div class="cw-approval__actions">
                 <button type="button" class="cw-btn" @click="customChatStore.respondApproval(ap.approvalId, false)">
                   拒绝
@@ -240,27 +281,47 @@
               :disabled="!hasActiveProvider || customChatStore.sending"
               @keydown="onComposerKeydown"
             ></textarea>
-            <button type="button" class="cw-btn cw-btn--primary" :disabled="!canSend" @click="submit">发送</button>
+            <button
+              v-if="customChatStore.sending"
+              type="button"
+              class="cw-btn cw-btn--danger"
+              @click="cancelGeneration"
+            >
+              停止
+            </button>
+            <button
+              v-else
+              type="button"
+              class="cw-btn cw-btn--primary"
+              :disabled="!canSend"
+              @click="submit"
+            >
+              发送
+            </button>
           </div>
         </footer>
-      </template>
+      </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { codexDesktop } from "../../api/codexDesktopClient";
 import AgentMarkdownContent from "../ui/AgentMarkdownContent.vue";
+import ExecutionWaveText from "../ui/ExecutionWaveText.vue";
+import UnifiedDiffViewer from "../timeline/cards/UnifiedDiffViewer.vue";
 import { useAgentMarkdownRenderer } from "../../features/timeline/useAgentMarkdownRenderer";
 import { getCachedUserLocalSettings, patchUserLocalSettings } from "../../domain/localSettings";
 import { useAppShellStore } from "../../stores/appShell.store";
 import { useCustomChatStore, type CustomToolActivity } from "../../stores/customChat.store";
+import { useRuntimeStore } from "../../stores/runtime.store";
 import type { TimelineEventItem } from "../../domain/types";
 import type { CustomProviderKind, LocalCustomProvider } from "@codenexus/shared/localSettings";
 
 const appShellStore = useAppShellStore();
 const customChatStore = useCustomChatStore();
+const runtimeStore = useRuntimeStore();
 
 // 复用时间线的 Markdown 渲染层（代码高亮 / mermaid / 复制按钮 + 流式节流），仅适配最小事件对象。
 const { getMarkdownEventHtml } = useAgentMarkdownRenderer({ key: () => "custom" });
@@ -271,6 +332,7 @@ function markdownHtml(id: string, text: string): string {
 const showConfig = ref(false);
 const draft = ref("");
 const listRef = ref<HTMLElement | null>(null);
+let scrollToBottomRafId: number | null = null;
 
 const testing = ref(false);
 const testMessage = ref("");
@@ -278,6 +340,77 @@ const testOk = ref(false);
 
 const providers = ref<LocalCustomProvider[]>([]);
 const activeProviderId = ref<string | null>(null);
+
+// Diff 检测和解析
+function isDiffContent(text: string): boolean {
+  const lines = text.split("\n");
+  const diffLineCount = lines.filter(
+    (line) => line.startsWith("+ ") || line.startsWith("- ") || line.startsWith("  ") || line.startsWith("@@")
+  ).length;
+  // 如果超过 30% 的行是 diff 格式，认为是 diff
+  return lines.length > 0 && diffLineCount / lines.length > 0.3;
+}
+
+function extractFilenameFromDetail(detail: string): string {
+  // Extract filename from approval detail (first line usually has path)
+  const firstLine = detail.split("\n")[0];
+  // Look for common file extensions
+  const match = firstLine.match(/([^\s]+\.(ts|tsx|js|jsx|vue|py|java|go|rs|css|scss|html|json|md|yaml|yml|toml|xml|sh|bash|sql|graphql|php|rb|swift|kt|dart|c|cpp|h|hpp))/i);
+  return match ? match[1] : "file.txt";
+}
+
+function parseDiffLines(text: string): Array<{ text: string; type: string; lineNum: string }> {
+  const lines = text.split("\n");
+  let oldLineNum = 1;
+  let newLineNum = 1;
+
+  return lines.map((line) => {
+    let type = "diff-ctx";
+    let lineNum = "";
+
+    if (line.startsWith("@@")) {
+      // Hunk header - extract line numbers
+      const match = line.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
+      if (match) {
+        oldLineNum = parseInt(match[1], 10);
+        newLineNum = parseInt(match[2], 10);
+      }
+      type = "diff-hunk";
+      lineNum = "";
+    } else if (line.startsWith("+ ")) {
+      type = "diff-add";
+      lineNum = `+${newLineNum}`;
+      newLineNum++;
+    } else if (line.startsWith("- ")) {
+      type = "diff-del";
+      lineNum = `-${oldLineNum}`;
+      oldLineNum++;
+    } else if (line.startsWith(" ")) {
+      type = "diff-ctx";
+      lineNum = ` ${oldLineNum}`;
+      oldLineNum++;
+      newLineNum++;
+    }
+
+    return { text: line, type, lineNum };
+  });
+}
+
+// Approval detail collapse state (track by approvalId)
+const collapsedApprovals = ref<Set<string>>(new Set());
+
+function toggleApprovalDetail(approvalId: string) {
+  if (collapsedApprovals.value.has(approvalId)) {
+    collapsedApprovals.value.delete(approvalId);
+  } else {
+    collapsedApprovals.value.add(approvalId);
+  }
+}
+
+function isApprovalCollapsed(approvalId: string): boolean {
+  return collapsedApprovals.value.has(approvalId);
+}
+
 const workspaceRoot = ref<string | null>(null);
 
 const editing = ref(false);
@@ -343,6 +476,34 @@ const canSave = computed(
 );
 
 const canSend = computed(() => hasActiveProvider.value && !customChatStore.sending && draft.value.trim().length > 0);
+
+const messagesAutoScrollSignature = computed(() =>
+  customChatStore.messages
+    .map((message) => {
+      const partsSignature = (message.parts ?? [])
+        .map((part) => {
+          if (part.type === "text") return `text:${part.id}:${part.text.length}`;
+          return [
+            "tool",
+            part.id,
+            part.tool.callId,
+            part.tool.status,
+            part.tool.resultText?.length ?? 0,
+            part.tool.error?.length ?? 0,
+          ].join(":");
+        })
+        .join("|");
+      return [
+        message.id,
+        message.role,
+        message.streaming ? "streaming" : "idle",
+        message.content.length,
+        message.reasoning?.length ?? 0,
+        partsSignature,
+      ].join(":");
+    })
+    .join("||")
+);
 
 function loadFromSettings() {
   const { customProviders } = getCachedUserLocalSettings().settings;
@@ -495,6 +656,13 @@ function submit() {
   });
 }
 
+async function cancelGeneration() {
+  const success = await customChatStore.cancelCurrentRun();
+  if (!success) {
+    console.warn("取消失败");
+  }
+}
+
 async function selectWorkspace() {
   const dir = await codexDesktop.workspace.select();
   if (!dir) return;
@@ -507,10 +675,10 @@ async function clearWorkspace() {
   await persist();
 }
 
-function toolIcon(status: CustomToolActivity["status"]): string {
-  if (status === "running") return "⏳";
-  if (status === "error") return "✗";
-  return "✓";
+function toolStatusLabel(status: CustomToolActivity["status"]): string {
+  if (status === "running") return "执行中";
+  if (status === "error") return "失败";
+  return "完成";
 }
 
 // 工具入参（JSON 串）的紧凑摘要：优先取 command/path/processId，否则截断原串。
@@ -537,20 +705,36 @@ function onComposerKeydown(event: KeyboardEvent) {
   }
 }
 
-watch(
-  () => [customChatStore.messages.length, customChatStore.sending] as const,
-  () => {
+function scrollMessagesToBottom() {
+  const element = listRef.value;
+  if (!element) return;
+  element.scrollTop = element.scrollHeight;
+}
+
+function scheduleScrollMessagesToBottom() {
+  if (scrollToBottomRafId !== null) return;
+  scrollToBottomRafId = window.requestAnimationFrame(() => {
+    scrollToBottomRafId = null;
     void nextTick(() => {
-      if (listRef.value) listRef.value.scrollTop = listRef.value.scrollHeight;
+      scrollMessagesToBottom();
     });
-  }
-);
+  });
+}
+
+watch(messagesAutoScrollSignature, scheduleScrollMessagesToBottom, { flush: "post" });
 
 onMounted(() => {
   loadFromSettings();
   showConfig.value = !hasActiveProvider.value;
   if (providers.value.length === 0) startNew();
   void customChatStore.initSessions(sessionSnapshot());
+});
+
+onBeforeUnmount(() => {
+  if (scrollToBottomRafId !== null) {
+    window.cancelAnimationFrame(scrollToBottomRafId);
+    scrollToBottomRafId = null;
+  }
 });
 </script>
 
@@ -607,37 +791,60 @@ onMounted(() => {
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px;
+  gap: 6px;
+  padding: 10px 12px;
   overflow: auto;
 }
 
 .cw-session {
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-  border-radius: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 6px;
+  min-height: 62px;
+  padding: 7px 7px 7px 10px;
+  border-radius: 10px;
   border: 1px solid transparent;
+  background: transparent;
+  box-sizing: border-box;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .cw-session.is-active {
   border-color: var(--border-accent);
-  background: var(--bg-accent-soft);
+  background: color-mix(in srgb, var(--bg-accent-soft) 82%, var(--surface-1) 18%);
+  box-shadow: inset 3px 0 0 var(--fg-accent);
+}
+
+.cw-session:hover {
+  border-color: var(--border-accent);
+  background: color-mix(in srgb, var(--bg-accent-soft) 62%, var(--surface-1) 38%);
 }
 
 .cw-session__main {
   min-width: 0;
-  flex: 1;
+  width: 100%;
+  height: auto;
+  min-height: 46px;
   cursor: pointer;
   border: 0;
   background: transparent;
   color: var(--text);
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px;
+  justify-content: center;
+  align-items: stretch;
+  gap: 4px;
+  padding: 0;
   text-align: left;
   font: inherit;
+  line-height: 1.35;
+  appearance: none;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .cw-session__main:disabled {
@@ -646,31 +853,57 @@ onMounted(() => {
 }
 
 .cw-session__title {
+  display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0;
 }
 
 .cw-session__meta,
 .cw-session__provider {
+  display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11px;
+  font-weight: 500;
+  line-height: 15px;
+  letter-spacing: 0;
   color: var(--text-muted);
 }
 
 .cw-session__delete {
-  width: 26px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   border: 0;
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
   color: var(--text-muted);
   font-size: 18px;
   line-height: 1;
+  opacity: 0.72;
+  transition:
+    opacity 140ms ease,
+    color 140ms ease,
+    background 140ms ease;
+}
+
+.cw-session:hover .cw-session__delete,
+.cw-session__delete:focus-visible {
+  opacity: 1;
 }
 
 .cw-session__delete:hover:not(:disabled) {
@@ -739,6 +972,17 @@ onMounted(() => {
 
 .cw-btn--primary:hover:not(:disabled) {
   border-color: var(--border-success-hover);
+}
+
+.cw-btn--danger {
+  color: var(--fg-danger);
+  border-color: var(--border-danger);
+  background: var(--bg-danger-soft);
+}
+
+.cw-btn--danger:hover:not(:disabled) {
+  border-color: var(--border-danger-hover);
+  background: color-mix(in srgb, var(--bg-danger-soft) 80%, var(--fg-danger) 20%);
 }
 
 .cw-config {
@@ -845,11 +1089,20 @@ onMounted(() => {
 .cw-field input,
 .cw-field select {
   padding: 8px 10px;
+  min-height: 40px;
+  box-sizing: border-box;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
   font: inherit;
+  line-height: 20px;
+}
+
+.cw-field select {
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .cw-field input:focus,
@@ -873,10 +1126,18 @@ onMounted(() => {
   color: var(--fg-danger);
 }
 
+.cw-chat-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .cw-messages {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1004,14 +1265,46 @@ onMounted(() => {
   background: var(--surface-2);
   padding: 6px 8px;
   font-size: 12px;
+  position: relative;
+  overflow: hidden;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.cw-tool::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
 }
 
 .cw-tool--running {
   border-color: var(--border-accent);
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--bg-accent-soft) 12%);
+  box-shadow: inset 2px 0 0 var(--fg-accent);
+}
+
+.cw-tool--running::before {
+  background: linear-gradient(90deg, transparent 0%, rgb(from var(--accent) r g b / 0.1) 45%, transparent 82%);
+  opacity: 1;
+  transform: translateX(-110%);
+  animation: cw-tool-scan 1.35s ease-in-out infinite;
+}
+
+.cw-tool--done {
+  border-color: var(--border-success);
+  background: color-mix(in srgb, var(--surface-2) 90%, var(--bg-success-soft) 10%);
+  box-shadow: inset 2px 0 0 var(--fg-success);
+  animation: cw-tool-complete 220ms ease-out;
 }
 
 .cw-tool--error {
   border-color: var(--border-danger);
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--bg-danger-soft) 12%);
+  box-shadow: inset 2px 0 0 var(--fg-danger);
 }
 
 .cw-tool__head {
@@ -1022,7 +1315,81 @@ onMounted(() => {
 }
 
 .cw-tool__icon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  border-radius: 50%;
+  position: relative;
+}
+
+.cw-tool__icon--running {
+  border: 2px solid var(--border-accent);
+  border-top-color: var(--fg-accent);
+  animation: cw-tool-spin 760ms linear infinite;
+}
+
+.cw-tool__icon--done {
+  color: var(--fg-success);
+  background: var(--bg-success-soft);
+  border: 1px solid var(--border-success);
+  animation: cw-tool-pop 220ms ease-out;
+}
+
+.cw-tool__icon--done::before {
+  content: "";
+  width: 7px;
+  height: 4px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-1px) rotate(-45deg);
+}
+
+.cw-tool__icon--error {
+  color: var(--fg-danger);
+  background: var(--bg-danger-soft);
+  border: 1px solid var(--border-danger);
+}
+
+.cw-tool__icon--error::before,
+.cw-tool__icon--error::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.cw-tool__icon--error::before {
+  transform: rotate(45deg);
+}
+
+.cw-tool__icon--error::after {
+  transform: rotate(-45deg);
+}
+
+.cw-tool__status {
+  width: 42px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.cw-tool--running .cw-tool__status {
+  color: var(--fg-accent);
+}
+
+.cw-tool--done .cw-tool__status {
+  color: var(--fg-success);
+}
+
+.cw-tool--error .cw-tool__status {
+  color: var(--fg-danger);
 }
 
 .cw-tool__name {
@@ -1061,6 +1428,56 @@ onMounted(() => {
   background: var(--surface-3);
 }
 
+@keyframes cw-tool-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cw-tool-scan {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  58%,
+  100% {
+    transform: translateX(110%);
+  }
+}
+
+@keyframes cw-tool-pop {
+  0% {
+    transform: scale(0.82);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes cw-tool-complete {
+  0% {
+    box-shadow:
+      inset 2px 0 0 var(--fg-success),
+      0 0 0 0 rgb(from var(--success) r g b / 0.22);
+  }
+
+  100% {
+    box-shadow:
+      inset 2px 0 0 var(--fg-success),
+      0 0 0 7px rgb(from var(--success) r g b / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cw-tool,
+  .cw-tool::before,
+  .cw-tool__icon {
+    animation: none !important;
+    transition: none;
+  }
+}
+
 /* 审批卡片 */
 .cw-approvals {
   display: flex;
@@ -1090,6 +1507,26 @@ onMounted(() => {
   min-width: 0;
 }
 
+.cw-approval__toggle {
+  margin-left: auto;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  transition: color 0.15s ease;
+  user-select: none;
+}
+
+.cw-approval__toggle:hover {
+  color: var(--text);
+}
+
+.cw-approval__toggle:active {
+  transform: scale(0.95);
+}
+
 .cw-approval__kind {
   font-size: 12px;
   font-weight: 600;
@@ -1117,6 +1554,71 @@ onMounted(() => {
   color: var(--text);
   background: var(--surface-2);
   border: 1px solid var(--border);
+}
+
+.cw-approval__diff {
+  margin: 0;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 12px;
+  border-radius: 6px;
+  background: var(--ui-code-bg);
+  border: 1px solid var(--ui-code-border);
+}
+
+.diff-line {
+  display: flex;
+  margin: 0;
+  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Menlo, Consolas, monospace;
+  line-height: 1.5;
+}
+
+.diff-line-num {
+  flex-shrink: 0;
+  width: 50px;
+  padding: 0 8px;
+  text-align: right;
+  color: var(--text-muted);
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
+  user-select: none;
+  font-size: 11px;
+}
+
+.diff-line-content {
+  flex: 1;
+  padding: 0 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cw-approval__diff .diff-add {
+  background-color: var(--bg-success-soft);
+  color: var(--fg-success);
+}
+
+.cw-approval__diff .diff-del {
+  background-color: var(--bg-danger-soft);
+  color: var(--fg-danger);
+}
+
+.cw-approval__diff .diff-ctx {
+  color: var(--text-muted);
+}
+
+.cw-approval__diff .diff-hunk {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.cw-approval__diff-viewer {
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: 6px;
+  background: var(--ui-code-bg);
+  border: 1px solid var(--ui-code-border);
 }
 
 .cw-approval__actions {
@@ -1202,6 +1704,14 @@ onMounted(() => {
   cursor: pointer;
   color: var(--text-muted);
   user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cw-think__status {
+  font-size: 11px;
+  color: var(--fg-accent);
 }
 
 .cw-think__body {

@@ -16,6 +16,11 @@ export type AgentMessage = {
   toolCalls?: ToolCall[];
   /** 工具结果对应的调用 id。仅 role=tool 时出现。 */
   toolCallId?: string;
+  /**
+   * Provider-specific metadata that must survive a conversation round-trip.
+   * This is intentionally opaque to the core loop and interpreted only by adapters.
+   */
+  providerMetadata?: Record<string, unknown>;
 };
 
 /** 模型决定调用某个工具的请求。arguments 是模型生成的 JSON 字符串。 */
@@ -24,6 +29,11 @@ export type ToolCall = {
   name: string;
   /** 原始 JSON 字符串参数（可能是不完整/非法 JSON，执行方负责解析与校验）。 */
   arguments: string;
+  /**
+   * Provider-specific metadata that must survive a tool round-trip.
+   * Adapters may use this to preserve protocol-only fields such as Gemini thought signatures.
+   */
+  providerMetadata?: Record<string, unknown>;
 };
 
 /** 一个可被模型调用的工具：名字、给模型看的描述、JSON Schema 参数、以及真正的执行逻辑。 */
@@ -33,7 +43,16 @@ export type ToolDefinition = {
   /** JSON Schema，描述参数形状，原样转发给模型。 */
   parameters: Record<string, unknown>;
   /** 执行工具。入参是已解析的参数对象，返回喂回模型的文本结果。 */
-  execute: (args: Record<string, unknown>) => Promise<string> | string;
+  execute: (
+    args: Record<string, unknown>,
+    context?: ToolExecutionContext,
+  ) => Promise<string> | string;
+};
+
+/** 工具执行上下文。 */
+export type ToolExecutionContext = {
+  /** 外部取消信号：长耗时工具应监听它并尽快中止。 */
+  signal?: AbortSignal;
 };
 
 /** 模型一轮回复：要么是最终文字，要么是一批工具调用（也可能两者都有）。 */
@@ -42,6 +61,11 @@ export type ModelReply = {
   toolCalls: ToolCall[];
   /** 思考/推理文本（若 provider 返回）。仅用于展示，不回灌进对话历史。 */
   reasoning?: string | null;
+  /**
+   * Provider-specific metadata from the model response.
+   * runAgent stores this on the assistant message so the same adapter can round-trip it.
+   */
+  providerMetadata?: Record<string, unknown>;
 };
 
 /** 流式回调：回吐文本增量与（可选）思考/推理增量。 */
@@ -49,6 +73,12 @@ export type ChatStreamHandlers = {
   onTextDelta: (delta: string) => void;
   /** 思考/推理增量（provider 支持且开启时）；不关心思考的调用方可不传。 */
   onReasoningDelta?: (delta: string) => void;
+};
+
+/** 一次模型请求的运行上下文。 */
+export type ChatRequestOptions = {
+  /** 外部取消信号：provider client 应传给 fetch / stream reader。 */
+  signal?: AbortSignal;
 };
 
 /**
@@ -62,6 +92,7 @@ export type ChatClient = {
   send: (
     messages: AgentMessage[],
     tools: ToolDefinition[],
+    options?: ChatRequestOptions,
   ) => Promise<ModelReply>;
   /**
    * 可选的流式实现：边产出边通过 handlers.onTextDelta 回吐文本增量，最终仍返回完整 ModelReply。
@@ -71,6 +102,7 @@ export type ChatClient = {
     messages: AgentMessage[],
     tools: ToolDefinition[],
     handlers: ChatStreamHandlers,
+    options?: ChatRequestOptions,
   ) => Promise<ModelReply>;
 };
 
@@ -83,6 +115,8 @@ export type RunAgentOptions = {
   maxSteps?: number;
   /** 可选的观测回调，用于 UI 实时展示「模型说了什么、调了什么工具」。 */
   onEvent?: (event: AgentEvent) => void;
+  /** 可选的取消信号：外部可通过 abort() 中止正在运行的 agent。 */
+  signal?: AbortSignal;
 };
 
 /** 内核运行过程中对外广播的事件，供 UI / 日志消费。 */
@@ -93,7 +127,8 @@ export type AgentEvent =
   | { type: "tool_call"; call: ToolCall }
   | { type: "tool_result"; toolCallId: string; name: string; result: string }
   | { type: "tool_error"; toolCallId: string; name: string; error: string }
-  | { type: "max_steps_reached"; steps: number };
+  | { type: "max_steps_reached"; steps: number }
+  | { type: "cancelled"; steps: number };
 
 /** 运行结束后的结果。 */
 export type RunAgentResult = {
@@ -105,4 +140,6 @@ export type RunAgentResult = {
   steps: number;
   /** 是否因为达到 maxSteps 而被强制中止。 */
   stoppedByMaxSteps: boolean;
+  /** 是否因为外部 AbortSignal 而被取消。 */
+  cancelled: boolean;
 };

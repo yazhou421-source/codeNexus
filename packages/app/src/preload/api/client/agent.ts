@@ -14,6 +14,7 @@ export function createAgentApi(ipcRenderer: IpcRenderer): CodexDesktopApi["agent
   return {
     run: (args) => ipcRenderer.invoke(IPC_AGENT_CHANNELS.agentRun, args),
     approve: (args) => ipcRenderer.invoke(IPC_AGENT_CHANNELS.agentApprove, args),
+    cancel: (args) => ipcRenderer.invoke(IPC_AGENT_CHANNELS.agentCancel, args),
     listSessions: () => ipcRenderer.invoke(IPC_AGENT_CHANNELS.agentSessionList),
     getSession: (args) => ipcRenderer.invoke(IPC_AGENT_CHANNELS.agentSessionGet, args),
     createSession: (args) => ipcRenderer.invoke(IPC_AGENT_CHANNELS.agentSessionCreate, args),

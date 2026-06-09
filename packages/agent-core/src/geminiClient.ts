@@ -1,6 +1,7 @@
 import type {
   AgentMessage,
   ChatClient,
+  ChatRequestOptions,
   ChatStreamHandlers,
   ModelReply,
   ToolCall,
@@ -16,7 +17,8 @@ import { postJson } from "./http";
  * - 端点是 `.../v1beta/models/{model}:generateContent`，鉴权用 `x-goog-api-key` 头
  * - 角色用 user / model（assistant→model）；system 走顶层 `systemInstruction`
  * - 消息是 `contents[].parts[]`；工具调用是 `functionCall` part，结果回传为 `functionResponse` part
- * - functionResponse 用函数名（非 id）关联，这里据 assistant 的 functionCall 建 id→name 映射
+ * - Gemini 3 的 functionCall / functionResponse 可带 id；这里保留该 id 以关联工具结果
+ * - thoughtSignature 属于 Gemini 多轮协议必需字段；收到后必须在后续 history 原样带回
  *
  * send 走 generateContent、stream 走 streamGenerateContent?alt=sse（SSE）皆已实现，内核优先走 stream；
  * 思考按 options.thinking 开启（thinkingConfig.includeThoughts，把 thought parts 当推理解析）。
@@ -37,6 +39,9 @@ export type GeminiClientOptions = {
 
 type Part = Record<string, unknown>;
 type WireContent = { role: "user" | "model"; parts: Part[] };
+type GeminiToolMetadata = {
+  thoughtSignature?: unknown;
+};
 
 function resolveEndpoint(
   baseUrl: string,
@@ -77,32 +82,34 @@ function toFunctionResponseObject(
   return { result: text };
 }
 
-function buildToolNameById(messages: AgentMessage[]): Map<string, string> {
-  const map = new Map<string, string>();
+function buildToolCallById(messages: AgentMessage[]): Map<string, ToolCall> {
+  const map = new Map<string, ToolCall>();
   for (const message of messages) {
-    for (const call of message.toolCalls ?? []) map.set(call.id, call.name);
+    for (const call of message.toolCalls ?? []) map.set(call.id, call);
   }
   return map;
 }
 
 function toWireContent(
   message: AgentMessage,
-  toolNameById: Map<string, string>,
+  toolCallById: Map<string, ToolCall>,
 ): WireContent | null {
   if (message.role === "system") return null;
   if (message.role === "tool") {
-    const name =
-      (message.toolCallId && toolNameById.get(message.toolCallId)) ||
-      message.toolCallId ||
-      "tool";
+    const call = message.toolCallId
+      ? toolCallById.get(message.toolCallId)
+      : undefined;
+    const name = call?.name || message.toolCallId || "tool";
+    const response: Record<string, unknown> = {
+      name,
+      response: toFunctionResponseObject(message.content),
+    };
+    if (message.toolCallId) response.id = message.toolCallId;
     return {
       role: "user",
       parts: [
         {
-          functionResponse: {
-            name,
-            response: toFunctionResponseObject(message.content),
-          },
+          functionResponse: response,
         },
       ],
     };
@@ -111,12 +118,16 @@ function toWireContent(
     const parts: Part[] = [];
     if (message.content) parts.push({ text: message.content });
     for (const call of message.toolCalls ?? []) {
-      parts.push({
-        functionCall: {
-          name: call.name,
-          args: safeParseObject(call.arguments),
-        },
-      });
+      const metadata = call.providerMetadata as GeminiToolMetadata | undefined;
+      const functionCall: Record<string, unknown> = {
+        name: call.name,
+        args: safeParseObject(call.arguments),
+      };
+      if (call.id) functionCall.id = call.id;
+      if (metadata?.thoughtSignature !== undefined) {
+        functionCall.thoughtSignature = metadata.thoughtSignature;
+      }
+      parts.push({ functionCall });
     }
     if (parts.length === 0) parts.push({ text: "" });
     return { role: "model", parts };
@@ -144,10 +155,20 @@ function extractToolCalls(parts: unknown[]): ToolCall[] {
     const record = fnCall as Record<string, unknown>;
     const name = typeof record.name === "string" ? record.name : "";
     if (!name) continue;
+    const metadata: GeminiToolMetadata = {};
+    if (record.thoughtSignature !== undefined) {
+      metadata.thoughtSignature = record.thoughtSignature;
+    }
     calls.push({
-      id: `call_${calls.length}`,
+      id:
+        typeof record.id === "string" && record.id
+          ? record.id
+          : `call_${calls.length}`,
       name,
       arguments: JSON.stringify(record.args ?? {}),
+      ...(Object.keys(metadata).length > 0
+        ? { providerMetadata: metadata }
+        : {}),
     });
   }
   return calls;
@@ -167,10 +188,10 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
       .map((message) => message.content ?? "")
       .filter(Boolean)
       .join("\n\n");
-    const toolNameById = buildToolNameById(messages);
+    const toolCallById = buildToolCallById(messages);
     const contents = coalesce(
       messages
-        .map((message) => toWireContent(message, toolNameById))
+        .map((message) => toWireContent(message, toolCallById))
         .filter((content): content is WireContent => content !== null),
     );
 
@@ -207,6 +228,7 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
     async send(
       messages: AgentMessage[],
       tools: ToolDefinition[],
+      request?: ChatRequestOptions,
     ): Promise<ModelReply> {
       const body = buildBody(messages, tools);
 
@@ -215,6 +237,7 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
         body,
         timeoutMs,
         errorLabel: "gemini generateContent",
+        signal: request?.signal,
       });
 
       const json = (await response.json()) as Record<string, unknown>;
@@ -250,6 +273,7 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
       messages: AgentMessage[],
       tools: ToolDefinition[],
       handlers: ChatStreamHandlers,
+      request?: ChatRequestOptions,
     ): Promise<ModelReply> {
       const body = buildBody(messages, tools);
 
@@ -259,6 +283,7 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
         timeoutMs,
         errorLabel: "gemini streamGenerateContent",
         stream: true,
+        signal: request?.signal,
       });
 
       let content = "";
@@ -302,10 +327,20 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
             typeof fnCall.name === "string" &&
             fnCall.name
           ) {
+            const metadata: GeminiToolMetadata = {};
+            if (fnCall.thoughtSignature !== undefined) {
+              metadata.thoughtSignature = fnCall.thoughtSignature;
+            }
             calls.push({
-              id: `call_${calls.length}`,
+              id:
+                typeof fnCall.id === "string" && fnCall.id
+                  ? fnCall.id
+                  : `call_${calls.length}`,
               name: fnCall.name,
               arguments: JSON.stringify(fnCall.args ?? {}),
+              ...(Object.keys(metadata).length > 0
+                ? { providerMetadata: metadata }
+                : {}),
             });
           }
         }
