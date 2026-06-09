@@ -13,6 +13,7 @@ export type {
   ModelReply,
   ChatClient,
   ChatStreamHandlers,
+  ToolCallDelta,
   ChatRequestOptions,
   RunAgentOptions,
   RunAgentResult,

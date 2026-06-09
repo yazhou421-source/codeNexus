@@ -94,6 +94,15 @@ export class CustomAgentService {
                   emit({ type: "delta", runId, text: event.delta });
                 } else if (event.type === "assistant_reasoning_delta") {
                   emit({ type: "reasoning", runId, text: event.delta });
+                } else if (event.type === "tool_call_delta") {
+                  emit({
+                    type: "tool_call_delta",
+                    runId,
+                    index: event.index,
+                    callId: event.callId,
+                    name: event.name,
+                    argsTextDelta: event.argsTextDelta,
+                  });
                 } else if (event.type === "tool_call") {
                   emit({
                     type: "tool_call",

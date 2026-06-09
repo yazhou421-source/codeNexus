@@ -148,6 +148,15 @@ function summarizeStreamEventForDebug(event: CustomAgentStreamEvent): Record<str
         runId: event.runId,
         text: summarizeDebugText(event.text),
       };
+    case "tool_call_delta":
+      return {
+        type: event.type,
+        runId: event.runId,
+        index: event.index,
+        callId: event.callId,
+        name: event.name,
+        argsTextDelta: summarizeDebugText(event.argsTextDelta),
+      };
     case "tool_call":
       return {
         type: event.type,
@@ -456,6 +465,7 @@ export const useCustomChatStore = defineStore("customChat", {
         const streamMethodByType: Record<CustomAgentStreamEvent["type"], string> = {
           delta: "custom/stream/delta",
           reasoning: "custom/stream/reasoning",
+          tool_call_delta: "custom/tool/call_delta",
           tool_call: "custom/tool/call",
           tool_result: "custom/tool/result",
           tool_error: "custom/tool/error",
@@ -473,6 +483,9 @@ export const useCustomChatStore = defineStore("customChat", {
             break;
           case "reasoning":
             this.applyReasoning(event.runId, event.text);
+            break;
+          case "tool_call_delta":
+            this.applyToolCallDelta(event.runId, event.callId, event.name, event.argsTextDelta);
             break;
           case "tool_call":
             this.startTool(event.runId, event.callId, event.name, event.argsText);
@@ -521,10 +534,42 @@ export const useCustomChatStore = defineStore("customChat", {
         this.schedulePersistCurrentSession();
       }
     },
+    // 流式期间按 callId 累积工具调用参数：首个增量创建 running tool part，
+    // 后续增量把 argsText 片段拼接上去。最终的 tool_call 事件由 startTool 覆盖为权威值。
+    applyToolCallDelta(runId: string, callId: string | undefined, name: string | undefined, argsTextDelta: string) {
+      if (!callId) return;
+      const message = this.findAssistantByRun(runId);
+      if (!message) return;
+      if (!message.parts) message.parts = [];
+      const existing = message.parts.find(
+        (item): item is CustomChatToolPart => item.type === "tool" && item.tool.callId === callId
+      );
+      if (existing) {
+        existing.tool.argsText += argsTextDelta;
+        if (name && !existing.tool.name) existing.tool.name = name;
+      } else {
+        message.parts.push({
+          id: `tool-${callId}`,
+          type: "tool",
+          tool: { callId, name: name ?? "", argsText: argsTextDelta, status: "running" },
+        });
+      }
+      this.schedulePersistCurrentSession();
+    },
     startTool(runId: string, callId: string, name: string, argsText: string) {
       const message = this.findAssistantByRun(runId);
       if (!message) return;
       if (!message.parts) message.parts = [];
+      // tool_call_delta 可能已为这次调用建好 part：用权威值覆盖，不重复 push。
+      const existing = message.parts.find(
+        (item): item is CustomChatToolPart => item.type === "tool" && item.tool.callId === callId
+      );
+      if (existing) {
+        existing.tool.name = name;
+        existing.tool.argsText = argsText;
+        this.schedulePersistCurrentSession();
+        return;
+      }
       message.parts.push({
         id: `tool-${callId}`,
         type: "tool",
@@ -666,7 +711,11 @@ export const useCustomChatStore = defineStore("customChat", {
           }
         }
         this.appendDebugEvent({
-          method: result.ok ? (result.cancelled ? "custom/run/cancelled" : "custom/run/completed") : "custom/run/failed",
+          method: result.ok
+            ? result.cancelled
+              ? "custom/run/cancelled"
+              : "custom/run/completed"
+            : "custom/run/failed",
           runId,
           sessionId: runSessionId,
           payload: {

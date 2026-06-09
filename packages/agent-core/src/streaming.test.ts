@@ -63,6 +63,30 @@ describe("streaming clients", () => {
     ]);
   });
 
+  it("openai-compatible: fires onToolCallDelta for each streamed arg fragment", async () => {
+    stubSse(
+      [
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"t1","function":{"name":"foo","arguments":"{\\"a\\":"}}]}}]}',
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"1}"}}]}}]}',
+        "data: [DONE]",
+      ].join("\n\n") + "\n\n",
+    );
+    const client = createChatCompletionsClient({
+      baseUrl: "https://x/v1",
+      apiKey: "k",
+      model: "m",
+    });
+    const toolDeltas: unknown[] = [];
+    await client.stream!([{ role: "user", content: "hi" }], [], {
+      onTextDelta: () => {},
+      onToolCallDelta: (d) => toolDeltas.push(d),
+    });
+    expect(toolDeltas).toEqual([
+      { index: 0, callId: "t1", name: "foo", argsTextDelta: '{"a":' },
+      { index: 0, callId: "t1", name: "foo", argsTextDelta: "1}" },
+    ]);
+  });
+
   it("openai-compatible: forwards abort signals to fetch", async () => {
     let capturedSignal: AbortSignal | undefined;
     vi.stubGlobal(
@@ -139,6 +163,30 @@ describe("streaming clients", () => {
     });
     expect(reply.toolCalls).toEqual([
       { id: "tu1", name: "foo", arguments: '{"a":1}' },
+    ]);
+  });
+
+  it("anthropic: fires onToolCallDelta with the tool_use id/name for each input_json fragment", async () => {
+    stubSse(
+      [
+        'event: content_block_start\ndata: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"tu1","name":"foo"}}',
+        'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\\"a\\":"}}',
+        'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"1}"}}',
+      ].join("\n\n") + "\n\n",
+    );
+    const client = createAnthropicClient({
+      baseUrl: "https://api.anthropic.com",
+      apiKey: "k",
+      model: "m",
+    });
+    const toolDeltas: unknown[] = [];
+    await client.stream!([{ role: "user", content: "hi" }], [], {
+      onTextDelta: () => {},
+      onToolCallDelta: (d) => toolDeltas.push(d),
+    });
+    expect(toolDeltas).toEqual([
+      { index: 0, callId: "tu1", name: "foo", argsTextDelta: '{"a":' },
+      { index: 0, callId: "tu1", name: "foo", argsTextDelta: "1}" },
     ]);
   });
 

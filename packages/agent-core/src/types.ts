@@ -68,11 +68,25 @@ export type ModelReply = {
   providerMetadata?: Record<string, unknown>;
 };
 
-/** 流式回调：回吐文本增量与（可选）思考/推理增量。 */
+/** 工具调用参数的流式增量：同一调用的多次增量按 index 聚合。 */
+export type ToolCallDelta = {
+  /** provider 内按 index 聚合工具调用；同一调用的多次增量 index 相同。 */
+  index: number;
+  /** 工具调用 id（provider 已确定时带上，便于与最终 tool_call 关联）。 */
+  callId?: string;
+  /** 工具名（首个增量里通常已确定）。 */
+  name?: string;
+  /** 参数 JSON 字符串的增量片段（按 index 拼接得到完整 arguments）。 */
+  argsTextDelta: string;
+};
+
+/** 流式回调：回吐文本增量、（可选）思考/推理增量、（可选）工具调用参数增量。 */
 export type ChatStreamHandlers = {
   onTextDelta: (delta: string) => void;
   /** 思考/推理增量（provider 支持且开启时）；不关心思考的调用方可不传。 */
   onReasoningDelta?: (delta: string) => void;
+  /** 工具调用参数增量（provider 支持时）；不关心的调用方可不传。 */
+  onToolCallDelta?: (delta: ToolCallDelta) => void;
 };
 
 /** 一次模型请求的运行上下文。 */
@@ -124,6 +138,13 @@ export type AgentEvent =
   | { type: "assistant_message"; content: string }
   | { type: "assistant_message_delta"; delta: string }
   | { type: "assistant_reasoning_delta"; delta: string }
+  | {
+      type: "tool_call_delta";
+      index: number;
+      callId?: string;
+      name?: string;
+      argsTextDelta: string;
+    }
   | { type: "tool_call"; call: ToolCall }
   | { type: "tool_result"; toolCallId: string; name: string; result: string }
   | { type: "tool_error"; toolCallId: string; name: string; error: string }

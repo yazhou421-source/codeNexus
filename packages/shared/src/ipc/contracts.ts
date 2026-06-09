@@ -844,11 +844,20 @@ export type CustomAgentRunResult =
 // 完成/失败通过 run() 的 Promise 返回，不单独发事件。
 // - delta：助手文本增量
 // - reasoning：助手思考/推理增量（provider 开启 thinking 时）
+// - tool_call_delta：工具调用参数的流式增量（provider 支持时，按 callId/index 拼接）
 // - tool_call/tool_result/tool_error：工具活动（接 agent-core 内核的同名 AgentEvent）
 // - approval_request：写改/命令需用户审批，renderer 经 agent:approve 回传决策（见 CustomAgentApproveArgs）
 export type CustomAgentStreamEvent =
   | { type: "delta"; runId: string; text: string }
   | { type: "reasoning"; runId: string; text: string }
+  | {
+      type: "tool_call_delta";
+      runId: string;
+      index: number;
+      callId?: string;
+      name?: string;
+      argsTextDelta: string;
+    }
   | {
       type: "tool_call";
       runId: string;

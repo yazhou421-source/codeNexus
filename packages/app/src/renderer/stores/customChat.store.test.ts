@@ -145,6 +145,48 @@ describe("customChat.store ordered parts", () => {
     });
   });
 
+  it("accumulates tool_call_delta fragments into one running tool part, then startTool overwrites authoritative args", async () => {
+    const store = await loadStoreWithAgent();
+    store.messages.push({ id: "assistant-1", role: "assistant", content: "", runId: "run-1", streaming: true });
+
+    // 流式期间：参数分多片到达，按 callId 累积到同一个 running tool part。
+    store.applyToolCallDelta("run-1", "tool-1", "write_file", '{"path":"a.txt",');
+    store.applyToolCallDelta("run-1", "tool-1", undefined, '"content":"hi"}');
+
+    const tools = store.messages[0].parts?.filter((part) => part.type === "tool").map((part) => part.tool);
+    expect(tools).toHaveLength(1);
+    expect(tools?.[0]).toMatchObject({
+      callId: "tool-1",
+      name: "write_file",
+      argsText: '{"path":"a.txt","content":"hi"}',
+      status: "running",
+    });
+
+    // 流结束的权威 tool_call：覆盖参数，不重复 push part。
+    store.startTool("run-1", "tool-1", "write_file", '{"path":"a.txt","content":"hi"}');
+    const toolsAfter = store.messages[0].parts?.filter((part) => part.type === "tool");
+    expect(toolsAfter).toHaveLength(1);
+    expect(toolsAfter?.[0]).toMatchObject({
+      type: "tool",
+      tool: { callId: "tool-1", argsText: '{"path":"a.txt","content":"hi"}', status: "running" },
+    });
+
+    // finishTool 仍按 callId 命中同一个 part。
+    store.finishTool("run-1", "tool-1", "done", { resultText: "wrote" });
+    expect(store.messages[0].parts?.[0]).toMatchObject({
+      type: "tool",
+      tool: { callId: "tool-1", status: "done", resultText: "wrote" },
+    });
+  });
+
+  it("ignores tool_call_delta without a callId", async () => {
+    const store = await loadStoreWithAgent();
+    store.messages.push({ id: "assistant-1", role: "assistant", content: "", runId: "run-1", streaming: true });
+
+    store.applyToolCallDelta("run-1", undefined, "foo", "{}");
+    expect(store.messages[0].parts ?? []).toEqual([]);
+  });
+
   it("does not let finalText overwrite already streamed parts", async () => {
     let listener: ((event: CustomAgentStreamEvent) => void) | null = null;
     const store = await loadStoreWithAgent({

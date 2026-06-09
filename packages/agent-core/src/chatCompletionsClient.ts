@@ -213,9 +213,19 @@ export function createChatCompletionsClient(
           if (typeof record.id === "string" && record.id) state.id = record.id;
           const fn = record.function as Record<string, unknown> | undefined;
           if (typeof fn?.name === "string" && fn.name) state.name = fn.name;
-          if (typeof fn?.arguments === "string")
-            state.arguments += fn.arguments;
+          const argsFragment =
+            typeof fn?.arguments === "string" ? fn.arguments : "";
+          if (argsFragment) state.arguments += argsFragment;
           toolAcc.set(index, state);
+          // 回吐参数增量：name 在首个片段里通常已确定，后续片段只带增量。
+          if (argsFragment || (typeof fn?.name === "string" && fn.name)) {
+            handlers.onToolCallDelta?.({
+              index,
+              callId: state.id || undefined,
+              name: state.name || undefined,
+              argsTextDelta: argsFragment,
+            });
+          }
         }
       }
 

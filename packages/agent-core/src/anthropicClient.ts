@@ -340,6 +340,20 @@ export function createAnthropicClient(
             if (block) {
               block.__json = `${typeof block.__json === "string" ? block.__json : ""}${delta.partial_json}`;
             }
+            if (delta.partial_json) {
+              handlers.onToolCallDelta?.({
+                index,
+                callId:
+                  typeof block?.id === "string" && block.id
+                    ? block.id
+                    : undefined,
+                name:
+                  typeof block?.name === "string" && block.name
+                    ? block.name
+                    : undefined,
+                argsTextDelta: delta.partial_json,
+              });
+            }
           }
         }
       }

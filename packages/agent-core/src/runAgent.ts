@@ -146,6 +146,14 @@ export async function runAgent(
                 onEvent?.({ type: "assistant_message_delta", delta }),
               onReasoningDelta: (delta) =>
                 onEvent?.({ type: "assistant_reasoning_delta", delta }),
+              onToolCallDelta: (delta) =>
+                onEvent?.({
+                  type: "tool_call_delta",
+                  index: delta.index,
+                  callId: delta.callId,
+                  name: delta.name,
+                  argsTextDelta: delta.argsTextDelta,
+                }),
             },
             { signal },
           )
