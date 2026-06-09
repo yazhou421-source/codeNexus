@@ -886,9 +886,101 @@ export type CustomAgentApproveArgs = {
   approved: boolean;
 };
 
+export type CustomSessionToolActivity = {
+  callId: string;
+  name: string;
+  argsText: string;
+  status: "running" | "done" | "error";
+  resultText?: string;
+  error?: string;
+};
+
+export type CustomSessionTextPart = {
+  id: string;
+  type: "text";
+  text: string;
+};
+
+export type CustomSessionToolPart = {
+  id: string;
+  type: "tool";
+  tool: CustomSessionToolActivity;
+};
+
+export type CustomSessionPart = CustomSessionTextPart | CustomSessionToolPart;
+
+export type CustomSessionMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: number;
+  error?: boolean;
+  reasoning?: string;
+  parts?: CustomSessionPart[];
+};
+
+export type CustomSession = {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  providerId: string | null;
+  providerLabel: string | null;
+  workspaceRoot: string | null;
+  messages: CustomSessionMessage[];
+};
+
+export type CustomSessionCreateArgs = Partial<
+  Pick<
+    CustomSession,
+    "title" | "providerId" | "providerLabel" | "workspaceRoot" | "messages"
+  >
+>;
+
+export type CustomSessionListResult = {
+  items: CustomSession[];
+};
+
+export type CustomSessionGetArgs = {
+  id: string;
+};
+
+export type CustomSessionGetResult = {
+  item: CustomSession | null;
+};
+
+export type CustomSessionUpsertArgs = {
+  session: CustomSession;
+};
+
+export type CustomSessionMutationResult = {
+  item: CustomSession;
+  items: CustomSession[];
+};
+
+export type CustomSessionDeleteArgs = {
+  id: string;
+};
+
+export type CustomSessionDeleteResult = {
+  deleted: boolean;
+  items: CustomSession[];
+};
+
 export type CodexDesktopAgentApi = {
   run(args: CustomAgentRunArgs): Promise<CustomAgentRunResult>;
   approve(args: CustomAgentApproveArgs): Promise<{ ok: boolean }>;
+  listSessions(): Promise<CustomSessionListResult>;
+  getSession(args: CustomSessionGetArgs): Promise<CustomSessionGetResult>;
+  createSession(
+    args?: CustomSessionCreateArgs,
+  ): Promise<CustomSessionMutationResult>;
+  upsertSession(
+    args: CustomSessionUpsertArgs,
+  ): Promise<CustomSessionMutationResult>;
+  deleteSession(
+    args: CustomSessionDeleteArgs,
+  ): Promise<CustomSessionDeleteResult>;
   onEvent(cb: (payload: CustomAgentStreamEvent) => void): () => void;
 };
 

@@ -48,7 +48,7 @@ export type LocalCustomProvider = {
 export type LocalCustomProvidersSettings = {
   activeProviderId: string | null;
   providers: LocalCustomProvider[];
-  /** 自定义运行时的工作区根目录（沙箱）。为 null 时不挂文件/命令工具，仅纯聊天。 */
+  /** 自定义运行时的工作区根目录（沙箱）。为 null 时使用系统工具路由，不绑定用户工作区。 */
   workspaceRoot: string | null;
 };
 

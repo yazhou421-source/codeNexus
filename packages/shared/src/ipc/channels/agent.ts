@@ -7,4 +7,10 @@ export const IPC_AGENT_CHANNELS = {
   agentRun: "agent:run",
   // 回传一次工具/命令审批决策，解开主进程里挂起的 requireApproval/requireConfirmation。
   agentApprove: "agent:approve",
+  // Custom 模式自己的会话历史，不复用 Codex app-server 的 history/session 文件。
+  agentSessionList: "agent:session:list",
+  agentSessionGet: "agent:session:get",
+  agentSessionCreate: "agent:session:create",
+  agentSessionUpsert: "agent:session:upsert",
+  agentSessionDelete: "agent:session:delete",
 } as const;

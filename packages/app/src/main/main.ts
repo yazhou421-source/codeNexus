@@ -31,6 +31,7 @@ import { UpdateService } from "./services/UpdateService";
 import { WorkspacePatchService } from "./services/WorkspacePatchService";
 import { DeepSeekResponsesProxyService } from "./services/DeepSeekResponsesProxyService";
 import { CustomAgentService } from "./services/CustomAgentService";
+import { CustomSessionService } from "./services/CustomSessionService";
 import { createMainWindow } from "./windows/mainWindow";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
@@ -203,6 +204,7 @@ app
     const historyService = new HistoryService(historyStore);
     const localSettingsService = new LocalSettingsService(join(app.getPath("userData"), "user-settings.json"));
     const customAgentService = new CustomAgentService(localSettingsService);
+    const customSessionService = new CustomSessionService(join(app.getPath("userData"), "custom-agent-sessions.json"));
     const codexProfileService = new CodexProfileService(join(app.getPath("userData"), "codex-profiles.json"));
     const codexSkillRootsService = new CodexSkillRootsService(join(app.getPath("userData"), "codex-skill-roots.json"));
     const codexConfigSwitcherService = new CodexConfigSwitcherService(
@@ -296,6 +298,7 @@ app
       updateService,
       deepSeekResponsesProxyService,
       customAgentService,
+      customSessionService,
       sendAgentEvent: (payload) => sendToRenderer(IPC_EVENT_CHANNELS.agentEvent, payload),
       cacheRegistryService,
     });

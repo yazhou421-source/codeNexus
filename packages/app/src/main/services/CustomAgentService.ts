@@ -28,8 +28,8 @@ import { logger } from "../utils/logger";
  * - gemini → createGeminiClient（generateContent）
  *
  * 流式：runAgent 优先走 ChatClient.stream，经 emit 把文本增量 / 工具活动回吐到渲染层。
- * 工具：仅当 localSettings 配了 workspaceRoot 时，挂上 agent-core 的文件 + 命令工具（沙箱在该目录）；
- *   否则纯聊天。写改文件 / 执行命令前经 requireApproval/requireConfirmation 弹审批——
+ * 工具：始终挂上 agent-core 的文件 + 命令工具；配了 workspaceRoot 时沙箱在工作区，
+ *   未选择工作区时走系统工具根。写改文件 / 执行命令前经 requireApproval/requireConfirmation 弹审批——
  *   emit 一条 approval_request 并挂起 Promise，等 renderer 经 resolveApproval 回传决策再继续。
  * provider 连接信息（含 apiKey）从 LocalSettingsService 读取，apiKey 在该服务内已解密为明文。
  */
@@ -72,8 +72,8 @@ export class CustomAgentService {
             ? createGeminiClient(options)
             : createChatCompletionsClient(options);
 
-      const workspaceRoot = await this.resolveWorkspaceRoot();
-      const tools = this.buildTools(workspaceRoot, runId, registry, emit);
+      const toolRoot = await this.resolveToolRoot();
+      const tools = this.buildTools(toolRoot, runId, registry, emit);
 
       const result = await runAgent({
         client,
@@ -134,16 +134,10 @@ export class CustomAgentService {
   }
 
   /**
-   * 按 workspaceRoot 构建工具集；没有 workspace 则返回空集（纯聊天）。
+   * 按工具根构建工具集；未选择 workspace 时也使用系统工具根，保持工具可用。
    * 写改文件 / 执行命令前调用 ask() 走审批回环；没有 runId/emit 无法回环时安全兜底为拒绝。
    */
-  private buildTools(
-    workspaceRoot: string | null,
-    runId: string,
-    registry: ProcessRegistry,
-    emit?: EmitFn
-  ): ToolDefinition[] {
-    if (!workspaceRoot) return [];
+  private buildTools(toolRoot: string, runId: string, registry: ProcessRegistry, emit?: EmitFn): ToolDefinition[] {
     const canApprove = Boolean(emit && runId);
     let approvalSeq = 0;
     const ask = (kind: "command" | "file", title: string, detail: string): Promise<boolean> => {
@@ -156,11 +150,11 @@ export class CustomAgentService {
       });
     };
 
-    const fileTools = createFileTools(workspaceRoot, {
+    const fileTools = createFileTools(toolRoot, {
       requireApproval: (op) => ask("file", `${op.tool} · ${op.path}`, op.preview),
     });
     const commandTools = createCommandTools({
-      cwd: workspaceRoot,
+      cwd: toolRoot,
       registry,
       requireConfirmation: (command) => ask("command", "执行命令", command),
     });
@@ -178,10 +172,10 @@ export class CustomAgentService {
     }
   }
 
-  private async resolveWorkspaceRoot(): Promise<string | null> {
+  private async resolveToolRoot(): Promise<string> {
     const { settings } = await this.localSettingsService.read();
     const root = String(settings.customProviders.workspaceRoot ?? "").trim();
-    return root || null;
+    return root || process.cwd();
   }
 
   private async resolveProvider(providerId?: string): Promise<LocalCustomProvider | null> {

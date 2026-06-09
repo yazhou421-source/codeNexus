@@ -16,6 +16,7 @@ import type { ThreadTitleOverrideService } from "../../services/ThreadTitleOverr
 import type { UpdateService } from "../../services/UpdateService";
 import type { DeepSeekResponsesProxyService } from "../../services/DeepSeekResponsesProxyService";
 import type { CustomAgentService } from "../../services/CustomAgentService";
+import type { CustomSessionService } from "../../services/CustomSessionService";
 import { WorkspacePatchService } from "../../services/WorkspacePatchService";
 import { registerAppHandlers } from "./app.handlers";
 import { registerAgentHandlers } from "./agent.handlers";
@@ -52,6 +53,7 @@ export type IpcHandlersDeps = {
   updateService: UpdateService;
   deepSeekResponsesProxyService: DeepSeekResponsesProxyService;
   customAgentService: CustomAgentService;
+  customSessionService: CustomSessionService;
   sendAgentEvent: (payload: CustomAgentStreamEvent) => void;
   cacheRegistryService: CacheRegistryService;
 };
@@ -77,7 +79,11 @@ export function registerAllHandlers(deps: IpcHandlersDeps) {
   });
   registerWindowHandlers({ getMainWindow: deps.getMainWindow });
   registerCodexHandlers({ serverManager: deps.serverManager, sendEvent: deps.sendCodexEvent });
-  registerAgentHandlers({ customAgentService: deps.customAgentService, sendEvent: deps.sendAgentEvent });
+  registerAgentHandlers({
+    customAgentService: deps.customAgentService,
+    customSessionService: deps.customSessionService,
+    sendEvent: deps.sendAgentEvent,
+  });
   registerCacheHandlers({ cacheRegistryService: deps.cacheRegistryService });
   registerHistoryHandlers({
     historyService: deps.historyService,
