@@ -10,6 +10,8 @@ import { defineStore } from "pinia";
 import { codexDesktop } from "../api/codexDesktopClient";
 import { useDebugTimelineStore } from "./debugTimeline.store";
 import { safeJsonStringify } from "../utils/safeJson";
+// 仅引纯函数（import type + 字符估算，无 node-only 依赖），与后端裁剪同口径。
+import { estimateHistoryTokens } from "@codenexus/agent-core/contextWindow";
 import type { TimelineEventLevel } from "../domain/types";
 import type { CustomAgentStreamEvent, CustomSession, CustomSessionMessage } from "@codenexus/shared/ipc/contracts";
 
@@ -294,6 +296,16 @@ export const useCustomChatStore = defineStore("customChat", {
     sending: false,
     currentRunId: "" as string,
   }),
+  getters: {
+    // 与 send() 发往模型的历史同口径：剔除本地错误占位，按 role/content 估算 token 总数。
+    // 注意只统计 content（与后端裁剪的估算一致——后端也只见到 role/content，工具活动在内核轮次里另算）。
+    estimatedContextTokens(state): number {
+      const history = state.messages
+        .filter((item) => !item.error)
+        .map((item) => ({ role: item.role, content: item.content }));
+      return estimateHistoryTokens(history);
+    },
+  },
   actions: {
     reset() {
       if (persistTimer) {

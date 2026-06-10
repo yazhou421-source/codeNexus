@@ -26,6 +26,8 @@ export type ChatCompletionsClientOptions = {
   baseUrl: string;
   apiKey: string;
   model: string;
+  /** max_tokens（最大输出 tokens）；未设或 ≤0 时默认 65536。 */
+  maxTokens?: number;
   /** 单次请求超时（毫秒），默认 120s。 */
   timeoutMs?: number;
   /** 透传给上游的可选采样参数。 */
@@ -107,6 +109,9 @@ export function createChatCompletionsClient(
 ): ChatClient {
   const endpoint = resolveEndpoint(options.baseUrl);
   const timeoutMs = options.timeoutMs ?? 120_000;
+  // 默认输出上限 65536，足以一次写完较大的文件，避免工具参数 JSON 被中途截断成 {}。
+  const maxTokens =
+    options.maxTokens && options.maxTokens > 0 ? options.maxTokens : 65536;
 
   return {
     async send(
@@ -121,6 +126,7 @@ export function createChatCompletionsClient(
       if (tools.length > 0) body.tools = tools.map(toWireTool);
       if (typeof options.temperature === "number")
         body.temperature = options.temperature;
+      if (maxTokens) body.max_tokens = maxTokens;
 
       const response = await postJson(endpoint, {
         headers: { authorization: `Bearer ${options.apiKey}` },
@@ -141,8 +147,10 @@ export function createChatCompletionsClient(
           ? message.reasoning_content
           : null;
       const toolCalls = extractToolCalls(message?.tool_calls);
+      // finish_reason === "length" 表示被 max_tokens 截断（工具参数 JSON 可能不完整）。
+      const truncated = first?.finish_reason === "length";
 
-      return { content, toolCalls, reasoning };
+      return { content, toolCalls, reasoning, truncated };
     },
 
     async stream(
@@ -159,6 +167,7 @@ export function createChatCompletionsClient(
       if (tools.length > 0) body.tools = tools.map(toWireTool);
       if (typeof options.temperature === "number")
         body.temperature = options.temperature;
+      if (maxTokens) body.max_tokens = maxTokens;
 
       const response = await postJson(endpoint, {
         headers: { authorization: `Bearer ${options.apiKey}` },
@@ -171,6 +180,7 @@ export function createChatCompletionsClient(
 
       let content = "";
       let reasoning = "";
+      let finishReason = "";
       const toolAcc = new Map<
         number,
         { id: string; name: string; arguments: string }
@@ -184,8 +194,11 @@ export function createChatCompletionsClient(
           continue;
         }
         const choices = Array.isArray(chunk.choices) ? chunk.choices : [];
-        const delta = (choices[0] as Record<string, unknown> | undefined)
-          ?.delta as Record<string, unknown> | undefined;
+        const choice = choices[0] as Record<string, unknown> | undefined;
+        if (typeof choice?.finish_reason === "string" && choice.finish_reason) {
+          finishReason = choice.finish_reason;
+        }
+        const delta = choice?.delta as Record<string, unknown> | undefined;
         if (!delta) continue;
         if (typeof delta.content === "string" && delta.content) {
           content += delta.content;
@@ -242,6 +255,7 @@ export function createChatCompletionsClient(
         content: content || null,
         toolCalls,
         reasoning: reasoning || null,
+        truncated: finishReason === "length",
       };
     },
   };

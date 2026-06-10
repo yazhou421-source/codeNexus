@@ -66,6 +66,12 @@ export type ModelReply = {
    * runAgent stores this on the assistant message so the same adapter can round-trip it.
    */
   providerMetadata?: Record<string, unknown>;
+  /**
+   * 模型因长度上限（max_tokens / finish_reason="length" / stop_reason="max_tokens"）被截断。
+   * 截断意味着工具调用参数 JSON 可能残缺：内核据此对 parse 失败的参数回灌明确错误，
+   * 而不是静默退化成 {} 去执行、报一个与真因无关的错。
+   */
+  truncated?: boolean;
 };
 
 /** 工具调用参数的流式增量：同一调用的多次增量按 index 聚合。 */
@@ -131,6 +137,12 @@ export type RunAgentOptions = {
   onEvent?: (event: AgentEvent) => void;
   /** 可选的取消信号：外部可通过 abort() 中止正在运行的 agent。 */
   signal?: AbortSignal;
+  /**
+   * 可选的输入侧上下文预算（估算 tokens）。设置后，每轮发给模型前按此预算裁剪历史，
+   * system 恒保留、tool 调用与结果成组不拆；完整历史仍照常累积与持久化，只裁发出去的副本。
+   * 未设或 ≤0 时不裁剪。
+   */
+  contextLimit?: number | null;
 };
 
 /** 内核运行过程中对外广播的事件，供 UI / 日志消费。 */

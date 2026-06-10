@@ -7,6 +7,7 @@ import type {
   ToolCall,
   ToolDefinition,
 } from "./types";
+import { trimMessageHistory } from "./contextWindow";
 
 const DEFAULT_MAX_STEPS = 16;
 
@@ -27,6 +28,23 @@ function parseToolArguments(raw: string): Record<string, unknown> {
   } catch {
     return {};
   }
+}
+
+/** 从工具的 JSON Schema 里取出 required 参数名列表（无则空数组）。 */
+function requiredParamNames(tool: ToolDefinition): string[] {
+  const params = tool.parameters as Record<string, unknown> | undefined;
+  const required = params?.required;
+  return Array.isArray(required)
+    ? required.filter((key): key is string => typeof key === "string")
+    : [];
+}
+
+/** 解析后的参数里缺失了哪些 required 字段（用于截断检测）。 */
+function missingRequiredArgs(
+  tool: ToolDefinition,
+  args: Record<string, unknown>,
+): string[] {
+  return requiredParamNames(tool).filter((key) => !(key in args));
 }
 
 function isAbortError(_error: unknown, signal?: AbortSignal): boolean {
@@ -55,6 +73,7 @@ async function executeToolCall(
   toolsByName: Map<string, ToolDefinition>,
   onEvent: RunAgentOptions["onEvent"],
   signal?: AbortSignal,
+  truncated?: boolean,
 ): Promise<AgentMessage> {
   if (signal?.aborted) {
     throw signal.reason instanceof Error
@@ -79,6 +98,29 @@ async function executeToolCall(
   onEvent?.({ type: "tool_call", call });
   try {
     const args = parseToolArguments(call.arguments);
+    // 模型被 max_tokens 截断时，工具参数 JSON 可能根本没写完（残缺串退化成 {}）。
+    // 此时若仍带着空/残缺参数去执行，会报与真因无关的错（如 "path is required"）。
+    // 改为直接回灌明确错误，让模型知道是输出被截断、应提高 max_tokens 或拆分调用后重试。
+    if (truncated) {
+      const missing = missingRequiredArgs(tool, args);
+      if (missing.length > 0) {
+        const error =
+          `Tool arguments were truncated because the model hit its max output token limit; ` +
+          `required parameter(s) missing: ${missing.join(", ")}. ` +
+          `Increase the model's max output tokens or split the call into smaller steps, then retry.`;
+        onEvent?.({
+          type: "tool_error",
+          toolCallId: call.id,
+          name: call.name,
+          error,
+        });
+        return {
+          role: "tool",
+          toolCallId: call.id,
+          content: `Error: ${error}`,
+        };
+      }
+    }
     const result = await tool.execute(args, { signal });
     const text = typeof result === "string" ? result : JSON.stringify(result);
     onEvent?.({
@@ -120,6 +162,7 @@ export async function runAgent(
 ): Promise<RunAgentResult> {
   const { client, tools, onEvent, signal } = options;
   const maxSteps = options.maxSteps ?? DEFAULT_MAX_STEPS;
+  const contextLimit = options.contextLimit;
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
   // 复制一份，避免就地修改调用方传入的数组。
   const messages: AgentMessage[] = [...options.messages];
@@ -134,12 +177,14 @@ export async function runAgent(
     }
 
     steps += 1;
+    // 发送前按预算裁剪历史（只裁发出去的副本，完整 messages 照常累积/持久化）。
+    const outbound = trimMessageHistory(messages, contextLimit);
     // 优先走流式（边产出边回吐文本/思考增量）；client 未实现 stream 时回退到非流式 send。
     let reply: ModelReply;
     try {
       reply = client.stream
         ? await client.stream(
-            messages,
+            outbound,
             tools,
             {
               onTextDelta: (delta) =>
@@ -157,7 +202,7 @@ export async function runAgent(
             },
             { signal },
           )
-        : await client.send(messages, tools, { signal });
+        : await client.send(outbound, tools, { signal });
     } catch (error: unknown) {
       if (isAbortError(error, signal)) {
         return cancelledResult(finalText, messages, steps, onEvent);
@@ -198,7 +243,7 @@ export async function runAgent(
     try {
       toolMessages = await Promise.all(
         reply.toolCalls.map((call) =>
-          executeToolCall(call, toolsByName, onEvent, signal),
+          executeToolCall(call, toolsByName, onEvent, signal, reply.truncated),
         ),
       );
     } catch (error: unknown) {

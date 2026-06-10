@@ -85,6 +85,63 @@ describe("createAnthropicClient", () => {
     });
   });
 
+  it("sends max_tokens from the maxTokens option", async () => {
+    const fetchMock = stubFetch({ content: [{ type: "text", text: "ok" }] });
+    const client = createAnthropicClient({
+      baseUrl: "https://api.anthropic.com",
+      apiKey: "k",
+      model: "m",
+      maxTokens: 1234,
+    });
+    await client.send([{ role: "user", content: "go" }], []);
+    const { body } = lastRequest(fetchMock);
+    expect(body.max_tokens).toBe(1234);
+  });
+
+  it("adds the thinking budget on top of the output budget (not shared)", async () => {
+    const fetchMock = stubFetch({ content: [{ type: "text", text: "ok" }] });
+    const client = createAnthropicClient({
+      baseUrl: "https://api.anthropic.com",
+      apiKey: "k",
+      model: "m",
+      maxTokens: 1234,
+      thinking: true,
+    });
+    await client.send([{ role: "user", content: "go" }], []);
+    const { body } = lastRequest(fetchMock);
+    // 输出预算 1234 + 默认 thinking 预算 2048 = 3282（叠加，不抢占）。
+    expect(body.thinking).toEqual({ type: "enabled", budget_tokens: 2048 });
+    expect(body.max_tokens).toBe(3282);
+  });
+
+  it("flags truncated when stop_reason is max_tokens", async () => {
+    stubFetch({
+      content: [{ type: "text", text: "partial" }],
+      stop_reason: "max_tokens",
+    });
+    const client = createAnthropicClient({
+      baseUrl: "https://api.anthropic.com",
+      apiKey: "k",
+      model: "m",
+    });
+    const reply = await client.send([{ role: "user", content: "go" }], []);
+    expect(reply.truncated).toBe(true);
+  });
+
+  it("does not flag truncated when stop_reason is end_turn", async () => {
+    stubFetch({
+      content: [{ type: "text", text: "done" }],
+      stop_reason: "end_turn",
+    });
+    const client = createAnthropicClient({
+      baseUrl: "https://api.anthropic.com",
+      apiKey: "k",
+      model: "m",
+    });
+    const reply = await client.send([{ role: "user", content: "go" }], []);
+    expect(reply.truncated).toBe(false);
+  });
+
   it("maps a tool result message into a user tool_result block", async () => {
     const fetchMock = stubFetch({ content: [{ type: "text", text: "ok" }] });
     const client = createAnthropicClient({
@@ -175,6 +232,39 @@ describe("createGeminiClient", () => {
       { role: "user", parts: [{ text: "hi" }] },
       { role: "model", parts: [{ text: "yo" }] },
     ]);
+  });
+
+  it("sends generationConfig.maxOutputTokens from the maxOutputTokens option", async () => {
+    const fetchMock = stubFetch({
+      candidates: [{ content: { parts: [{ text: "ok" }] } }],
+    });
+    const client = createGeminiClient({
+      baseUrl: "https://gl.example.com",
+      apiKey: "k",
+      model: "m",
+      maxOutputTokens: 555,
+    });
+    await client.send([{ role: "user", content: "go" }], []);
+    const { body } = lastRequest(fetchMock);
+    expect(body.generationConfig).toEqual({ maxOutputTokens: 555 });
+  });
+
+  it("flags truncated when finishReason is MAX_TOKENS", async () => {
+    stubFetch({
+      candidates: [
+        {
+          content: { parts: [{ text: "partial" }] },
+          finishReason: "MAX_TOKENS",
+        },
+      ],
+    });
+    const client = createGeminiClient({
+      baseUrl: "https://gl.example.com",
+      apiKey: "k",
+      model: "m",
+    });
+    const reply = await client.send([{ role: "user", content: "go" }], []);
+    expect(reply.truncated).toBe(true);
   });
 
   it("parses text + functionCall parts from the response", async () => {

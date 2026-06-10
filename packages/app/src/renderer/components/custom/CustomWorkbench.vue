@@ -114,6 +114,14 @@
             <span>模型</span>
             <input v-model="form.model" type="text" :placeholder="modelPlaceholder" />
           </label>
+          <label class="cw-field">
+            <span>最大输出 tokens</span>
+            <input v-model="form.maxOutputTokens" type="number" min="1" step="1" placeholder="留空用服务端默认" />
+          </label>
+          <label class="cw-field">
+            <span>上下文长度（输入 tokens）</span>
+            <input v-model="form.contextLimit" type="number" min="1" step="1" placeholder="留空不裁剪历史" />
+          </label>
           <label class="cw-check">
             <input v-model="form.thinking" type="checkbox" />
             <span
@@ -184,6 +192,19 @@
                     <span class="cw-tool__name mono">{{ part.tool.name }}</span>
                     <span class="cw-tool__args mono">{{ toolArgsSummary(part.tool.argsText) }}</span>
                   </div>
+                  <div v-if="toolHasPreview(part.tool.argsText)" class="cw-tool__args-preview">
+                    <button
+                      type="button"
+                      class="cw-tool__args-toggle"
+                      @click="toggleToolArgs(part)"
+                      :aria-label="isToolArgsOpen(part) ? '折叠参数' : '展开参数'"
+                    >
+                      {{ isToolArgsOpen(part) ? "▼" : "▶" }} 参数
+                    </button>
+                    <pre v-show="isToolArgsOpen(part)" class="cw-tool__args-body mono">{{
+                      toolArgsPreview(part.tool.argsText)
+                    }}</pre>
+                  </div>
                   <details v-if="part.tool.resultText || part.tool.error" class="cw-tool__more">
                     <summary>{{ part.tool.error ? "错误" : "结果" }}</summary>
                     <pre class="cw-tool__detail mono">{{ part.tool.error || part.tool.resultText }}</pre>
@@ -223,7 +244,7 @@
                   @click="toggleApprovalDetail(ap.approvalId)"
                   :aria-label="isApprovalCollapsed(ap.approvalId) ? '展开详情' : '折叠详情'"
                 >
-                  {{ isApprovalCollapsed(ap.approvalId) ? '▶' : '▼' }}
+                  {{ isApprovalCollapsed(ap.approvalId) ? "▶" : "▼" }}
                 </button>
               </div>
               <template v-if="!isApprovalCollapsed(ap.approvalId)">
@@ -271,6 +292,9 @@
               </button>
               <button v-if="workspaceRoot" type="button" class="cw-link" @click="clearWorkspace">清除</button>
             </span>
+            <span class="cw-context" :class="`cw-context--${contextUsageState}`" :title="contextUsageTitle">
+              {{ contextUsageLabel }}
+            </span>
           </div>
           <div class="cw-composer__row">
             <textarea
@@ -289,13 +313,7 @@
             >
               停止
             </button>
-            <button
-              v-else
-              type="button"
-              class="cw-btn cw-btn--primary"
-              :disabled="!canSend"
-              @click="submit"
-            >
+            <button v-else type="button" class="cw-btn cw-btn--primary" :disabled="!canSend" @click="submit">
               发送
             </button>
           </div>
@@ -316,6 +334,8 @@ import { getCachedUserLocalSettings, patchUserLocalSettings } from "../../domain
 import { useAppShellStore } from "../../stores/appShell.store";
 import { useCustomChatStore, type CustomToolActivity } from "../../stores/customChat.store";
 import { useRuntimeStore } from "../../stores/runtime.store";
+// 纯函数（字符估算，无 node-only 依赖），与后端裁剪 / store getter 同口径。
+import { estimateTokens } from "@codenexus/agent-core/contextWindow";
 import type { TimelineEventItem } from "../../domain/types";
 import type { CustomProviderKind, LocalCustomProvider } from "@codenexus/shared/localSettings";
 
@@ -355,7 +375,9 @@ function extractFilenameFromDetail(detail: string): string {
   // Extract filename from approval detail (first line usually has path)
   const firstLine = detail.split("\n")[0];
   // Look for common file extensions
-  const match = firstLine.match(/([^\s]+\.(ts|tsx|js|jsx|vue|py|java|go|rs|css|scss|html|json|md|yaml|yml|toml|xml|sh|bash|sql|graphql|php|rb|swift|kt|dart|c|cpp|h|hpp))/i);
+  const match = firstLine.match(
+    /([^\s]+\.(ts|tsx|js|jsx|vue|py|java|go|rs|css|scss|html|json|md|yaml|yml|toml|xml|sh|bash|sql|graphql|php|rb|swift|kt|dart|c|cpp|h|hpp))/i
+  );
   return match ? match[1] : "file.txt";
 }
 
@@ -411,6 +433,22 @@ function isApprovalCollapsed(approvalId: string): boolean {
   return collapsedApprovals.value.has(approvalId);
 }
 
+// 工具参数展开/折叠：仅记录用户显式开合，未设时默认按状态（执行中展开、完成折叠）。
+const toolArgsOverride = ref<Record<string, boolean>>({});
+
+function isToolArgsOpen(part: { tool: CustomToolActivity }): boolean {
+  const override = toolArgsOverride.value[part.tool.callId];
+  if (override !== undefined) return override;
+  return part.tool.status === "running";
+}
+
+function toggleToolArgs(part: { tool: CustomToolActivity }) {
+  toolArgsOverride.value = {
+    ...toolArgsOverride.value,
+    [part.tool.callId]: !isToolArgsOpen(part),
+  };
+}
+
 const workspaceRoot = ref<string | null>(null);
 
 const editing = ref(false);
@@ -422,6 +460,8 @@ const form = ref<{
   apiKey: string;
   model: string;
   thinking: boolean;
+  maxOutputTokens: string;
+  contextLimit: string;
 }>({
   kind: "openai-compatible",
   name: "",
@@ -429,12 +469,24 @@ const form = ref<{
   apiKey: "",
   model: "",
   thinking: false,
+  maxOutputTokens: "",
+  contextLimit: "",
 });
 
 function kindLabel(kind: CustomProviderKind): string {
   if (kind === "anthropic") return "Claude";
   if (kind === "gemini") return "Gemini";
   return "OpenAI 兼容";
+}
+
+/** 表单里的数字输入是字符串：空/非法/≤0 → null（表示「未设置」），否则取四舍五入正整数。 */
+function parsePositiveIntOrNull(value: string): number | null {
+  const text = value.trim();
+  if (!text) return null;
+  const n = Number(text);
+  if (!Number.isFinite(n)) return null;
+  const rounded = Math.round(n);
+  return rounded > 0 ? rounded : null;
 }
 
 const baseUrlPlaceholder = computed(() => {
@@ -477,6 +529,45 @@ const canSave = computed(
 
 const canSend = computed(() => hasActiveProvider.value && !customChatStore.sending && draft.value.trim().length > 0);
 
+// 上下文用量：已持久化历史（store 同口径估算）+ 正在输入的草稿（含一条消息固定开销 4）。
+const contextUsedTokens = computed(() => {
+  const draftText = draft.value.trim();
+  const draftTokens = draftText ? estimateTokens(draftText) + 4 : 0;
+  return customChatStore.estimatedContextTokens + draftTokens;
+});
+
+// provider 配的上下文上限（输入 tokens）；未设则回退到默认窗口（与内核 DEFAULT_CONTEXT_LIMIT 一致）。
+const DEFAULT_CONTEXT_LIMIT = 200_000;
+const contextLimitTokens = computed(() => activeProvider.value?.contextLimit ?? DEFAULT_CONTEXT_LIMIT);
+
+// 输入栏展示文案：「已用 N tokens」或「已用 N / 上限 M tokens（百分比）」。
+const contextUsageLabel = computed(() => {
+  const used = contextUsedTokens.value;
+  const limit = contextLimitTokens.value;
+  if (!limit) return `上下文约 ${used.toLocaleString()} tokens`;
+  const pct = Math.min(999, Math.round((used / limit) * 100));
+  return `上下文约 ${used.toLocaleString()} / ${limit.toLocaleString()} tokens（${pct}%）`;
+});
+
+// 接近 / 超出上限时变色提示（超限后内核会裁掉最旧历史，仅保留最近窗口）。
+const contextUsageState = computed<"normal" | "warn" | "over">(() => {
+  const limit = contextLimitTokens.value;
+  if (!limit) return "normal";
+  const ratio = contextUsedTokens.value / limit;
+  if (ratio >= 1) return "over";
+  if (ratio >= 0.8) return "warn";
+  return "normal";
+});
+
+// 鼠标悬停的解释：估算口径 + 超限时的裁剪行为。
+const contextUsageTitle = computed(() => {
+  const base = "按字符估算（CJK≈1.5、其余≈4 字符/token），含正在输入的草稿；为近似值。";
+  if (!contextLimitTokens.value) return `${base}\n未设上下文上限，历史全量发送、不裁剪。`;
+  if (contextUsageState.value === "over")
+    return `${base}\n已超上限：发送时内核会丢弃最旧历史，仅保留最近窗口（system 与工具调用配对不拆开）。`;
+  return `${base}\n超过上限时，内核会自动裁掉最旧历史。`;
+});
+
 const messagesAutoScrollSignature = computed(() =>
   customChatStore.messages
     .map((message) => {
@@ -488,6 +579,7 @@ const messagesAutoScrollSignature = computed(() =>
             part.id,
             part.tool.callId,
             part.tool.status,
+            part.tool.argsText.length,
             part.tool.resultText?.length ?? 0,
             part.tool.error?.length ?? 0,
           ].join(":");
@@ -522,6 +614,8 @@ async function persist() {
     apiKey: provider.apiKey,
     model: provider.model,
     thinking: provider.thinking,
+    maxOutputTokens: provider.maxOutputTokens ?? null,
+    contextLimit: provider.contextLimit ?? null,
   }));
   await patchUserLocalSettings({
     customProviders: {
@@ -562,7 +656,16 @@ function formatSessionTime(value: number): string {
 
 function startNew() {
   editingId.value = null;
-  form.value = { kind: "openai-compatible", name: "", baseUrl: "", apiKey: "", model: "", thinking: false };
+  form.value = {
+    kind: "openai-compatible",
+    name: "",
+    baseUrl: "",
+    apiKey: "",
+    model: "",
+    thinking: false,
+    maxOutputTokens: "",
+    contextLimit: "",
+  };
   testMessage.value = "";
   editing.value = true;
 }
@@ -576,6 +679,8 @@ function edit(provider: LocalCustomProvider) {
     apiKey: provider.apiKey ?? "",
     model: provider.model,
     thinking: provider.thinking ?? false,
+    maxOutputTokens: provider.maxOutputTokens != null ? String(provider.maxOutputTokens) : "",
+    contextLimit: provider.contextLimit != null ? String(provider.contextLimit) : "",
   };
   testMessage.value = "";
   editing.value = true;
@@ -596,6 +701,8 @@ async function saveProvider() {
     apiKey: form.value.apiKey.trim(),
     model: form.value.model.trim(),
     thinking: form.value.thinking,
+    maxOutputTokens: parsePositiveIntOrNull(form.value.maxOutputTokens),
+    contextLimit: parsePositiveIntOrNull(form.value.contextLimit),
   };
   const next = providers.value.filter((item) => item.id !== id);
   next.push(provider);
@@ -696,6 +803,39 @@ function toolArgsSummary(argsText: string): string {
     // 非 JSON：直接截断展示
   }
   return text.length > 80 ? `${text.slice(0, 80)}…` : text;
+}
+
+// 残缺 JSON 增量里的转义序列还原为可读字符（流式期间 parse 不出整串时用）。
+function unescapeJsonFragment(text: string): string {
+  return text
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\r/g, "")
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\");
+}
+
+// 工具入参的多行预览：JSON 完整时优先展示 content 大文本，否则美化整串；
+// 流式残缺 JSON parse 失败时，反转义原始串增量地多行展示（无需等 JSON 闭合）。
+function toolArgsPreview(argsText: string): string {
+  const text = String(argsText ?? "").trim();
+  if (!text) return "";
+  try {
+    const obj = JSON.parse(text) as Record<string, unknown>;
+    if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+      if (typeof obj.content === "string") return obj.content;
+      return JSON.stringify(obj, null, 2);
+    }
+  } catch {
+    // 流式残缺 JSON：反转义后多行展示
+  }
+  return unescapeJsonFragment(text);
+}
+
+// 是否值得显示多行展开体：一行装不下（含换行或超 80 字符）才显示，短参数保持单行清爽。
+function toolHasPreview(argsText: string): boolean {
+  const preview = toolArgsPreview(argsText);
+  return preview.includes("\n") || preview.length > 80;
 }
 
 function onComposerKeydown(event: KeyboardEvent) {
@@ -1428,6 +1568,39 @@ onBeforeUnmount(() => {
   background: var(--surface-3);
 }
 
+/* 流式参数预览：执行中展开看正在写入的内容，完成后折叠回单行摘要 */
+.cw-tool__args-preview {
+  margin-top: 4px;
+}
+
+.cw-tool__args-toggle {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.cw-tool__args-toggle:hover {
+  color: var(--text);
+}
+
+.cw-tool__args-body {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--surface-3);
+}
+
 @keyframes cw-tool-spin {
   to {
     transform: rotate(360deg);
@@ -1570,7 +1743,7 @@ onBeforeUnmount(() => {
 .diff-line {
   display: flex;
   margin: 0;
-  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Menlo, Consolas, monospace;
+  font-family: ui-monospace, "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
   line-height: 1.5;
 }
 
@@ -1676,6 +1849,23 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 上下文用量指示：默认柔和，接近上限转警告色，超限转危险色 */
+.cw-context {
+  display: inline-flex;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.cw-context--warn {
+  color: var(--fg-warning);
+}
+
+.cw-context--over {
+  color: var(--fg-danger);
 }
 
 /* provider 表单的复选项（启用思考） */

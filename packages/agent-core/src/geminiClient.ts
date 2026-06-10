@@ -29,7 +29,7 @@ export type GeminiClientOptions = {
   baseUrl: string;
   apiKey: string;
   model: string;
-  /** generationConfig.maxOutputTokens；默认不设（用服务端默认）。 */
+  /** generationConfig.maxOutputTokens（最大输出 tokens）；未设或 ≤0 时默认 65536。 */
   maxOutputTokens?: number;
   /** 单次请求超时（毫秒），默认 120s。 */
   timeoutMs?: number;
@@ -178,6 +178,11 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
   const endpoint = resolveEndpoint(options.baseUrl, options.model, false);
   const streamEndpoint = resolveEndpoint(options.baseUrl, options.model, true);
   const timeoutMs = options.timeoutMs ?? 120_000;
+  // 输出上限。默认 65536，足以一次写完较大的文件，避免工具参数被中途截断。
+  const maxOutputTokens =
+    options.maxOutputTokens && options.maxOutputTokens > 0
+      ? options.maxOutputTokens
+      : 65536;
 
   const buildBody = (
     messages: AgentMessage[],
@@ -209,11 +214,8 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
       ];
     }
     const generationConfig: Record<string, unknown> = {};
-    if (
-      typeof options.maxOutputTokens === "number" &&
-      options.maxOutputTokens > 0
-    ) {
-      generationConfig.maxOutputTokens = options.maxOutputTokens;
+    if (maxOutputTokens > 0) {
+      generationConfig.maxOutputTokens = maxOutputTokens;
     }
     if (options.thinking === true) {
       generationConfig.thinkingConfig = { includeThoughts: true };
@@ -265,8 +267,10 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
           .map((part) => part.text as string)
           .join("") || null;
       const toolCalls = extractToolCalls(parts);
+      // finishReason === "MAX_TOKENS" 表示被截断（工具参数 JSON 可能不完整）。
+      const truncated = first?.finishReason === "MAX_TOKENS";
 
-      return { content: text || null, toolCalls, reasoning };
+      return { content: text || null, toolCalls, reasoning, truncated };
     },
 
     async stream(
@@ -288,6 +292,7 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
 
       let content = "";
       let reasoning = "";
+      let finishReason = "";
       const calls: ToolCall[] = [];
       for await (const { data } of readSseBlocks(response)) {
         let chunk: Record<string, unknown>;
@@ -300,6 +305,9 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
           ? chunk.candidates
           : [];
         const first = candidates[0] as Record<string, unknown> | undefined;
+        if (typeof first?.finishReason === "string" && first.finishReason) {
+          finishReason = first.finishReason;
+        }
         const contentObj = first?.content as
           | Record<string, unknown>
           | undefined;
@@ -350,6 +358,7 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
         content: content || null,
         toolCalls: calls,
         reasoning: reasoning || null,
+        truncated: finishReason === "MAX_TOKENS",
       };
     },
   };

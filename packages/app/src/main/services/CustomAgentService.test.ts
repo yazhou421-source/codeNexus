@@ -122,7 +122,10 @@ describe("CustomAgentService tool routing", () => {
 
     await expect(runService(service)).resolves.toMatchObject({ ok: true, finalText: "ok" });
 
-    expect(agentCoreMocks.createWorkspaceTools).toHaveBeenCalledWith("D:\\Desktop\\codex\\electron", expect.any(Object));
+    expect(agentCoreMocks.createWorkspaceTools).toHaveBeenCalledWith(
+      "D:\\Desktop\\codex\\electron",
+      expect.any(Object)
+    );
     expect(agentCoreMocks.createCommandTools).toHaveBeenCalledWith(
       expect.objectContaining({ cwd: "D:\\Desktop\\codex\\electron" })
     );
@@ -170,6 +173,34 @@ describe("CustomAgentService tool routing", () => {
     expect(
       agentCoreMocks.runAgent.mock.calls[1]?.[0].messages.map((message: { content: string | null }) => message.content)
     ).toEqual(["first", "ok", "second"]);
+  });
+
+  it("threads provider maxOutputTokens and contextLimit through to the client and runAgent", async () => {
+    const settings = buildSettings("D:\\repo");
+    settings.customProviders.providers[0]!.maxOutputTokens = 2048;
+    settings.customProviders.providers[0]!.contextLimit = 8000;
+    const service = buildService(settings);
+
+    await expect(runService(service)).resolves.toMatchObject({ ok: true });
+
+    // OpenAI/Anthropic read maxTokens, Gemini reads maxOutputTokens — both keys are set.
+    expect(agentCoreMocks.createChatCompletionsClient).toHaveBeenCalledWith(
+      expect.objectContaining({ maxTokens: 2048, maxOutputTokens: 2048 })
+    );
+    expect(agentCoreMocks.state.runOptions?.contextLimit).toBe(8000);
+  });
+
+  it("leaves output token limits to the client default but applies the context window default when unset", async () => {
+    const service = buildService(buildSettings("D:\\repo"));
+
+    await expect(runService(service)).resolves.toMatchObject({ ok: true });
+
+    // Output caps stay undefined here — each client applies its own default internally.
+    expect(agentCoreMocks.createChatCompletionsClient).toHaveBeenCalledWith(
+      expect.objectContaining({ maxTokens: undefined, maxOutputTokens: undefined })
+    );
+    // Context window falls back to the service default (200000) so history can't grow unbounded.
+    expect(agentCoreMocks.state.runOptions?.contextLimit).toBe(200000);
   });
 
   it("rejects approval-gated tool actions when approval cannot round-trip", async () => {

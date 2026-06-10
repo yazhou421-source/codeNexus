@@ -34,6 +34,9 @@ import { logger } from "../utils/logger";
  */
 type EmitFn = (event: CustomAgentStreamEvent) => void;
 
+// 未配置 contextLimit 时的默认输入侧上下文窗口（估算 tokens）。
+const DEFAULT_CONTEXT_LIMIT = 200_000;
+
 function approvalKey(runId: string, approvalId: string): string {
   return `${runId}:${approvalId}`;
 }
@@ -70,7 +73,17 @@ export class CustomAgentService {
       const messages = this.toAgentMessages(args?.messages);
       if (messages.length === 0) return { ok: false, error: "对话内容为空。" };
 
-      const options = { baseUrl, apiKey, model, thinking: provider.thinking };
+      // maxOutputTokens 是统一的「最大输出 tokens」语义：OpenAI/Anthropic 读 maxTokens、
+      // Gemini 读 maxOutputTokens，这里同时给两个键，各 client 只取自己认识的那个。
+      const maxOutputTokens = provider.maxOutputTokens ?? undefined;
+      const options = {
+        baseUrl,
+        apiKey,
+        model,
+        thinking: provider.thinking,
+        maxTokens: maxOutputTokens,
+        maxOutputTokens,
+      };
       const client =
         provider.kind === "anthropic"
           ? createAnthropicClient(options)
@@ -85,6 +98,8 @@ export class CustomAgentService {
         client,
         tools,
         messages,
+        // 未配置上下文上限时回退到默认窗口（200000），避免历史无限增长后超出模型上限。
+        contextLimit: provider.contextLimit ?? DEFAULT_CONTEXT_LIMIT,
         signal: controller.signal,
         // 把内核事件映射成渲染层的 CustomAgentStreamEvent（带上 runId 以便按消息关联）。
         onEvent:

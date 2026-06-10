@@ -5,6 +5,12 @@ export { createGeminiClient } from "./geminiClient";
 export { createWorkspaceTools } from "./workspaceTools";
 export { createCommandTools } from "./commandTools";
 export { ProcessRegistry } from "./processRegistry";
+export {
+  estimateTokens,
+  estimateMessageTokens,
+  estimateHistoryTokens,
+  trimMessageHistory,
+} from "./contextWindow";
 export type {
   AgentMessage,
   ToolCall,

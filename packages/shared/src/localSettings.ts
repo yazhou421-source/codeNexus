@@ -42,6 +42,10 @@ export type LocalCustomProvider = {
   model: string;
   /** 是否开启思考/推理输出（Claude thinking / Gemini includeThoughts / OpenAI reasoning）。 */
   thinking?: boolean;
+  /** 最大输出 tokens（Anthropic max_tokens / Gemini maxOutputTokens / OpenAI max_tokens）；未设或 ≤0 时用各协议默认值。 */
+  maxOutputTokens?: number | null;
+  /** 历史上下文预算（输入侧最大估算 tokens）；未设或 ≤0 时不裁剪、全量发送历史。 */
+  contextLimit?: number | null;
 };
 
 /** 自定义 provider 集合与当前激活项。activeProviderId 必须指向仍存在的 provider。 */
@@ -358,6 +362,15 @@ function toPositiveInteger(value: unknown, fallback: number): number {
   return rounded > 0 ? rounded : fallback;
 }
 
+/** 可选正整数：null/缺省/非法/≤0 → null（表示「未设置」），否则取四舍五入后的正整数。 */
+function toNullablePositiveInteger(value: unknown): number | null {
+  if (value == null) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  const rounded = Math.round(n);
+  return rounded > 0 ? rounded : null;
+}
+
 function toIntegerInRange(
   value: unknown,
   fallback: number,
@@ -425,6 +438,8 @@ function normalizeCustomProvider(value: unknown): LocalCustomProvider | null {
     apiKey: toNullableString(record.apiKey, null),
     model: String(record.model ?? "").trim(),
     thinking: toBoolean(record.thinking, false),
+    maxOutputTokens: toNullablePositiveInteger(record.maxOutputTokens),
+    contextLimit: toNullablePositiveInteger(record.contextLimit),
   };
 }
 

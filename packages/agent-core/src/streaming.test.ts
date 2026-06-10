@@ -42,6 +42,58 @@ describe("streaming clients", () => {
     expect(reply.content).toBe("Hello");
   });
 
+  it("openai-compatible: sends max_tokens from the maxTokens option, falls back to the default otherwise", async () => {
+    const withCap = stubSse("data: [DONE]\n\n");
+    const capped = createChatCompletionsClient({
+      baseUrl: "https://x/v1",
+      apiKey: "k",
+      model: "m",
+      maxTokens: 777,
+    });
+    await capped.stream!([{ role: "user", content: "hi" }], [], {
+      onTextDelta: () => {},
+    });
+    const cappedBody = JSON.parse(
+      (withCap.mock.calls[0]![1] as RequestInit).body as string,
+    );
+    expect(cappedBody.max_tokens).toBe(777);
+
+    vi.unstubAllGlobals();
+    const noCap = stubSse("data: [DONE]\n\n");
+    const plain = createChatCompletionsClient({
+      baseUrl: "https://x/v1",
+      apiKey: "k",
+      model: "m",
+    });
+    await plain.stream!([{ role: "user", content: "hi" }], [], {
+      onTextDelta: () => {},
+    });
+    const plainBody = JSON.parse(
+      (noCap.mock.calls[0]![1] as RequestInit).body as string,
+    );
+    // 未设 maxTokens 时回退到默认输出上限（65536），不再省略字段。
+    expect(plainBody.max_tokens).toBe(65536);
+  });
+
+  it("openai-compatible: flags truncated when a chunk carries finish_reason length", async () => {
+    stubSse(
+      [
+        'data: {"choices":[{"delta":{"content":"par"}}]}',
+        'data: {"choices":[{"delta":{},"finish_reason":"length"}]}',
+        "data: [DONE]",
+      ].join("\n\n") + "\n\n",
+    );
+    const client = createChatCompletionsClient({
+      baseUrl: "https://x/v1",
+      apiKey: "k",
+      model: "m",
+    });
+    const reply = await client.stream!([{ role: "user", content: "hi" }], [], {
+      onTextDelta: () => {},
+    });
+    expect(reply.truncated).toBe(true);
+  });
+
   it("openai-compatible: accumulates streamed tool_call fragments by index", async () => {
     stubSse(
       [

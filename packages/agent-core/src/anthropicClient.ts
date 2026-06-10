@@ -27,7 +27,7 @@ export type AnthropicClientOptions = {
   baseUrl: string;
   apiKey: string;
   model: string;
-  /** Anthropic 要求 max_tokens 必填，默认 4096。 */
+  /** 输出预算（max_tokens 里留给回答/工具参数的部分）。未设或 ≤0 时默认 65536。 */
   maxTokens?: number;
   /** 单次请求超时（毫秒），默认 120s。 */
   timeoutMs?: number;
@@ -35,7 +35,7 @@ export type AnthropicClientOptions = {
   anthropicVersion?: string;
   /** 开启扩展思考（Claude thinking）：发送 thinking 参数并解析 thinking 块。 */
   thinking?: boolean;
-  /** thinking 预算 tokens（开启时生效，最小 1024），默认 2048；max_tokens 会被抬到 > 预算。 */
+  /** thinking 预算 tokens（开启时生效，最小 1024），默认 2048；叠加在输出预算之上构成 max_tokens。 */
   thinkingBudgetTokens?: number;
 };
 
@@ -168,17 +168,20 @@ export function createAnthropicClient(
 ): ChatClient {
   const endpoint = resolveEndpoint(options.baseUrl);
   const timeoutMs = options.timeoutMs ?? 120_000;
+  // 输出预算（max_tokens 里留给最终回答/工具参数的部分）。默认 65536，
+  // 足以一次写完较大的文件，避免工具参数 JSON 被中途截断成 {}。
   const maxTokens =
-    options.maxTokens && options.maxTokens > 0 ? options.maxTokens : 4096;
+    options.maxTokens && options.maxTokens > 0 ? options.maxTokens : 65536;
   const version = options.anthropicVersion ?? "2023-06-01";
   const thinkingEnabled = options.thinking === true;
   const thinkingBudget =
     options.thinkingBudgetTokens && options.thinkingBudgetTokens >= 1024
       ? options.thinkingBudgetTokens
       : 2048;
-  // Anthropic 要求 max_tokens 严格大于 budget_tokens。
+  // thinking 预算叠加在输出预算之上（不抢占）：max_tokens = 输出 + 思考。
+  // Anthropic 要求 max_tokens 严格大于 budget_tokens，叠加天然满足。
   const effectiveMaxTokens = thinkingEnabled
-    ? Math.max(maxTokens, thinkingBudget + 1024)
+    ? maxTokens + thinkingBudget
     : maxTokens;
 
   return {
@@ -240,8 +243,16 @@ export function createAnthropicClient(
       const toolCalls = extractToolCalls(content);
       const providerMetadata =
         blocks.length > 0 ? providerMetadataForBlocks(blocks) : undefined;
+      // stop_reason === "max_tokens" 表示被截断（工具参数 JSON 可能不完整）。
+      const truncated = json.stop_reason === "max_tokens";
 
-      return { content: text || null, toolCalls, reasoning, providerMetadata };
+      return {
+        content: text || null,
+        toolCalls,
+        reasoning,
+        providerMetadata,
+        truncated,
+      };
     },
 
     async stream(
@@ -284,6 +295,7 @@ export function createAnthropicClient(
 
       let content = "";
       let reasoning = "";
+      let stopReason = "";
       const blocks = new Map<number, Block & { __json?: string }>();
       for await (const { data } of readSseBlocks(response)) {
         let evt: Record<string, unknown>;
@@ -291,6 +303,13 @@ export function createAnthropicClient(
           evt = JSON.parse(data) as Record<string, unknown>;
         } catch {
           continue;
+        }
+        // message_delta 携带 stop_reason；"max_tokens" 表示被截断（工具参数 JSON 可能不完整）。
+        if (evt.type === "message_delta") {
+          const delta = evt.delta as Record<string, unknown> | undefined;
+          if (typeof delta?.stop_reason === "string" && delta.stop_reason) {
+            stopReason = delta.stop_reason;
+          }
         }
         if (evt.type === "content_block_start") {
           const block = evt.content_block as
@@ -394,6 +413,7 @@ export function createAnthropicClient(
         toolCalls,
         reasoning: reasoning || null,
         providerMetadata,
+        truncated: stopReason === "max_tokens",
       };
     },
   };

@@ -199,6 +199,77 @@ describe("runAgent", () => {
     expect(tool.lastArgs).toEqual({});
   });
 
+  it("feeds a truncation error back when truncated and a required arg is missing", async () => {
+    // write_file 需要 path + content；模型被 max_tokens 截断，参数残缺退化成 {}。
+    const writeFile = makeTool("write_file", "wrote");
+    writeFile.parameters = {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        content: { type: "string" },
+      },
+      required: ["path", "content"],
+    };
+    const client = scriptedClient([
+      {
+        content: null,
+        toolCalls: [{ id: "c1", name: "write_file", arguments: "{}" }],
+        truncated: true,
+      },
+      { content: "ok, will retry smaller", toolCalls: [] },
+    ]);
+
+    const events: AgentEvent[] = [];
+    const result = await runAgent({
+      client,
+      tools: [writeFile],
+      messages: [{ role: "user", content: "write a big file" }],
+      onEvent: (e) => events.push(e),
+    });
+
+    // 工具不应被执行（参数残缺），而是回灌明确的截断错误。
+    expect(writeFile.lastArgs).toBeUndefined();
+    const toolMessage = result.messages.find((m) => m.role === "tool");
+    expect(toolMessage?.content).toContain("truncated");
+    expect(toolMessage?.content).toContain("path");
+    expect(toolMessage?.content).toContain("content");
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: "tool_error", name: "write_file" }),
+    );
+  });
+
+  it("still executes a truncated tool call when all required args are present", async () => {
+    // 截断标记为真，但参数恰好完整（截断发生在工具调用之后）——不应误拦截。
+    const writeFile = makeTool("write_file", "wrote");
+    writeFile.parameters = {
+      type: "object",
+      properties: { path: { type: "string" }, content: { type: "string" } },
+      required: ["path", "content"],
+    };
+    const client = scriptedClient([
+      {
+        content: null,
+        toolCalls: [
+          {
+            id: "c1",
+            name: "write_file",
+            arguments: '{"path":"a.txt","content":"hi"}',
+          },
+        ],
+        truncated: true,
+      },
+      { content: "done", toolCalls: [] },
+    ]);
+
+    await runAgent({
+      client,
+      tools: [writeFile],
+      messages: [{ role: "user", content: "go" }],
+    });
+
+    expect(writeFile.lastArgs).toEqual({ path: "a.txt", content: "hi" });
+  });
+
   it("stops at maxSteps when the model keeps calling tools forever", async () => {
     const loopTool = makeTool("loop", "again");
     // 一个永远要求继续调工具的模型
