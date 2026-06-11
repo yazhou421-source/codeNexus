@@ -3,8 +3,13 @@
     <aside class="cw-sessions">
       <div class="cw-sessions__head">
         <strong>Custom 会话</strong>
-        <button type="button" class="cw-btn cw-btn--compact" :disabled="customChatStore.sending" @click="createSession">
-          新建
+        <button
+          type="button"
+          class="cw-btn cw-btn--compact cw-btn--primary"
+          :disabled="customChatStore.sending"
+          @click="createSession"
+        >
+          + 新建
         </button>
       </div>
       <div v-if="customChatStore.loadingSessions" class="cw-sessions__empty">加载中...</div>
@@ -46,13 +51,34 @@
           <span class="cw-tag">实验 · 不依赖 codex-app-server</span>
         </div>
         <div class="cw-header__actions">
-          <button type="button" class="cw-btn" @click="runtimeStore.toggleTimelineDebugEnabled()">
-            {{ runtimeStore.timelineDebugEnabled ? "隐藏日志" : "日志" }}
+          <button
+            type="button"
+            class="cw-btn"
+            :class="{ 'is-on': runtimeStore.timelineDebugEnabled }"
+            :aria-pressed="runtimeStore.timelineDebugEnabled ? 'true' : 'false'"
+            @click="runtimeStore.toggleTimelineDebugEnabled()"
+          >
+            <ScrollText class="cw-btn__icon" aria-hidden="true" />
+            日志
           </button>
-          <button type="button" class="cw-btn" @click="showConfig = !showConfig">
-            {{ showConfig ? "返回对话" : "配置 Provider" }}
+          <button
+            type="button"
+            class="cw-btn"
+            :class="{ 'is-on': showConfig }"
+            :aria-pressed="showConfig ? 'true' : 'false'"
+            @click="showConfig = !showConfig"
+          >
+            <Settings2 class="cw-btn__icon" aria-hidden="true" />
+            配置 Provider
           </button>
-          <button type="button" class="cw-btn" @click="appShellStore.openModeChooser()">切换模式</button>
+          <button
+            type="button"
+            class="cw-btn cw-btn--ghost cw-header__mode-switch"
+            @click="appShellStore.openModeChooser()"
+          >
+            <ArrowRightLeft class="cw-btn__icon" aria-hidden="true" />
+            切换模式
+          </button>
         </div>
       </header>
 
@@ -75,14 +101,16 @@
               <button
                 v-if="provider.id !== activeProviderId"
                 type="button"
-                class="cw-btn"
+                class="cw-btn cw-btn--accent"
                 @click="activate(provider.id)"
               >
                 激活
               </button>
               <span v-else class="cw-provider__current">当前</span>
               <button type="button" class="cw-btn" @click="edit(provider)">编辑</button>
-              <button type="button" class="cw-btn" @click="remove(provider.id)">删除</button>
+              <button type="button" class="cw-btn cw-btn--danger cw-provider__remove" @click="remove(provider.id)">
+                删除
+              </button>
             </div>
           </div>
           <button type="button" class="cw-btn cw-btn--primary cw-config__add" @click="startNew">+ 新增 Provider</button>
@@ -138,8 +166,10 @@
             >
               {{ testing ? "测试中…" : "测试连接" }}
             </button>
-            <button type="button" class="cw-btn" @click="cancelEdit">取消</button>
-            <button type="submit" class="cw-btn cw-btn--primary" :disabled="!canSave">保存并激活</button>
+            <div class="cw-config__actions-commit">
+              <button type="button" class="cw-btn" @click="cancelEdit">取消</button>
+              <button type="submit" class="cw-btn cw-btn--primary" :disabled="!canSave">保存并激活</button>
+            </div>
           </div>
           <p v-if="form.kind !== 'openai-compatible'" class="cw-config__hint">
             连接测试目前仅支持 OpenAI 兼容协议；Claude / Gemini 直接保存后在对话中验证。
@@ -162,7 +192,7 @@
             <div class="cw-msg__role">{{ message.role === "user" ? "你" : message.error ? "错误" : "助手" }}</div>
             <details v-if="message.role === 'assistant' && message.reasoning" class="cw-think">
               <summary>
-                💭 思考过程
+                思考过程
                 <ExecutionWaveText
                   v-if="message.streaming"
                   text="(生成中)"
@@ -180,35 +210,67 @@
                   class="cw-msg__body cw-msg__body--md agent-markdown-body"
                   :html="markdownHtml(part.id, part.text)"
                 />
-                <div v-else class="cw-tool" :class="`cw-tool--${part.tool.status}`">
-                  <div class="cw-tool__head">
-                    <span
-                      class="cw-tool__icon"
-                      :class="`cw-tool__icon--${part.tool.status}`"
-                      :aria-label="toolStatusLabel(part.tool.status)"
-                      role="img"
-                    ></span>
-                    <span class="cw-tool__status">{{ toolStatusLabel(part.tool.status) }}</span>
+                <div
+                  v-else
+                  class="cw-tool"
+                  :class="[
+                    `cw-tool--${part.tool.status}`,
+                    `cw-tool--cat-${toolCategory(part.tool.name)}`,
+                    { 'is-open': toolHasDetail(part) && isToolDetailOpen(part) },
+                  ]"
+                >
+                  <component
+                    :is="toolHasDetail(part) ? 'button' : 'div'"
+                    class="cw-tool__row"
+                    :class="{ 'is-clickable': toolHasDetail(part) }"
+                    :type="toolHasDetail(part) ? 'button' : undefined"
+                    :aria-expanded="toolHasDetail(part) ? (isToolDetailOpen(part) ? 'true' : 'false') : undefined"
+                    @click="toolHasDetail(part) && toggleToolDetail(part)"
+                  >
+                    <component :is="toolIcon(part.tool.name)" class="cw-tool__cat-icon" aria-hidden="true" />
                     <span class="cw-tool__name mono">{{ part.tool.name }}</span>
+                    <span v-if="toolArgsSummary(part.tool.argsText)" class="cw-tool__sep" aria-hidden="true">·</span>
                     <span class="cw-tool__args mono">{{ toolArgsSummary(part.tool.argsText) }}</span>
-                  </div>
-                  <div v-if="toolHasPreview(part.tool.argsText)" class="cw-tool__args-preview">
-                    <button
-                      type="button"
-                      class="cw-tool__args-toggle"
-                      @click="toggleToolArgs(part)"
-                      :aria-label="isToolArgsOpen(part) ? '折叠参数' : '展开参数'"
+                    <span
+                      class="cw-tool__state"
+                      :class="`cw-tool__state--${part.tool.status}`"
+                      :title="toolStatusLabel(part.tool.status)"
                     >
-                      {{ isToolArgsOpen(part) ? "▼" : "▶" }} 参数
-                    </button>
-                    <pre v-show="isToolArgsOpen(part)" class="cw-tool__args-body mono">{{
-                      toolArgsPreview(part.tool.argsText)
-                    }}</pre>
+                      <span
+                        v-if="part.tool.status === 'running'"
+                        class="cw-tool__spinner"
+                        :aria-label="toolStatusLabel(part.tool.status)"
+                        role="img"
+                      ></span>
+                      <span
+                        v-else-if="part.tool.status === 'done'"
+                        class="cw-tool__check"
+                        role="img"
+                        aria-label="完成"
+                      ></span>
+                      <X v-else class="cw-tool__err-icon" role="img" aria-label="失败" />
+                    </span>
+                    <ChevronDown
+                      v-if="toolHasDetail(part)"
+                      class="cw-tool__chevron"
+                      :class="{ 'is-open': isToolDetailOpen(part) }"
+                      aria-hidden="true"
+                    />
+                  </component>
+                  <div v-if="toolHasDetail(part)" v-show="isToolDetailOpen(part)" class="cw-tool__detail-panel">
+                    <template v-if="toolHasPreview(part.tool.argsText)">
+                      <div class="cw-tool__detail-label">参数</div>
+                      <pre class="cw-tool__detail-body mono">{{ toolArgsPreview(part.tool.argsText) }}</pre>
+                    </template>
+                    <template v-if="part.tool.resultText || part.tool.error">
+                      <div class="cw-tool__detail-label" :class="{ 'is-error': part.tool.error }">
+                        {{ part.tool.error ? "错误" : "结果" }}
+                      </div>
+                      <pre class="cw-tool__detail-body mono" :class="{ 'is-error': part.tool.error }">{{
+                        part.tool.error || part.tool.resultText
+                      }}</pre>
+                    </template>
                   </div>
-                  <details v-if="part.tool.resultText || part.tool.error" class="cw-tool__more">
-                    <summary>{{ part.tool.error ? "错误" : "结果" }}</summary>
-                    <pre class="cw-tool__detail mono">{{ part.tool.error || part.tool.resultText }}</pre>
-                  </details>
                 </div>
               </template>
             </div>
@@ -243,8 +305,13 @@
                   class="cw-approval__toggle"
                   @click="toggleApprovalDetail(ap.approvalId)"
                   :aria-label="isApprovalCollapsed(ap.approvalId) ? '展开详情' : '折叠详情'"
+                  :aria-expanded="isApprovalCollapsed(ap.approvalId) ? 'false' : 'true'"
                 >
-                  {{ isApprovalCollapsed(ap.approvalId) ? "▶" : "▼" }}
+                  <ChevronDown
+                    class="cw-approval__chevron"
+                    :class="{ 'is-open': !isApprovalCollapsed(ap.approvalId) }"
+                    aria-hidden="true"
+                  />
                 </button>
               </div>
               <template v-if="!isApprovalCollapsed(ap.approvalId)">
@@ -259,7 +326,11 @@
                 <pre v-else class="cw-approval__detail mono">{{ ap.detail }}</pre>
               </template>
               <div class="cw-approval__actions">
-                <button type="button" class="cw-btn" @click="customChatStore.respondApproval(ap.approvalId, false)">
+                <button
+                  type="button"
+                  class="cw-btn cw-btn--ghost-danger"
+                  @click="customChatStore.respondApproval(ap.approvalId, false)"
+                >
                   拒绝
                 </button>
                 <button
@@ -276,46 +347,79 @@
           <p v-if="!hasActiveProvider" class="cw-composer__warn">
             尚未配置可用 Provider，<button type="button" class="cw-link" @click="showConfig = true">点此配置</button>。
           </p>
-          <div v-else class="cw-composer__meta">
-            <label class="cw-provider-switcher">
-              <span>当前</span>
-              <select :value="activeProviderId ?? ''" :disabled="customChatStore.sending" @change="onProviderSelect">
-                <option v-for="provider in providers" :key="provider.id" :value="provider.id">
-                  {{ providerOptionLabel(provider) }}
-                </option>
-              </select>
-            </label>
-            <span class="cw-ws">
-              工作区：<span class="cw-ws__path">{{ workspaceRoot || "未选择（系统工具）" }}</span>
-              <button type="button" class="cw-link" @click="selectWorkspace">
-                {{ workspaceRoot ? "更改" : "选择" }}
-              </button>
-              <button v-if="workspaceRoot" type="button" class="cw-link" @click="clearWorkspace">清除</button>
-            </span>
-            <span class="cw-context" :class="`cw-context--${contextUsageState}`" :title="contextUsageTitle">
-              {{ contextUsageLabel }}
-            </span>
-          </div>
-          <div class="cw-composer__row">
+          <div v-else class="cw-shell" :class="{ 'is-sending': customChatStore.sending }">
             <textarea
+              ref="composerInputRef"
               v-model="draft"
-              class="cw-composer__input"
-              rows="2"
+              class="cw-shell__input app-scrollbar"
+              :style="composerSizeStyle"
               placeholder="给自定义模型发消息…（Enter 发送，Shift+Enter 换行）"
-              :disabled="!hasActiveProvider || customChatStore.sending"
+              :disabled="customChatStore.sending"
               @keydown="onComposerKeydown"
+              @input="onComposerInput"
             ></textarea>
-            <button
-              v-if="customChatStore.sending"
-              type="button"
-              class="cw-btn cw-btn--danger"
-              @click="cancelGeneration"
-            >
-              停止
-            </button>
-            <button v-else type="button" class="cw-btn cw-btn--primary" :disabled="!canSend" @click="submit">
-              发送
-            </button>
+            <div class="cw-shell__bar">
+              <div class="cw-shell__left">
+                <SelectDropdown
+                  class="cw-model-select"
+                  :modelValue="activeProviderId ?? ''"
+                  :options="providerSelectOptions"
+                  :disabled="customChatStore.sending"
+                  ariaLabel="选择 Provider"
+                  :minPopoverWidth="260"
+                  @update:modelValue="onProviderPick"
+                />
+                <button
+                  type="button"
+                  class="cw-tool-chip"
+                  :class="{ 'is-set': !!workspaceRoot }"
+                  :title="workspaceRoot || '未选择工作区（使用系统工具，根目录为进程 cwd）'"
+                  @click="selectWorkspace"
+                >
+                  <FolderOpen v-if="workspaceRoot" class="cw-tool-chip__icon" aria-hidden="true" />
+                  <Folder v-else class="cw-tool-chip__icon" aria-hidden="true" />
+                  <span class="cw-tool-chip__label">{{ workspaceShortName || "工作区" }}</span>
+                  <span
+                    v-if="workspaceRoot"
+                    class="cw-tool-chip__clear"
+                    role="button"
+                    aria-label="清除工作区"
+                    @click.stop="clearWorkspace"
+                  >
+                    <X class="cw-tool-chip__clear-icon" aria-hidden="true" />
+                  </span>
+                </button>
+              </div>
+              <div class="cw-shell__right">
+                <span
+                  class="cw-context-chip"
+                  :class="`cw-context-chip--${contextUsageState}`"
+                  :title="contextUsageTitle"
+                >
+                  <span class="cw-context-blocks" aria-hidden="true">
+                    <span
+                      v-for="i in CONTEXT_BLOCK_COUNT"
+                      :key="i"
+                      class="cw-context-blocks__cell"
+                      :class="{ 'is-on': i <= contextBlocksOn }"
+                    ></span>
+                  </span>
+                  <span class="cw-context-chip__label">{{ contextCompactLabel }}</span>
+                </span>
+                <button
+                  v-if="customChatStore.sending"
+                  type="button"
+                  class="cw-send-btn cw-send-btn--stop"
+                  aria-label="停止生成"
+                  @click="cancelGeneration"
+                >
+                  <Square class="cw-send-btn__icon" aria-hidden="true" />
+                </button>
+                <button v-else type="button" class="cw-send-btn" aria-label="发送" :disabled="!canSend" @click="submit">
+                  <ArrowUp class="cw-send-btn__icon" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
           </div>
         </footer>
       </div>
@@ -325,9 +429,35 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  ArrowRightLeft,
+  ArrowUp,
+  ChevronDown,
+  Download,
+  FileDiff,
+  FilePlus,
+  FileSearch,
+  FileText,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  GitBranch,
+  Globe,
+  Pencil,
+  ScrollText,
+  Search,
+  Settings2,
+  Square,
+  Terminal,
+  Trash2,
+  Wrench,
+  X,
+} from "lucide-vue-next";
+import type { Component } from "vue";
 import { codexDesktop } from "../../api/codexDesktopClient";
 import AgentMarkdownContent from "../ui/AgentMarkdownContent.vue";
 import ExecutionWaveText from "../ui/ExecutionWaveText.vue";
+import SelectDropdown from "../ui/SelectDropdown.vue";
 import UnifiedDiffViewer from "../timeline/cards/UnifiedDiffViewer.vue";
 import { useAgentMarkdownRenderer } from "../../features/timeline/useAgentMarkdownRenderer";
 import { getCachedUserLocalSettings, patchUserLocalSettings } from "../../domain/localSettings";
@@ -352,6 +482,7 @@ function markdownHtml(id: string, text: string): string {
 const showConfig = ref(false);
 const draft = ref("");
 const listRef = ref<HTMLElement | null>(null);
+const composerInputRef = ref<HTMLTextAreaElement | null>(null);
 let scrollToBottomRafId: number | null = null;
 
 const testing = ref(false);
@@ -381,43 +512,6 @@ function extractFilenameFromDetail(detail: string): string {
   return match ? match[1] : "file.txt";
 }
 
-function parseDiffLines(text: string): Array<{ text: string; type: string; lineNum: string }> {
-  const lines = text.split("\n");
-  let oldLineNum = 1;
-  let newLineNum = 1;
-
-  return lines.map((line) => {
-    let type = "diff-ctx";
-    let lineNum = "";
-
-    if (line.startsWith("@@")) {
-      // Hunk header - extract line numbers
-      const match = line.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
-      if (match) {
-        oldLineNum = parseInt(match[1], 10);
-        newLineNum = parseInt(match[2], 10);
-      }
-      type = "diff-hunk";
-      lineNum = "";
-    } else if (line.startsWith("+ ")) {
-      type = "diff-add";
-      lineNum = `+${newLineNum}`;
-      newLineNum++;
-    } else if (line.startsWith("- ")) {
-      type = "diff-del";
-      lineNum = `-${oldLineNum}`;
-      oldLineNum++;
-    } else if (line.startsWith(" ")) {
-      type = "diff-ctx";
-      lineNum = ` ${oldLineNum}`;
-      oldLineNum++;
-      newLineNum++;
-    }
-
-    return { text: line, type, lineNum };
-  });
-}
-
 // Approval detail collapse state (track by approvalId)
 const collapsedApprovals = ref<Set<string>>(new Set());
 
@@ -433,19 +527,25 @@ function isApprovalCollapsed(approvalId: string): boolean {
   return collapsedApprovals.value.has(approvalId);
 }
 
-// 工具参数展开/折叠：仅记录用户显式开合，未设时默认按状态（执行中展开、完成折叠）。
-const toolArgsOverride = ref<Record<string, boolean>>({});
+// 工具详情展开/折叠：单行右侧点击展开，统一展示「参数 + 结果/错误」。
+// 仅记录用户显式开合，未设时默认按状态（执行中展开看进度、完成/失败折叠）。
+const toolDetailOverride = ref<Record<string, boolean>>({});
 
-function isToolArgsOpen(part: { tool: CustomToolActivity }): boolean {
-  const override = toolArgsOverride.value[part.tool.callId];
+// 该工具是否有可展开的详情：可预览参数 OR 有结果/错误。
+function toolHasDetail(part: { tool: CustomToolActivity }): boolean {
+  return toolHasPreview(part.tool.argsText) || Boolean(part.tool.resultText) || Boolean(part.tool.error);
+}
+
+function isToolDetailOpen(part: { tool: CustomToolActivity }): boolean {
+  const override = toolDetailOverride.value[part.tool.callId];
   if (override !== undefined) return override;
   return part.tool.status === "running";
 }
 
-function toggleToolArgs(part: { tool: CustomToolActivity }) {
-  toolArgsOverride.value = {
-    ...toolArgsOverride.value,
-    [part.tool.callId]: !isToolArgsOpen(part),
+function toggleToolDetail(part: { tool: CustomToolActivity }) {
+  toolDetailOverride.value = {
+    ...toolDetailOverride.value,
+    [part.tool.callId]: !isToolDetailOpen(part),
   };
 }
 
@@ -514,6 +614,19 @@ function providerOptionLabel(provider: LocalCustomProvider): string {
   return `${provider.name} · ${kindLabel(provider.kind)} · ${provider.model || "未设置模型"}`;
 }
 
+// SelectDropdown 选项：value=provider.id，label=完整标签。
+const providerSelectOptions = computed(() =>
+  providers.value.map((provider) => ({ value: provider.id, label: providerOptionLabel(provider) }))
+);
+
+// 工作区末段目录名（用于工具栏芯片紧凑展示，完整路径挂 title）。
+const workspaceShortName = computed(() => {
+  const root = workspaceRoot.value;
+  if (!root) return "";
+  const segments = root.split(/[\\/]/).filter(Boolean);
+  return segments[segments.length - 1] || root;
+});
+
 function sessionSnapshot() {
   return {
     providerId: activeProviderId.value,
@@ -540,15 +653,6 @@ const contextUsedTokens = computed(() => {
 const DEFAULT_CONTEXT_LIMIT = 200_000;
 const contextLimitTokens = computed(() => activeProvider.value?.contextLimit ?? DEFAULT_CONTEXT_LIMIT);
 
-// 输入栏展示文案：「已用 N tokens」或「已用 N / 上限 M tokens（百分比）」。
-const contextUsageLabel = computed(() => {
-  const used = contextUsedTokens.value;
-  const limit = contextLimitTokens.value;
-  if (!limit) return `上下文约 ${used.toLocaleString()} tokens`;
-  const pct = Math.min(999, Math.round((used / limit) * 100));
-  return `上下文约 ${used.toLocaleString()} / ${limit.toLocaleString()} tokens（${pct}%）`;
-});
-
 // 接近 / 超出上限时变色提示（超限后内核会裁掉最旧历史，仅保留最近窗口）。
 const contextUsageState = computed<"normal" | "warn" | "over">(() => {
   const limit = contextLimitTokens.value;
@@ -558,6 +662,33 @@ const contextUsageState = computed<"normal" | "warn" | "over">(() => {
   if (ratio >= 0.8) return "warn";
   return "normal";
 });
+
+// 进度环百分比（0–100，封顶 100）；无上限时回 0（环画成空，文案仅显示用量）。
+const contextUsagePercent = computed(() => {
+  const limit = contextLimitTokens.value;
+  if (!limit) return 0;
+  return Math.min(100, Math.round((contextUsedTokens.value / limit) * 100));
+});
+
+// 进度展示用的像素分段块条：5 格，按封顶百分比向上取整点亮（有用量时至少亮 1 格）。
+const CONTEXT_BLOCK_COUNT = 5;
+const contextBlocksOn = computed(() => {
+  const pct = contextUsagePercent.value;
+  if (pct === 0) return 0;
+  return Math.max(1, Math.ceil((pct / 100) * CONTEXT_BLOCK_COUNT));
+});
+
+// 紧凑 token 文案：≥1000 显示 x.xk，否则原值。
+function formatCompactTokens(n: number): string {
+  if (n >= 1000) {
+    const k = n / 1000;
+    return `${k >= 100 ? Math.round(k) : k.toFixed(1)}k`;
+  }
+  return String(n);
+}
+
+// 工具栏芯片用的紧凑用量文案。
+const contextCompactLabel = computed(() => formatCompactTokens(contextUsedTokens.value));
 
 // 鼠标悬停的解释：估算口径 + 超限时的裁剪行为。
 const contextUsageTitle = computed(() => {
@@ -717,10 +848,11 @@ async function activate(id: string) {
   await persist();
 }
 
-async function onProviderSelect(event: Event) {
-  const id = String((event.target as HTMLSelectElement | null)?.value ?? "").trim();
-  if (!id || id === activeProviderId.value || customChatStore.sending) return;
-  await activate(id);
+// SelectDropdown 回调：直接收 provider id（sending 时忽略，避免运行中切换）。
+async function onProviderPick(id: string) {
+  const next = id.trim();
+  if (!next || next === activeProviderId.value || customChatStore.sending) return;
+  await activate(next);
 }
 
 async function remove(id: string) {
@@ -756,6 +888,7 @@ function submit() {
   const providerId = activeProvider.value?.id ?? activeProviderId.value;
   const text = draft.value;
   draft.value = "";
+  resetComposerHeight();
   void customChatStore.send(text, {
     providerId,
     providerLabel: activeProviderLabel.value,
@@ -786,6 +919,57 @@ function toolStatusLabel(status: CustomToolActivity["status"]): string {
   if (status === "running") return "执行中";
   if (status === "error") return "失败";
   return "完成";
+}
+
+// 工具按语义分 5 类：读 / 写 / 删 / 执行 / 网络（其余归 other）。
+// 类别决定行内图标 + 语义色调（read=accent、write=success、destructive=danger、
+// exec=warning、network=accent、other=muted）；与卡片三态色（running/done/error）叠加。
+type ToolCategory = "read" | "write" | "destructive" | "exec" | "network" | "other";
+
+const TOOL_CATEGORY_BY_NAME: Record<string, ToolCategory> = {
+  read_file: "read",
+  read_file_range: "read",
+  search_files: "read",
+  grep: "read",
+  git_status: "read",
+  git_diff: "read",
+  git_show: "read",
+  write_file: "write",
+  edit_file: "write",
+  apply_patch: "write",
+  mkdir: "write",
+  move_file: "write",
+  delete_file: "destructive",
+  run_command: "exec",
+  web_search: "network",
+  web_fetch: "network",
+};
+
+const TOOL_ICON_BY_NAME: Record<string, Component> = {
+  read_file: FileText,
+  read_file_range: FileText,
+  search_files: FileSearch,
+  grep: Search,
+  git_status: GitBranch,
+  git_diff: FileDiff,
+  git_show: GitBranch,
+  write_file: FilePlus,
+  edit_file: Pencil,
+  apply_patch: FileDiff,
+  mkdir: FolderPlus,
+  move_file: ArrowRightLeft,
+  delete_file: Trash2,
+  run_command: Terminal,
+  web_search: Globe,
+  web_fetch: Download,
+};
+
+function toolCategory(name: string): ToolCategory {
+  return TOOL_CATEGORY_BY_NAME[name] ?? "other";
+}
+
+function toolIcon(name: string): Component {
+  return TOOL_ICON_BY_NAME[name] ?? Wrench;
 }
 
 // 工具入参（JSON 串）的紧凑摘要：优先取 command/path/processId，否则截断原串。
@@ -845,6 +1029,34 @@ function onComposerKeydown(event: KeyboardEvent) {
   }
 }
 
+// textarea 自动增高：内容增长时撑高，到上限（约 8 行）后内部滚动。
+// 高度边界只在这里定义，模板内联样式引用，避免与 CSS 各存一份漂移。
+const COMPOSER_MIN_HEIGHT = 48;
+const COMPOSER_MAX_HEIGHT = 200;
+const composerSizeStyle = {
+  height: `${COMPOSER_MIN_HEIGHT}px`,
+  maxHeight: `${COMPOSER_MAX_HEIGHT}px`,
+};
+function autoGrowComposer() {
+  const el = composerInputRef.value;
+  if (!el) return;
+  el.style.height = "auto";
+  const next = Math.min(COMPOSER_MAX_HEIGHT, Math.max(COMPOSER_MIN_HEIGHT, el.scrollHeight));
+  el.style.height = `${next}px`;
+  el.style.overflowY = el.scrollHeight > COMPOSER_MAX_HEIGHT ? "auto" : "hidden";
+}
+
+function resetComposerHeight() {
+  const el = composerInputRef.value;
+  if (!el) return;
+  el.style.height = `${COMPOSER_MIN_HEIGHT}px`;
+  el.style.overflowY = "hidden";
+}
+
+function onComposerInput() {
+  autoGrowComposer();
+}
+
 function scrollMessagesToBottom() {
   const element = listRef.value;
   if (!element) return;
@@ -880,11 +1092,48 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .custom-workbench {
+  /* 像素皮肤原语：颜色一律从当前主题 token 派生，跟随主题切换 */
+  --px-bw: 2px;
+  --px-shadow-color: color-mix(in srgb, var(--text) 22%, var(--bg));
+  --px-shadow: 3px 3px 0 0 var(--px-shadow-color);
+  --px-shadow-sm: 2px 2px 0 0 var(--px-shadow-color);
+  --cw-font-content: var(--ui-font, var(--sans));
+  --composer-shell-focus-ring: transparent;
+  position: relative;
   display: flex;
   height: 100%;
   min-height: 0;
+  font-family: var(--ui-font, var(--sans));
+  font-size: 13px;
+  line-height: 20px;
   color: var(--text);
   background: var(--bg);
+}
+
+/* 静态 CRT 扫描线：极淡、不动画，reduced-motion 安全 */
+.custom-workbench::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--text) 3%, transparent) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* 全局按钮基线是 3px 圆角，本页整体拍平成方角 */
+.custom-workbench button {
+  border-radius: 0;
+}
+
+/* 页内滚动条方角化（颜色 token 不动） */
+.app-scrollbar::-webkit-scrollbar-thumb,
+.app-scrollbar::-webkit-scrollbar-track,
+.app-scrollbar::-webkit-scrollbar-track-piece {
+  border-radius: 0;
 }
 
 .cw-main {
@@ -898,7 +1147,7 @@ onBeforeUnmount(() => {
 .cw-sessions {
   width: 244px;
   min-width: 220px;
-  border-right: 1px solid var(--border);
+  border-right: var(--px-bw) solid var(--border);
   background: var(--surface-1);
   display: flex;
   flex-direction: column;
@@ -911,19 +1160,19 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 8px;
   padding: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--px-bw) solid var(--border);
 }
 
 .cw-btn--compact {
-  padding: 4px 8px;
-  font-size: 12px;
-  border-radius: 7px;
+  padding: 2px 8px;
 }
 
 .cw-sessions__empty {
-  padding: 14px 12px;
+  margin: 14px 12px;
+  padding: 12px;
   font-size: 12px;
   color: var(--text-muted);
+  border: var(--px-bw) dashed var(--border);
 }
 
 .cw-session-list {
@@ -943,20 +1192,16 @@ onBeforeUnmount(() => {
   gap: 6px;
   min-height: 62px;
   padding: 7px 7px 7px 10px;
-  border-radius: 10px;
-  border: 1px solid transparent;
+  border-radius: 0;
+  border: var(--px-bw) solid transparent;
   background: transparent;
   box-sizing: border-box;
-  transition:
-    border-color 140ms ease,
-    background 140ms ease,
-    box-shadow 140ms ease;
 }
 
 .cw-session.is-active {
   border-color: var(--border-accent);
   background: color-mix(in srgb, var(--bg-accent-soft) 82%, var(--surface-1) 18%);
-  box-shadow: inset 3px 0 0 var(--fg-accent);
+  box-shadow: var(--px-shadow-sm);
 }
 
 .cw-session:hover {
@@ -998,7 +1243,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 18px;
   letter-spacing: 0;
@@ -1011,9 +1256,9 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 15px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
   letter-spacing: 0;
   color: var(--text-muted);
 }
@@ -1029,16 +1274,12 @@ onBeforeUnmount(() => {
   justify-content: center;
   cursor: pointer;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
   color: var(--text-muted);
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
   opacity: 0.72;
-  transition:
-    opacity 140ms ease,
-    color 140ms ease,
-    background 140ms ease;
 }
 
 .cw-session:hover .cw-session__delete,
@@ -1062,7 +1303,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--px-bw) solid var(--border);
 }
 
 .cw-header__title {
@@ -1071,10 +1312,17 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.cw-header__title strong {
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 400;
+}
+
 .cw-tag {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: 0;
+  border: var(--px-bw) solid var(--border);
   color: var(--text-muted);
   background: var(--surface-3);
 }
@@ -1085,13 +1333,26 @@ onBeforeUnmount(() => {
 }
 
 .cw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   cursor: pointer;
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 18px;
+  padding: 4px 12px;
+  border-radius: 0;
+  border: var(--px-bw) solid var(--border);
   background: var(--surface-2);
   color: var(--text);
+  box-shadow: var(--px-shadow-sm);
+  transition: none;
+}
+
+.cw-btn__icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .cw-btn:hover:not(:disabled) {
@@ -1099,9 +1360,24 @@ onBeforeUnmount(() => {
   background: var(--surface-3);
 }
 
+/* 经典像素按压：整体位移 + 阴影收没 */
+.cw-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
 .cw-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 开关按钮的持久按下态（header 日志 / 配置 Provider） */
+.cw-btn.is-on {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+  border-color: var(--border-accent);
+  background: var(--bg-accent-soft);
+  color: var(--fg-accent);
 }
 
 .cw-btn--primary {
@@ -1112,6 +1388,17 @@ onBeforeUnmount(() => {
 
 .cw-btn--primary:hover:not(:disabled) {
   border-color: var(--border-success-hover);
+  background: var(--bg-success-soft);
+}
+
+.cw-btn--accent {
+  color: var(--fg-accent);
+  border-color: var(--border-accent);
+  background: var(--bg-accent-soft);
+}
+
+.cw-btn--accent:hover:not(:disabled) {
+  background: var(--bg-accent-soft);
 }
 
 .cw-btn--danger {
@@ -1123,6 +1410,41 @@ onBeforeUnmount(() => {
 .cw-btn--danger:hover:not(:disabled) {
   border-color: var(--border-danger-hover);
   background: color-mix(in srgb, var(--bg-danger-soft) 80%, var(--fg-danger) 20%);
+}
+
+/* danger ghost：危险文字 + 中性底，用于审批「拒绝」这类需要可读但不抢眼的破坏性操作 */
+.cw-btn--ghost-danger {
+  color: var(--fg-danger);
+}
+
+.cw-btn--ghost-danger:hover:not(:disabled) {
+  border-color: var(--border-danger);
+  background: var(--bg-danger-soft);
+}
+
+/* ghost：无底无影，用于导航类次要动作（header 切换模式） */
+.cw-btn--ghost {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+}
+
+.cw-btn--ghost:hover:not(:disabled) {
+  border-color: var(--border-accent);
+  background: transparent;
+  color: var(--text);
+}
+
+.cw-btn--ghost:active:not(:disabled) {
+  transform: none;
+}
+
+/* 与左侧两个开关按钮之间的分隔线：ghost 无边框，单独亮出左边线 */
+.cw-header__mode-switch {
+  margin-left: 4px;
+  padding-left: 12px;
+  border-left: var(--px-bw) solid var(--border);
 }
 
 .cw-config {
@@ -1142,7 +1464,9 @@ onBeforeUnmount(() => {
 
 .cw-config h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 400;
   color: var(--text);
 }
 
@@ -1163,14 +1487,16 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
+  border-radius: 0;
+  border: var(--px-bw) solid var(--border);
   background: var(--surface-2);
+  box-shadow: var(--px-shadow);
 }
 
 .cw-provider.is-active {
   border-color: var(--border-success);
   background: var(--bg-success-soft);
+  box-shadow: 3px 3px 0 0 color-mix(in srgb, var(--fg-success) 35%, var(--bg));
 }
 
 .cw-provider__info {
@@ -1186,9 +1512,10 @@ onBeforeUnmount(() => {
 }
 
 .cw-provider__kind {
-  font-size: 11px;
-  padding: 1px 7px;
-  border-radius: 999px;
+  font-size: 12px;
+  padding: 0 6px;
+  border-radius: 0;
+  border: 1px solid var(--border);
   color: var(--text-muted);
   background: var(--surface-3);
 }
@@ -1205,6 +1532,11 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
+/* 破坏性操作与常规操作拉开间距 */
+.cw-provider__remove {
+  margin-left: 6px;
+}
+
 .cw-provider__current {
   font-size: 12px;
   color: var(--fg-success);
@@ -1215,14 +1547,14 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 12px;
   padding-top: 16px;
-  border-top: 1px solid var(--border);
+  border-top: var(--px-bw) solid var(--border);
 }
 
 .cw-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
 }
 
@@ -1231,8 +1563,8 @@ onBeforeUnmount(() => {
   padding: 8px 10px;
   min-height: 40px;
   box-sizing: border-box;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+  border-radius: 0;
+  border: var(--px-bw) solid var(--border);
   background: var(--surface-2);
   color: var(--text);
   font: inherit;
@@ -1245,15 +1577,25 @@ onBeforeUnmount(() => {
   padding-bottom: 0;
 }
 
+/* 凹槽态：边框变 accent + 内嵌硬阴影，与按钮的凸起形成对偶 */
 .cw-field input:focus,
 .cw-field select:focus {
   outline: none;
   border-color: var(--border-accent);
+  box-shadow: inset 2px 2px 0 0 color-mix(in srgb, var(--text) 10%, transparent);
 }
 
 .cw-config__actions {
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+/* 提交组右对齐，主操作收尾；测试连接（工具类）留在左侧 */
+.cw-config__actions-commit {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .cw-config__test {
@@ -1286,9 +1628,11 @@ onBeforeUnmount(() => {
 
 .cw-empty {
   margin: auto;
-  font-size: 13px;
+  padding: 14px 20px;
+  font-size: 12px;
   text-align: center;
   color: var(--text-muted);
+  border: var(--px-bw) dashed var(--border);
 }
 
 .cw-msg {
@@ -1304,24 +1648,27 @@ onBeforeUnmount(() => {
 }
 
 .cw-msg__role {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
 }
 
 .cw-msg__body {
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.6;
+  line-height: 20px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: 0;
   color: var(--text);
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: var(--px-bw) solid var(--border);
+  box-shadow: var(--px-shadow);
 }
 
+/* 用户气泡右对齐，阴影落向左下；与助手气泡的右下阴影形成方向区分 */
 .cw-msg--user .cw-msg__body {
   border-color: var(--border-accent);
   background: var(--bg-accent-soft);
+  box-shadow: -3px 3px 0 0 var(--px-shadow-color);
 }
 
 .cw-msg.is-error .cw-msg__body {
@@ -1338,6 +1685,13 @@ onBeforeUnmount(() => {
   white-space: normal;
 }
 
+/* markdown 正文走独立字体 token，避免长文继承实验性界面字体 */
+.custom-workbench :deep(.agent-markdown-body) {
+  font-family: var(--cw-font-content);
+  font-size: 13px;
+  line-height: 20px;
+}
+
 .cw-msg__parts {
   display: flex;
   flex-direction: column;
@@ -1346,14 +1700,14 @@ onBeforeUnmount(() => {
 
 .cw-composer {
   border-top: 1px solid var(--border);
-  padding: 12px 16px;
+  padding: 12px 16px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
 }
 
-.cw-composer__warn,
-.cw-composer__meta {
+.cw-composer__warn {
   margin: 0;
   font-size: 12px;
   color: var(--text-muted);
@@ -1368,168 +1722,316 @@ onBeforeUnmount(() => {
   font: inherit;
 }
 
-.cw-composer__row {
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-}
-
-.cw-composer__input {
-  flex: 1;
-  resize: none;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  font: inherit;
-  line-height: 1.5;
-}
-
-.cw-composer__input:focus {
-  outline: none;
-  border-color: var(--border-accent);
-}
-
-/* 工具活动（read/write/命令等） */
-.cw-tools {
+/* 融合输入外壳：textarea 在上，底部一条工具栏内嵌模型/工作区/上下文/发送 */
+.cw-shell {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 2px;
-}
-
-.cw-tool {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-2);
-  padding: 6px 8px;
-  font-size: 12px;
-  position: relative;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--composer-shell-border, var(--border));
+  background: var(--composer-shell-bg, var(--surface-2));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg) 26%, transparent);
   overflow: hidden;
   transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    box-shadow 160ms ease;
+    border-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
-.cw-tool::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
+.cw-shell:focus-within {
+  border-color: var(--composer-shell-focus-border, var(--border-accent));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 10px 28px color-mix(in srgb, var(--bg) 30%, transparent);
 }
 
-.cw-tool--running {
-  border-color: var(--border-accent);
-  background: color-mix(in srgb, var(--surface-2) 88%, var(--bg-accent-soft) 12%);
-  box-shadow: inset 2px 0 0 var(--fg-accent);
+.cw-shell.is-sending {
+  opacity: 0.96;
 }
 
-.cw-tool--running::before {
-  background: linear-gradient(90deg, transparent 0%, rgb(from var(--accent) r g b / 0.1) 45%, transparent 82%);
-  opacity: 1;
-  transform: translateX(-110%);
-  animation: cw-tool-scan 1.35s ease-in-out infinite;
+.cw-shell__input {
+  resize: none;
+  padding: 12px 14px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--composer-input-text, var(--text));
+  font-family: var(--ui-font, var(--sans));
+  font-size: 13px;
+  line-height: 20px;
+  overflow-y: hidden;
 }
 
-.cw-tool--done {
-  border-color: var(--border-success);
-  background: color-mix(in srgb, var(--surface-2) 90%, var(--bg-success-soft) 10%);
-  box-shadow: inset 2px 0 0 var(--fg-success);
-  animation: cw-tool-complete 220ms ease-out;
+.cw-shell__input::placeholder {
+  color: var(--composer-input-placeholder, var(--text-muted));
 }
 
-.cw-tool--error {
-  border-color: var(--border-danger);
-  background: color-mix(in srgb, var(--surface-2) 88%, var(--bg-danger-soft) 12%);
-  box-shadow: inset 2px 0 0 var(--fg-danger);
+.cw-shell__input:focus {
+  outline: none;
 }
 
-.cw-tool__head {
+.cw-shell__input:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.cw-shell__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  border-top: 1px solid var(--composer-divider, var(--border));
+  background: color-mix(in srgb, var(--surface-1) 58%, transparent);
+}
+
+.cw-shell__left {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
+  flex: 1;
 }
 
-.cw-tool__icon {
+.cw-shell__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* SelectDropdown trigger 融入工具栏：压扁高度、紧凑内边距 */
+.cw-model-select :deep(.ui-select-trigger),
+.cw-model-select.ui-select-trigger {
+  height: 28px;
+  max-width: min(360px, 42vw);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--composer-select-border, var(--border));
+  background: var(--composer-select-bg, var(--surface-2));
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease;
+  box-shadow: none;
+}
+
+.cw-model-select :deep(.ui-select-value) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cw-model-select :deep(.ui-select-trigger:hover:not(:disabled)) {
+  border-color: var(--composer-select-hover-border, var(--border-accent));
+  background: var(--composer-select-hover-bg, var(--surface-3));
+}
+
+.cw-model-select :deep(.ui-select-trigger:disabled) {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+/* 工具栏芯片（工作区） */
+.cw-tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  max-width: 200px;
+  padding: 0 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--composer-chip-border, var(--border));
+  background: var(--composer-chip-bg, var(--surface-2));
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.cw-tool-chip:hover {
+  border-color: var(--border-accent);
+  background: var(--composer-chip-hover-bg, var(--surface-3));
+  color: var(--text);
+}
+
+.cw-tool-chip.is-set {
+  color: var(--text);
+}
+
+.cw-tool-chip__icon {
   width: 14px;
   height: 14px;
+  flex-shrink: 0;
+}
+
+.cw-tool-chip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cw-tool-chip__clear {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
-  border-radius: 50%;
-  position: relative;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
 }
 
-.cw-tool__icon--running {
-  border: 2px solid var(--border-accent);
-  border-top-color: var(--fg-accent);
-  animation: cw-tool-spin 760ms linear infinite;
-}
-
-.cw-tool__icon--done {
-  color: var(--fg-success);
-  background: var(--bg-success-soft);
-  border: 1px solid var(--border-success);
-  animation: cw-tool-pop 220ms ease-out;
-}
-
-.cw-tool__icon--done::before {
-  content: "";
-  width: 7px;
-  height: 4px;
-  border-left: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: translateY(-1px) rotate(-45deg);
-}
-
-.cw-tool__icon--error {
+.cw-tool-chip__clear:hover {
   color: var(--fg-danger);
   background: var(--bg-danger-soft);
-  border: 1px solid var(--border-danger);
 }
 
-.cw-tool__icon--error::before,
-.cw-tool__icon--error::after {
-  content: "";
-  position: absolute;
-  width: 8px;
-  height: 2px;
-  border-radius: 999px;
+.cw-tool-chip__clear-icon {
+  width: 11px;
+  height: 11px;
+}
+
+/* 上下文用量芯片 + 分段用量条 */
+.cw-context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 4px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+.cw-context-chip--warn {
+  color: var(--fg-warning);
+}
+
+.cw-context-chip--over {
+  color: var(--fg-danger);
+}
+
+.cw-context-blocks {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.cw-context-blocks__cell {
+  width: 4px;
+  height: 10px;
+  border-radius: 1px;
+  background: var(--border);
+}
+
+/* 点亮格随 currentColor 走，warn/over 时跟着芯片一起变色 */
+.cw-context-blocks__cell.is-on {
   background: currentColor;
 }
 
-.cw-tool__icon--error::before {
-  transform: rotate(45deg);
-}
-
-.cw-tool__icon--error::after {
-  transform: rotate(-45deg);
-}
-
-.cw-tool__status {
-  width: 42px;
-  flex-shrink: 0;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 600;
+.cw-context-chip__label {
   line-height: 1;
 }
 
-.cw-tool--running .cw-tool__status {
-  color: var(--fg-accent);
-}
-
-.cw-tool--done .cw-tool__status {
+/* 发送 / 停止图标按钮 */
+.cw-send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-success);
+  background: var(--bg-success-soft);
   color: var(--fg-success);
+  cursor: pointer;
+  box-shadow: none;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    transform 140ms ease;
 }
 
-.cw-tool--error .cw-tool__status {
+.cw-send-btn:hover:not(:disabled) {
+  border-color: var(--border-success-hover);
+}
+
+.cw-send-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.cw-send-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.cw-send-btn--stop {
+  border-color: var(--border-danger);
+  background: var(--bg-danger-soft);
   color: var(--fg-danger);
+}
+
+.cw-send-btn--stop:hover {
+  border-color: var(--border-danger-hover);
+}
+
+.cw-send-btn__icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* 工具活动：轻量行内式 —— 一行一个工具，类别图标 + 名称 + 参数摘要 + 右侧状态点 */
+.cw-tool {
+  border-radius: 0;
+  border: var(--px-bw) solid var(--border);
+  padding: 3px 6px;
+  font-size: 12px;
+  transition: none;
+}
+
+/* 行内主体：图标 / 名称 / 分隔点 / 参数 / 状态指示 / 展开箭头，单行对齐 */
+.cw-tool__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+  line-height: 18px;
+  /* 作为 <button> 时复位原生样式，仍继承字号/颜色 */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.cw-tool__row.is-clickable {
+  cursor: pointer;
+}
+
+.cw-tool__row.is-clickable:focus-visible {
+  outline: 2px solid var(--border-accent);
+  outline-offset: 2px;
+  border-radius: 0;
+}
+
+/* 类别图标：默认随类别染色（see cat 规则），执行中/失败时被状态色覆盖 */
+.cw-tool__cat-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-muted);
 }
 
 .cw-tool__name {
@@ -1538,114 +2040,168 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
+.cw-tool__sep {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
 .cw-tool__args {
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
-.cw-tool__more {
-  margin-top: 4px;
+/* 右侧状态指示：执行中转圈、完成对勾、失败 × —— 顶到行尾 */
+.cw-tool__state {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
-.cw-tool__more summary {
-  cursor: pointer;
+/* 像素 spinner：实心方块按 45° 阶跳旋转 */
+.cw-tool__spinner {
+  width: 10px;
+  height: 10px;
+  border-radius: 0;
+  background: var(--fg-accent);
+  animation: cw-px-spin 1s steps(8) infinite;
+}
+
+.cw-tool__check {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-success);
+}
+
+/* 字形对勾：继承像素字体，比旋转边框画的勾更贴风格 */
+.cw-tool__check::before {
+  content: "✓";
+  font-size: 12px;
+  line-height: 1;
+}
+
+.cw-tool__err-icon {
+  width: 12px;
+  height: 12px;
+  color: var(--fg-danger);
+}
+
+/* 类别语义色：仅给图标上色，保持行内轻量（不染整行底色） */
+.cw-tool--cat-read .cw-tool__cat-icon {
+  color: var(--fg-accent);
+}
+
+.cw-tool--cat-write .cw-tool__cat-icon {
+  color: var(--fg-success);
+}
+
+.cw-tool--cat-destructive .cw-tool__cat-icon {
+  color: var(--fg-danger);
+}
+
+.cw-tool--cat-exec .cw-tool__cat-icon {
+  color: var(--fg-warning);
+}
+
+.cw-tool--cat-network .cw-tool__cat-icon {
+  color: var(--fg-accent);
+}
+
+/* 状态态：执行中给一抹柔和底色 + 边框转状态色 + 图标转状态色；失败同理走危险色 */
+.cw-tool--running {
+  border-color: var(--border-accent);
+  background: color-mix(in srgb, transparent 86%, var(--bg-accent-soft) 14%);
+}
+
+.cw-tool--running .cw-tool__cat-icon {
+  color: var(--fg-accent);
+}
+
+.cw-tool--error {
+  border-color: var(--border-danger);
+  background: color-mix(in srgb, transparent 88%, var(--bg-danger-soft) 12%);
+}
+
+.cw-tool--error .cw-tool__cat-icon {
+  color: var(--fg-danger);
+}
+
+/* hover 仅提亮边框，不再叠加灰底（避免与状态态底色叠成两层） */
+.cw-tool:hover {
+  border-color: var(--border-accent);
+}
+
+/* 右侧展开箭头：仅有详情时出现，瞬时翻转（无过渡） */
+.cw-tool__chevron {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
   color: var(--text-muted);
-  font-size: 11px;
 }
 
-.cw-tool__detail {
-  margin: 6px 0 0;
-  padding: 6px 8px;
-  max-height: 220px;
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 11px;
-  border-radius: 6px;
-  color: var(--text);
-  background: var(--surface-3);
+.cw-tool__chevron.is-open {
+  transform: rotate(180deg);
 }
 
-/* 流式参数预览：执行中展开看正在写入的内容，完成后折叠回单行摘要 */
-.cw-tool__args-preview {
+/* 统一详情区：参数 + 结果/错误，点击行展开后纵向堆叠 */
+.cw-tool__detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   margin-top: 4px;
+  padding-left: 20px;
 }
 
-.cw-tool__args-toggle {
-  padding: 0;
-  border: none;
-  background: transparent;
+.cw-tool__detail-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-muted);
-  cursor: pointer;
-  font-size: 11px;
-  user-select: none;
-  transition: color 0.15s ease;
 }
 
-.cw-tool__args-toggle:hover {
-  color: var(--text);
+.cw-tool__detail-label.is-error {
+  color: var(--fg-danger);
 }
 
-.cw-tool__args-body {
-  margin: 6px 0 0;
+.cw-tool__detail-body {
+  margin: 0;
   padding: 6px 8px;
   max-height: 260px;
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
-  font-size: 11px;
-  border-radius: 6px;
+  font-size: 12px;
+  border-radius: 0;
+  border: 1px solid var(--border);
   color: var(--text);
   background: var(--surface-3);
 }
 
-@keyframes cw-tool-spin {
+.cw-tool__detail-body.is-error {
+  color: var(--fg-danger);
+}
+
+@keyframes cw-px-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes cw-tool-scan {
-  0% {
-    transform: translateX(-110%);
-  }
-
-  58%,
-  100% {
-    transform: translateX(110%);
-  }
-}
-
-@keyframes cw-tool-pop {
-  0% {
-    transform: scale(0.82);
-  }
-
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes cw-tool-complete {
-  0% {
-    box-shadow:
-      inset 2px 0 0 var(--fg-success),
-      0 0 0 0 rgb(from var(--success) r g b / 0.22);
-  }
-
-  100% {
-    box-shadow:
-      inset 2px 0 0 var(--fg-success),
-      0 0 0 7px rgb(from var(--success) r g b / 0);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .cw-tool,
-  .cw-tool::before,
-  .cw-tool__icon {
+  .cw-tool__spinner {
     animation: none !important;
     transition: none;
   }
@@ -1659,9 +2215,10 @@ onBeforeUnmount(() => {
 }
 
 .cw-approval {
-  border: 1px solid var(--border-accent);
-  border-radius: 10px;
+  border: var(--px-bw) solid var(--border-accent);
+  border-radius: 0;
   background: var(--bg-accent-soft);
+  box-shadow: var(--px-shadow);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
@@ -1687,8 +2244,9 @@ onBeforeUnmount(() => {
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 10px;
-  transition: color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  transition: none;
   user-select: none;
 }
 
@@ -1696,15 +2254,28 @@ onBeforeUnmount(() => {
   color: var(--text);
 }
 
-.cw-approval__toggle:active {
-  transform: scale(0.95);
+/* 与工具卡片的展开箭头同一视觉语言：13px chevron，展开时旋转 180°（瞬时） */
+.cw-approval__chevron {
+  width: 13px;
+  height: 13px;
 }
 
+.cw-approval__chevron.is-open {
+  transform: rotate(180deg);
+}
+
+/* 反白徽章：审批类型一眼可辨 */
 .cw-approval__kind {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text);
+  padding: 1px 6px;
+  color: var(--bg);
+  background: var(--fg-accent);
   flex-shrink: 0;
+}
+
+.cw-approval--command .cw-approval__kind {
+  background: var(--fg-danger);
 }
 
 .cw-approval__title {
@@ -1723,73 +2294,16 @@ onBeforeUnmount(() => {
   white-space: pre-wrap;
   word-break: break-word;
   font-size: 12px;
-  border-radius: 6px;
+  border-radius: 0;
   color: var(--text);
   background: var(--surface-2);
   border: 1px solid var(--border);
 }
 
-.cw-approval__diff {
-  margin: 0;
-  padding: 0;
-  max-height: 300px;
-  overflow-y: auto;
-  font-size: 12px;
-  border-radius: 6px;
-  background: var(--ui-code-bg);
-  border: 1px solid var(--ui-code-border);
-}
-
-.diff-line {
-  display: flex;
-  margin: 0;
-  font-family: ui-monospace, "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
-  line-height: 1.5;
-}
-
-.diff-line-num {
-  flex-shrink: 0;
-  width: 50px;
-  padding: 0 8px;
-  text-align: right;
-  color: var(--text-muted);
-  background: var(--surface-1);
-  border-right: 1px solid var(--border);
-  user-select: none;
-  font-size: 11px;
-}
-
-.diff-line-content {
-  flex: 1;
-  padding: 0 8px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.cw-approval__diff .diff-add {
-  background-color: var(--bg-success-soft);
-  color: var(--fg-success);
-}
-
-.cw-approval__diff .diff-del {
-  background-color: var(--bg-danger-soft);
-  color: var(--fg-danger);
-}
-
-.cw-approval__diff .diff-ctx {
-  color: var(--text-muted);
-}
-
-.cw-approval__diff .diff-hunk {
-  background: var(--surface-2);
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
 .cw-approval__diff-viewer {
   max-height: 400px;
   overflow-y: auto;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--ui-code-bg);
   border: 1px solid var(--ui-code-border);
 }
@@ -1800,91 +2314,43 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
 }
 
-/* composer meta：provider / workspace 两段 */
-.cw-composer__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 16px;
-}
-
-.cw-provider-switcher {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.cw-provider-switcher select {
-  max-width: min(420px, 52vw);
-  height: 28px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-2);
-  color: var(--text);
-  padding: 0 28px 0 9px;
-  font: inherit;
-  font-size: 12px;
-}
-
-.cw-provider-switcher select:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-}
-
-.cw-provider-switcher select:focus {
-  outline: none;
-  border-color: var(--border-accent);
-}
-
-.cw-ws {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.cw-ws__path {
-  color: var(--text);
-  max-width: 360px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* 上下文用量指示：默认柔和，接近上限转警告色，超限转危险色 */
-.cw-context {
-  display: inline-flex;
-  align-items: center;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
-  cursor: default;
-}
-
-.cw-context--warn {
-  color: var(--fg-warning);
-}
-
-.cw-context--over {
-  color: var(--fg-danger);
-}
-
-/* provider 表单的复选项（启用思考） */
+/* provider 表单的复选项（启用思考）：自绘像素方块 checkbox */
 .cw-check {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
 }
 
 .cw-check input {
   flex-shrink: 0;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: var(--px-bw) solid var(--border);
+  border-radius: 0;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+/* 选中 = 实心填充 + inset 留白圈出内方块 */
+.cw-check input:checked {
+  border-color: var(--border-accent);
+  background: var(--fg-accent);
+  box-shadow: inset 0 0 0 3px var(--surface-2);
+}
+
+.cw-check input:focus-visible {
+  outline: 2px solid var(--border-accent);
+  outline-offset: 2px;
 }
 
 /* 思考过程折叠区 */
 .cw-think {
-  border: 1px dashed var(--border);
-  border-radius: 8px;
+  border: var(--px-bw) dashed var(--border);
+  border-radius: 0;
   background: var(--surface-2);
   padding: 4px 10px;
   font-size: 12px;
@@ -1897,10 +2363,25 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  list-style: none;
+}
+
+.cw-think summary::-webkit-details-marker {
+  display: none;
+}
+
+/* 像素风折叠箭头，替代原生 marker / emoji */
+.cw-think summary::before {
+  content: "▸";
+  color: var(--text-muted);
+}
+
+.cw-think[open] summary::before {
+  content: "▾";
 }
 
 .cw-think__status {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--fg-accent);
 }
 
@@ -1911,9 +2392,10 @@ onBeforeUnmount(() => {
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.5;
+  line-height: 18px;
   color: var(--text-muted);
   background: var(--surface-3);
-  border-radius: 6px;
+  border-radius: 0;
+  border: 1px solid var(--border);
 }
 </style>

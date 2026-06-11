@@ -441,13 +441,6 @@ button {
     color 0.15s ease;
 }
 
-button:hover:not(:disabled) {
-  border-color: var(--button-border-hover);
-  background-color: var(--button-bg-hover);
-  background-image: none;
-  color: var(--button-text-hover, var(--button-text));
-}
-
 button:active:not(:disabled) {
   transform: translateY(1px);
 }
