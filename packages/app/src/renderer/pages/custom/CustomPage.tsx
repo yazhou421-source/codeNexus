@@ -1,4 +1,4 @@
-import CustomWorkbench from "../../components/custom/CustomWorkbench";
+import CustomWorkbench from "./workbench/CustomWorkbench";
 import DebugTimelineSidebar from "../../components/layout/debug/DebugTimelineSidebar";
 import { useUiPrefsStore } from "../../stores/uiPrefs.store";
 import CustomTopBar from "./shell/CustomTopBar";
