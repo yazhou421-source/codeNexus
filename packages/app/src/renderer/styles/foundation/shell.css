@@ -28,6 +28,18 @@ body.is-resizing .main {
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* 自定义运行模式整页：workbench 自带左侧会话栏，无需 .main 的 tasks/files 预留列。
+   默认单列铺满；仅当开启调试时间线侧栏时，额外让出右列。 */
+.main.is-custom {
+  grid-template-areas: "center";
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.main.is-custom.has-files-sidebar {
+  grid-template-areas: "center files";
+  grid-template-columns: minmax(0, 1fr) var(--debug-sidebar-w, 280px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .main {
     transition: none;

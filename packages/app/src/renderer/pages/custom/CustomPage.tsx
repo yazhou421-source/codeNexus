@@ -10,7 +10,9 @@ export default function CustomPage() {
   const uiPrefsStore = useUiPrefsStore();
   const showDebugSidebar = uiPrefsStore.timelineDebugEnabled;
 
-  const mainClass = ["main", showDebugSidebar ? "has-files-sidebar" : ""].filter(Boolean).join(" ");
+  const mainClass = ["main", "is-custom", showDebugSidebar ? "has-files-sidebar" : ""]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <>
