@@ -4,11 +4,13 @@ import type {
   ChatRequestOptions,
   ChatStreamHandlers,
   ModelReply,
+  TokenUsage,
   ToolCall,
   ToolDefinition,
 } from "./types";
 import { readSseBlocks } from "./sse";
 import { postJson } from "./http";
+import { num, parseAnthropicUsage } from "./usage";
 
 /**
  * Anthropic Messages API 的 ChatClient 实现。
@@ -252,6 +254,7 @@ export function createAnthropicClient(
         reasoning,
         providerMetadata,
         truncated,
+        usage: parseAnthropicUsage(json.usage),
       };
     },
 
@@ -296,6 +299,9 @@ export function createAnthropicClient(
       let content = "";
       let reasoning = "";
       let stopReason = "";
+      // 用量分两处：input/cache 在 message_start，output 累计值在最后一个 message_delta。
+      let usageInput: TokenUsage | undefined;
+      let finalOutputTokens = 0;
       const blocks = new Map<number, Block & { __json?: string }>();
       for await (const { data } of readSseBlocks(response)) {
         let evt: Record<string, unknown>;
@@ -313,12 +319,20 @@ export function createAnthropicClient(
             : JSON.stringify(evt);
           throw new Error(`anthropic messages stream error: ${detail}`);
         }
+        // message_start 携带完整 input/cache 用量（output 只是占位 ~1）。
+        if (evt.type === "message_start") {
+          const msg = evt.message as Record<string, unknown> | undefined;
+          if (msg?.usage) usageInput = parseAnthropicUsage(msg.usage) ?? usageInput;
+        }
         // message_delta 携带 stop_reason；"max_tokens" 表示被截断（工具参数 JSON 可能不完整）。
         if (evt.type === "message_delta") {
           const delta = evt.delta as Record<string, unknown> | undefined;
           if (typeof delta?.stop_reason === "string" && delta.stop_reason) {
             stopReason = delta.stop_reason;
           }
+          // output_tokens 是累计值（非增量），取最后一帧即最终值。
+          const u = evt.usage as Record<string, unknown> | undefined;
+          if (u?.output_tokens != null) finalOutputTokens = num(u.output_tokens);
         }
         if (evt.type === "content_block_start") {
           const block = evt.content_block as
@@ -417,12 +431,17 @@ export function createAnthropicClient(
           ? providerMetadataForBlocks(contentBlocks)
           : undefined;
 
+      const usage = usageInput
+        ? { ...usageInput, outputTokens: finalOutputTokens }
+        : undefined;
+
       return {
         content: content || null,
         toolCalls,
         reasoning: reasoning || null,
         providerMetadata,
         truncated: stopReason === "max_tokens",
+        usage,
       };
     },
   };

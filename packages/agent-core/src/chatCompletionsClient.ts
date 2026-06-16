@@ -4,11 +4,13 @@ import type {
   ChatRequestOptions,
   ChatStreamHandlers,
   ModelReply,
+  TokenUsage,
   ToolDefinition,
   ToolCall,
 } from "./types";
 import { readSseBlocks } from "./sse";
 import { postJson } from "./http";
+import { parseOpenAiUsage } from "./usage";
 
 /**
  * 真实的 ChatClient 实现：直连 OpenAI 兼容的 /v1/chat/completions 接口。
@@ -150,7 +152,13 @@ export function createChatCompletionsClient(
       // finish_reason === "length" 表示被 max_tokens 截断（工具参数 JSON 可能不完整）。
       const truncated = first?.finish_reason === "length";
 
-      return { content, toolCalls, reasoning, truncated };
+      return {
+        content,
+        toolCalls,
+        reasoning,
+        truncated,
+        usage: parseOpenAiUsage(json.usage),
+      };
     },
 
     async stream(
@@ -163,6 +171,9 @@ export function createChatCompletionsClient(
         model: options.model,
         messages: messages.map(toWireMessage),
         stream: true,
+        // 流式下 usage 默认不返回；必须显式开启才会在末尾追加一个 usage 帧。
+        // 个别中转站可能忽略或拒绝此参数：拒绝时 usage 留空、UI 回退估算，不影响对话。
+        stream_options: { include_usage: true },
       };
       if (tools.length > 0) body.tools = tools.map(toWireTool);
       if (typeof options.temperature === "number")
@@ -181,6 +192,7 @@ export function createChatCompletionsClient(
       let content = "";
       let reasoning = "";
       let finishReason = "";
+      let usage: TokenUsage | undefined;
       const toolAcc = new Map<
         number,
         { id: string; name: string; arguments: string }
@@ -204,6 +216,8 @@ export function createChatCompletionsClient(
               : String(streamError);
           throw new Error(`chat/completions stream error: ${detail}`);
         }
+        // usage 在末尾一个独立帧（choices 为空数组）；不能依赖 choices[0]。
+        if (chunk.usage) usage = parseOpenAiUsage(chunk.usage) ?? usage;
         const choices = Array.isArray(chunk.choices) ? chunk.choices : [];
         const choice = choices[0] as Record<string, unknown> | undefined;
         if (typeof choice?.finish_reason === "string" && choice.finish_reason) {
@@ -267,6 +281,7 @@ export function createChatCompletionsClient(
         toolCalls,
         reasoning: reasoning || null,
         truncated: finishReason === "length",
+        usage,
       };
     },
   };

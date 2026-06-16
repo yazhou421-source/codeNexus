@@ -836,8 +836,27 @@ export type CustomAgentRunArgs = {
   messages: CustomAgentMessage[];
 };
 
+// 一轮模型调用的真实 token 用量（镜像 agent-core 的 TokenUsage，inline 以免 shared 依赖 agent-core）。
+export type CustomTokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  totalInputTokens: number;
+  cacheReadTokens?: number;
+  cacheCreationTokens?: number;
+  reasoningTokens?: number;
+};
+
 export type CustomAgentRunResult =
-  | { ok: true; finalText: string; steps: number; cancelled?: boolean }
+  | {
+      ok: true;
+      finalText: string;
+      steps: number;
+      cancelled?: boolean;
+      // 最后一轮模型调用的真实输入侧用量（UI 上下文条权威值）；无则回退估算。
+      lastUsage?: CustomTokenUsage;
+      // 本次 run 跨所有 step 的累计输出 tokens（成本展示）。
+      totalOutputTokens?: number;
+    }
   | { ok: false; error: string };
 
 // 自定义运行时的流式事件（main → renderer，经 agent:event 广播），按 runId 关联到某条助手消息。
@@ -847,6 +866,7 @@ export type CustomAgentRunResult =
 // - tool_call_delta：工具调用参数的流式增量（provider 支持时，按 callId/index 拼接）
 // - tool_call/tool_result/tool_error：工具活动（接 agent-core 内核的同名 AgentEvent）
 // - approval_request：写改/命令需用户审批，renderer 经 agent:approve 回传决策（见 CustomAgentApproveArgs）
+// - usage：某一轮模型调用的真实 token 用量（provider 返回时），renderer 据此校准上下文条
 export type CustomAgentStreamEvent =
   | { type: "delta"; runId: string; text: string }
   | { type: "reasoning"; runId: string; text: string }
@@ -886,7 +906,8 @@ export type CustomAgentStreamEvent =
       kind: "command" | "file";
       title: string;
       detail: string;
-    };
+    }
+  | { type: "usage"; runId: string; usage: CustomTokenUsage };
 
 // renderer → main：回传一次审批决策，解开主进程里挂起的 requireApproval/requireConfirmation Promise。
 export type CustomAgentApproveArgs = {

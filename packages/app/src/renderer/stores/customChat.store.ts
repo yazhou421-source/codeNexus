@@ -13,7 +13,7 @@ import { safeJsonStringify } from "../utils/safeJson";
 // 仅引纯函数（import type + 字符估算，无 node-only 依赖），与后端裁剪同口径。
 import { estimateHistoryTokens } from "@codenexus/agent-core/contextWindow";
 import type { TimelineEventLevel } from "../domain/types";
-import type { CustomAgentStreamEvent, CustomSession, CustomSessionMessage } from "@codenexus/shared/ipc/contracts";
+import type { CustomAgentStreamEvent, CustomSession, CustomSessionMessage, CustomTokenUsage } from "@codenexus/shared/ipc/contracts";
 
 export type CustomChatRole = "user" | "assistant";
 
@@ -192,6 +192,14 @@ function summarizeStreamEventForDebug(event: CustomAgentStreamEvent): Record<str
         title: event.title,
         detail: summarizeDebugText(event.detail),
       };
+    case "usage":
+      return {
+        type: event.type,
+        runId: event.runId,
+        inputTokens: event.usage.inputTokens,
+        outputTokens: event.usage.outputTokens,
+        totalInputTokens: event.usage.totalInputTokens,
+      };
   }
 }
 
@@ -295,6 +303,10 @@ export const useCustomChatStore = defineStore("customChat", {
     loadingSessions: false,
     sending: false,
     currentRunId: "" as string,
+    // 最近一轮模型调用的真实 token 用量（provider 返回）；用于上下文条权威值，无则回退估算。
+    lastUsage: null as CustomTokenUsage | null,
+    // 本会话累计输出 tokens（跨多次 run 求和），用于成本展示。
+    sessionOutputTokens: 0,
   }),
   getters: {
     // 与 send() 发往模型的历史同口径：剔除本地错误占位，按 role/content 估算 token 总数。
@@ -304,6 +316,13 @@ export const useCustomChatStore = defineStore("customChat", {
         .filter((item) => !item.error)
         .map((item) => ({ role: item.role, content: item.content }));
       return estimateHistoryTokens(history);
+    },
+    // 上下文条权威值：有真实用量优先用 provider 返回的输入侧总量，否则回退字符估算。
+    contextTokens(state): { value: number; source: "actual" | "estimate" } {
+      if (state.lastUsage && state.lastUsage.totalInputTokens > 0) {
+        return { value: state.lastUsage.totalInputTokens, source: "actual" };
+      }
+      return { value: this.estimatedContextTokens, source: "estimate" };
     },
   },
   actions: {
@@ -319,11 +338,16 @@ export const useCustomChatStore = defineStore("customChat", {
       this.loadingSessions = false;
       this.sending = false;
       this.currentRunId = "";
+      this.lastUsage = null;
+      this.sessionOutputTokens = 0;
     },
     hydrateSession(session: CustomSession) {
       this.currentSessionId = session.id;
       this.messages = session.messages.map(deserializeMessage);
       this.pendingApprovals = [];
+      // 切换会话清空真实用量：未持久化，下一轮真实回包前回退估算。
+      this.lastUsage = null;
+      this.sessionOutputTokens = 0;
     },
     currentSession(snapshot?: SessionSnapshotInput): CustomSession {
       const existing = this.sessions.find((session) => session.id === this.currentSessionId);
@@ -482,6 +506,7 @@ export const useCustomChatStore = defineStore("customChat", {
           tool_result: "custom/tool/result",
           tool_error: "custom/tool/error",
           approval_request: "custom/approval/requested",
+          usage: "custom/usage",
         };
         this.appendDebugEvent({
           method: streamMethodByType[event.type],
@@ -516,6 +541,13 @@ export const useCustomChatStore = defineStore("customChat", {
               title: event.title,
               detail: event.detail,
             });
+            break;
+          case "usage":
+            // 仅采纳属于当前会话的用量，避免后台会话的 run 串扰上下文条。
+            if (this.currentSessionId === runSessionById.get(event.runId)) {
+              this.lastUsage = event.usage;
+              this.sessionOutputTokens += event.usage.outputTokens;
+            }
             break;
         }
       });

@@ -20,6 +20,8 @@ type CustomComposerProps = {
   contextBlockCount: number;
   contextBlocksOn: number;
   contextCompactLabel: string;
+  contextIsActual: boolean;
+  sessionOutputLabel: string | null;
   collapsedApprovals: Record<string, boolean>;
   onToggleApprovalCollapsed: (approvalId: string) => void;
   onOpenConfig: () => void;
@@ -44,6 +46,8 @@ export default function CustomComposer({
   contextBlockCount,
   contextBlocksOn,
   contextCompactLabel,
+  contextIsActual,
+  sessionOutputLabel,
   collapsedApprovals,
   onToggleApprovalCollapsed,
   onOpenConfig,
@@ -136,7 +140,19 @@ export default function CustomComposer({
                   ))}
                 </span>
                 <span className="cw-context-chip__label">{contextCompactLabel}</span>
+                <span
+                  className={`cw-context-chip__src${contextIsActual ? " is-actual" : ""}`}
+                  aria-hidden="true"
+                  title={contextIsActual ? "真实用量（provider 返回）" : "估算值（首轮回包前）"}
+                >
+                  {contextIsActual ? "实" : "约"}
+                </span>
               </span>
+              {sessionOutputLabel ? (
+                <span className="cw-context-chip cw-context-chip--output" title="本会话累计输出 tokens（provider 返回）">
+                  <span className="cw-context-chip__label">↑{sessionOutputLabel}</span>
+                </span>
+              ) : null}
               {customChatStore.sending ? (
                 <button className="cw-send-btn cw-send-btn--stop" type="button" aria-label="停止生成" onClick={() => void customChatStore.cancelCurrentRun()}>
                   <Square className="cw-send-btn__icon" aria-hidden="true" />

@@ -4,11 +4,13 @@ import type {
   ChatRequestOptions,
   ChatStreamHandlers,
   ModelReply,
+  TokenUsage,
   ToolCall,
   ToolDefinition,
 } from "./types";
 import { readSseBlocks } from "./sse";
 import { postJson } from "./http";
+import { parseGeminiUsage } from "./usage";
 
 /**
  * Google Gemini（Generative Language API）的 ChatClient 实现。
@@ -270,7 +272,13 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
       // finishReason === "MAX_TOKENS" 表示被截断（工具参数 JSON 可能不完整）。
       const truncated = first?.finishReason === "MAX_TOKENS";
 
-      return { content: text || null, toolCalls, reasoning, truncated };
+      return {
+        content: text || null,
+        toolCalls,
+        reasoning,
+        truncated,
+        usage: parseGeminiUsage(json.usageMetadata),
+      };
     },
 
     async stream(
@@ -293,6 +301,7 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
       let content = "";
       let reasoning = "";
       let finishReason = "";
+      let usage: TokenUsage | undefined;
       const calls: ToolCall[] = [];
       for await (const { data } of readSseBlocks(response)) {
         let chunk: Record<string, unknown>;
@@ -319,6 +328,10 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
           throw new Error(
             `gemini stream blocked: ${promptFeedback.blockReason}`,
           );
+        }
+        // usageMetadata 在多帧中是累计快照（非增量），取最后一个有值的帧。
+        if (chunk.usageMetadata) {
+          usage = parseGeminiUsage(chunk.usageMetadata) ?? usage;
         }
         const candidates = Array.isArray(chunk.candidates)
           ? chunk.candidates
@@ -378,6 +391,7 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
         toolCalls: calls,
         reasoning: reasoning || null,
         truncated: finishReason === "MAX_TOKENS",
+        usage,
       };
     },
   };

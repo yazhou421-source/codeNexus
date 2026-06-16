@@ -61,12 +61,37 @@ export type ToolExecutionContext = {
   signal?: AbortSignal;
 };
 
+/**
+ * 一轮模型调用的真实 token 用量（来自 provider 回包，已归一化为三家共用口径）。
+ * 字段缺失/未返回时记 0；整体解析失败时调用方拿到 undefined，回退到字符估算。
+ */
+export type TokenUsage = {
+  /** 计费输入 tokens（不含缓存）。OpenAI prompt_tokens；Anthropic input_tokens；Gemini promptTokenCount。 */
+  inputTokens: number;
+  /** 输出 tokens（含 reasoning）。OpenAI completion_tokens；Anthropic output_tokens；Gemini candidatesTokenCount+thoughtsTokenCount。 */
+  outputTokens: number;
+  /**
+   * 真实输入侧总量 = inputTokens + cacheReadTokens + cacheCreationTokens。
+   * 用于 UI 上下文条「窗口现在多满」。OpenAI/Gemini 缓存是 input 的子集，故等于 inputTokens；
+   * Anthropic 的 input_tokens 不含缓存，必须把缓存加回。
+   */
+  totalInputTokens: number;
+  /** 缓存命中读取 tokens（Anthropic cache_read_input_tokens / OpenAI cached_tokens / Gemini cachedContentTokenCount）。 */
+  cacheReadTokens?: number;
+  /** 缓存写入 tokens（仅 Anthropic cache_creation_input_tokens）。 */
+  cacheCreationTokens?: number;
+  /** 推理 tokens（OpenAI reasoning_tokens / Gemini thoughtsTokenCount；Anthropic 已并入 output）。仅展示。 */
+  reasoningTokens?: number;
+};
+
 /** 模型一轮回复：要么是最终文字，要么是一批工具调用（也可能两者都有）。 */
 export type ModelReply = {
   content: string | null;
   toolCalls: ToolCall[];
   /** 思考/推理文本（若 provider 返回）。仅用于展示，不回灌进对话历史。 */
   reasoning?: string | null;
+  /** Provider 返回的真实 token 用量（未返回/解析失败为 undefined，调用方回退估算）。 */
+  usage?: TokenUsage;
   /**
    * Provider-specific metadata from the model response.
    * runAgent stores this on the assistant message so the same adapter can round-trip it.
@@ -167,6 +192,7 @@ export type AgentEvent =
   | { type: "tool_result"; toolCallId: string; name: string; result: string }
   | { type: "tool_error"; toolCallId: string; name: string; error: string }
   | { type: "max_steps_reached"; steps: number }
+  | { type: "usage"; usage: TokenUsage }
   | { type: "cancelled"; steps: number };
 
 /** 运行结束后的结果。 */
@@ -181,4 +207,8 @@ export type RunAgentResult = {
   stoppedByMaxSteps: boolean;
   /** 是否因为外部 AbortSignal 而被取消。 */
   cancelled: boolean;
+  /** 最后一轮模型调用的真实用量（UI 上下文条权威值）；无则 undefined，回退估算。 */
+  lastUsage?: TokenUsage;
+  /** 本次 run 跨所有 step 的累计输出 tokens；用于成本展示。无任何 usage 时为 0。 */
+  totalOutputTokens?: number;
 };

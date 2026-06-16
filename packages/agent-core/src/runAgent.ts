@@ -214,6 +214,9 @@ export async function runAgent(
 
   let steps = 0;
   let finalText = "";
+  // 真实 token 用量：lastUsage 给 UI 上下文条权威值；totalOutputTokens 累计供成本展示。
+  let lastUsage: ModelReply["usage"];
+  let totalOutputTokens = 0;
 
   while (steps < maxSteps) {
     // 每轮开始前检查取消信号
@@ -259,6 +262,13 @@ export async function runAgent(
       return cancelledResult(finalText, messages, steps, onEvent);
     }
 
+    // 记录真实用量（若 provider 返回）：lastUsage 取最近一轮，输出 tokens 跨轮累加。
+    if (reply.usage) {
+      lastUsage = reply.usage;
+      totalOutputTokens += reply.usage.outputTokens;
+      onEvent?.({ type: "usage", usage: reply.usage });
+    }
+
     if (reply.content) {
       onEvent?.({ type: "assistant_message", content: reply.content });
     }
@@ -280,6 +290,8 @@ export async function runAgent(
         steps,
         stoppedByMaxSteps: false,
         cancelled: false,
+        lastUsage,
+        totalOutputTokens,
       };
     }
 
@@ -315,6 +327,8 @@ export async function runAgent(
     steps,
     stoppedByMaxSteps: true,
     cancelled: false,
+    lastUsage,
+    totalOutputTokens,
   };
 }
 

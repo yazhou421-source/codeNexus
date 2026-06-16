@@ -17,6 +17,7 @@ export type {
   ToolDefinition,
   ToolExecutionContext,
   ModelReply,
+  TokenUsage,
   ChatClient,
   ChatStreamHandlers,
   ToolCallDelta,

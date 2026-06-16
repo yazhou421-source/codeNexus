@@ -136,6 +136,8 @@ export class CustomAgentService {
                   });
                 } else if (event.type === "tool_error") {
                   emit({ type: "tool_error", runId, callId: event.toolCallId, name: event.name, error: event.error });
+                } else if (event.type === "usage") {
+                  emit({ type: "usage", runId, usage: event.usage });
                 }
               }
             : undefined,
@@ -145,6 +147,8 @@ export class CustomAgentService {
         finalText: result.finalText,
         steps: result.steps,
         cancelled: result.cancelled,
+        lastUsage: result.lastUsage,
+        totalOutputTokens: result.totalOutputTokens,
       };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);

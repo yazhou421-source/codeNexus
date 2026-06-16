@@ -469,4 +469,62 @@ describe("streaming clients", () => {
       }),
     ).rejects.toThrow(/SAFETY/);
   });
+
+  it("openai-compatible: sends stream_options.include_usage and parses the trailing usage frame (empty choices)", async () => {
+    const fetchMock = stubSse(
+      [
+        'data: {"choices":[{"delta":{"content":"hi"}}]}',
+        'data: {"choices":[],"usage":{"prompt_tokens":120,"completion_tokens":8,"prompt_tokens_details":{"cached_tokens":40}}}',
+        "data: [DONE]",
+      ].join("\n\n") + "\n\n",
+    );
+    const client = createChatCompletionsClient({ baseUrl: "https://x/v1", apiKey: "k", model: "m" });
+    const reply = await client.stream!([{ role: "user", content: "hi" }], [], { onTextDelta: () => {} });
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body.stream_options).toEqual({ include_usage: true });
+    expect(reply.usage).toEqual({
+      inputTokens: 120,
+      outputTokens: 8,
+      totalInputTokens: 120,
+      cacheReadTokens: 40,
+      reasoningTokens: undefined,
+    });
+  });
+
+  it("anthropic: reads input from message_start, final cumulative output from last message_delta", async () => {
+    stubSse(
+      [
+        'event: message_start\ndata: {"type":"message_start","message":{"usage":{"input_tokens":30,"cache_read_input_tokens":10,"output_tokens":1}}}',
+        'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hi"}}',
+        'event: message_delta\ndata: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":42}}',
+      ].join("\n\n") + "\n\n",
+    );
+    const client = createAnthropicClient({ baseUrl: "https://api.anthropic.com", apiKey: "k", model: "m" });
+    const reply = await client.stream!([{ role: "user", content: "hi" }], [], { onTextDelta: () => {} });
+    expect(reply.usage).toEqual({
+      inputTokens: 30,
+      outputTokens: 42, // from message_delta, not the message_start placeholder (1)
+      totalInputTokens: 40, // 30 + cache_read 10
+      cacheReadTokens: 10,
+      cacheCreationTokens: undefined,
+    });
+  });
+
+  it("gemini: takes usageMetadata from the last chunk that carries it (cumulative snapshot)", async () => {
+    stubSse(
+      [
+        'data: {"candidates":[{"content":{"parts":[{"text":"hi"}]}}],"usageMetadata":{"promptTokenCount":11,"candidatesTokenCount":2}}',
+        'data: {"candidates":[{"finishReason":"STOP","content":{"parts":[]}}],"usageMetadata":{"promptTokenCount":11,"candidatesTokenCount":9,"thoughtsTokenCount":3}}',
+      ].join("\n\n") + "\n\n",
+    );
+    const client = createGeminiClient({ baseUrl: "https://gl.example.com", apiKey: "k", model: "m" });
+    const reply = await client.stream!([{ role: "user", content: "hi" }], [], { onTextDelta: () => {} });
+    expect(reply.usage).toEqual({
+      inputTokens: 11,
+      outputTokens: 12, // 9 candidates + 3 thoughts, from the LAST chunk
+      totalInputTokens: 11,
+      cacheReadTokens: undefined,
+      reasoningTokens: 3,
+    });
+  });
 });

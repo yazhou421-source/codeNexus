@@ -47,16 +47,25 @@ export default function CustomWorkbench() {
   const canSend = Boolean(draft.trim() && hasActiveProvider && !customChatStore.sending);
   const baseUrlPlaceholder = form.kind === "anthropic" ? "https://api.anthropic.com" : form.kind === "gemini" ? "https://generativelanguage.googleapis.com" : "https://api.openai.com/v1";
   const modelPlaceholder = form.kind === "anthropic" ? "claude-..." : form.kind === "gemini" ? "gemini-..." : "gpt-4o-mini";
-  const contextUsedTokens = Number(customChatStore.estimatedContextTokens ?? 0) + (draft.trim() ? estimateTokens(draft.trim()) + 4 : 0);
+  // 上下文条优先用 provider 返回的真实输入侧用量；首轮回包前回退字符估算。叠加正在输入的草稿估算。
+  const ctx = customChatStore.contextTokens;
+  const draftTokens = draft.trim() ? estimateTokens(draft.trim()) + 4 : 0;
+  const contextUsedTokens = Number(ctx.value ?? 0) + draftTokens;
+  const contextIsActual = ctx.source === "actual";
+  const sessionOutputTokens = Number(customChatStore.sessionOutputTokens ?? 0);
   const contextLimitTokens = activeProvider?.contextLimit ?? DEFAULT_CONTEXT_LIMIT;
   const contextUsagePercent = contextLimitTokens > 0 ? Math.min(100, Math.round((contextUsedTokens / contextLimitTokens) * 100)) : 0;
   const contextBlocksOn = contextUsagePercent === 0 ? 0 : Math.max(1, Math.ceil((contextUsagePercent / 100) * CONTEXT_BLOCK_COUNT));
   const contextUsageState = contextLimitTokens > 0 && contextUsedTokens / contextLimitTokens >= 1 ? "over" : contextLimitTokens > 0 && contextUsedTokens / contextLimitTokens >= 0.8 ? "warn" : "normal";
   const contextCompactLabel = formatCompactTokens(contextUsedTokens);
+  const sourceLine = contextIsActual
+    ? `输入侧：上一轮 provider 返回的真实用量${draftTokens ? " + 草稿估算" : ""}。`
+    : "输入侧：按字符估算（CJK≈1.5、其余≈4 字符/token），含草稿；为近似值。首轮回包后改用真实用量。";
+  const outputLine = sessionOutputTokens > 0 ? `\n本会话累计输出：${formatCompactTokens(sessionOutputTokens)} tokens。` : "";
   const contextUsageTitle =
     contextUsageState === "over"
-      ? "按字符估算（CJK≈1.5、其余≈4 字符/token），含正在输入的草稿；为近似值。\n已超上限：发送时内核会丢弃最旧历史，仅保留最近窗口（system 与工具调用配对不拆开）。"
-      : "按字符估算（CJK≈1.5、其余≈4 字符/token），含正在输入的草稿；为近似值。\n超过上限时，内核会自动裁掉最旧历史。";
+      ? `${sourceLine}${outputLine}\n已超上限：发送时内核会丢弃最旧历史，仅保留最近窗口（system 与工具调用配对不拆开）。`
+      : `${sourceLine}${outputLine}\n超过上限时，内核会自动裁掉最旧历史。`;
 
   const providerSelectOptions = useMemo(
     () => providers.map((provider) => ({ value: provider.id, label: providerOptionLabel(provider) })),
@@ -303,6 +312,8 @@ export default function CustomWorkbench() {
               contextBlockCount={CONTEXT_BLOCK_COUNT}
               contextBlocksOn={contextBlocksOn}
               contextCompactLabel={contextCompactLabel}
+              contextIsActual={contextIsActual}
+              sessionOutputLabel={sessionOutputTokens > 0 ? formatCompactTokens(sessionOutputTokens) : null}
               collapsedApprovals={collapsedApprovals}
               onToggleApprovalCollapsed={(approvalId) =>
                 setCollapsedApprovals((current) => ({ ...current, [approvalId]: !current[approvalId] }))

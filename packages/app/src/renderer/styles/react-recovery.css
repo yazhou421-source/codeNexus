@@ -1541,6 +1541,28 @@
   background: currentColor;
 }
 
+/* 真实/估算来源标记：默认弱化（估算），真实用量时点亮成功色。 */
+.cw-context-chip__src {
+  font-size: 10px;
+  line-height: 1;
+  padding: 1px 3px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.cw-context-chip__src.is-actual {
+  color: var(--fg-success);
+  border-color: var(--border-success);
+  opacity: 1;
+}
+
+/* 累计输出 tokens chip：弱化展示，不参与 warn/over 配色。 */
+.cw-context-chip--output {
+  color: var(--text-muted);
+}
+
 .cw-send-btn {
   width: 34px;
   height: 34px;
