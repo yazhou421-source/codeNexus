@@ -1,4 +1,4 @@
-import RuntimeModeChooser from "../components/custom/RuntimeModeChooser";
+import RuntimeModeChooser from "../shared/shell/RuntimeModeChooser";
 import CodexPage from "../pages/codex/CodexPage";
 import CustomPage from "../pages/custom/CustomPage";
 import { useAppShellStore } from "../stores/appShell.store";

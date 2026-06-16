@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from "react";
-import { useAppShellStore } from "../../../stores/appShell.store";
-import { useCustomChatStore } from "../../../stores/customChat.store";
-import { useDebugTimelineStore } from "../../../stores/debugTimeline.store";
-import { useRuntimeStore } from "../../../stores/runtime.store";
-import { useUiPrefsStore } from "../../../stores/uiPrefs.store";
-import { useTimelineStore } from "../../../stores/timeline.store";
-import ChatPane from "../chat/ChatPane";
+import { useAppShellStore } from "../../stores/appShell.store";
+import { useCustomChatStore } from "../../stores/customChat.store";
+import { useDebugTimelineStore } from "../../stores/debugTimeline.store";
+import { useRuntimeStore } from "../../stores/runtime.store";
+import { useUiPrefsStore } from "../../stores/uiPrefs.store";
+import { useTimelineStore } from "../../stores/timeline.store";
+import ChatPane from "../../components/layout/chat/ChatPane";
 
 type DebugTimelineSidebarProps = {
   className?: string;

@@ -2,7 +2,7 @@ import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, useMemo, 
 import TopBar from "../../components/layout/TopBar";
 import CenterPane from "../../components/layout/CenterPane";
 import BottomBar from "../../components/layout/BottomBar";
-import DebugTimelineSidebar from "../../components/layout/debug/DebugTimelineSidebar";
+import DebugTimelineSidebar from "../../shared/shell/DebugTimelineSidebar";
 import LeftSidebar from "../../components/layout/LeftSidebar";
 import SettingsPage from "../../components/layout/SettingsPage";
 import WorkspaceEditorPane from "../../components/layout/workspace/WorkspaceEditorPane";

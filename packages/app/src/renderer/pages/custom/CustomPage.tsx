@@ -1,5 +1,5 @@
 import CustomWorkbench from "./workbench/CustomWorkbench";
-import DebugTimelineSidebar from "../../components/layout/debug/DebugTimelineSidebar";
+import DebugTimelineSidebar from "../../shared/shell/DebugTimelineSidebar";
 import { useUiPrefsStore } from "../../stores/uiPrefs.store";
 import CustomTopBar from "./shell/CustomTopBar";
 import CustomBottomBar from "./shell/CustomBottomBar";
