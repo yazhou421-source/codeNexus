@@ -63,6 +63,12 @@
   background: transparent;
   color: var(--topbar-text);
   letter-spacing: 0;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .topbar button:hover:not(:disabled) {
@@ -97,6 +103,11 @@
   border: 1px solid transparent;
   background: transparent;
   color: var(--topbar-text);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard);
 }
 
 .topbar .btn-icon.is-active {
@@ -410,6 +421,10 @@
   .topbar .btn-icon.has-approval-dot::after {
     animation: none;
   }
+  .topbar button,
+  .topbar .btn-icon {
+    transition: none;
+  }
 }
 
 /* Shared app control baseline. Kept here to preserve current import order. */
@@ -436,9 +451,9 @@ button {
   color: var(--button-text);
   cursor: pointer;
   transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease,
-    color 0.15s ease;
+    border-color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard);
 }
 
 button:active:not(:disabled) {

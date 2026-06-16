@@ -285,6 +285,7 @@ export default function SelectDropdown({
                   role="option"
                   aria-selected={option.value === currentValue ? "true" : "false"}
                   disabled={option.disabled}
+                  style={{ "--i": index } as CSSProperties}
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => pickValue(option.value)}
                 >

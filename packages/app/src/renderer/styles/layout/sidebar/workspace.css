@@ -192,12 +192,12 @@
   cursor: grab;
   padding-right: 22px;
   transition:
-    background-color 0.14s ease,
-    color 0.14s ease,
-    box-shadow 0.14s ease,
-    opacity 0.14s ease,
-    transform 0.14s ease,
-    filter 0.14s ease;
+    background-color var(--duration-1) var(--ease-standard),
+    color var(--duration-1) var(--ease-standard),
+    box-shadow var(--duration-1) var(--ease-standard),
+    opacity var(--duration-1) var(--ease-standard),
+    transform var(--duration-1) var(--ease-standard),
+    filter var(--duration-1) var(--ease-standard);
 }
 
 .workspace-file-tree-row::before {
@@ -236,8 +236,8 @@
   );
   background-size: 4px 4px;
   transition:
-    opacity 0.14s ease,
-    transform 0.14s ease;
+    opacity var(--duration-1) var(--ease-standard),
+    transform var(--duration-1) var(--ease-standard);
 }
 
 .workspace-file-tree-row:hover:not(:disabled)::after,
@@ -304,8 +304,8 @@
   flex: 0 0 auto;
   color: color-mix(in srgb, var(--text-muted) 88%, transparent);
   transition:
-    transform 0.14s ease,
-    color 0.14s ease;
+    transform var(--duration-1) var(--ease-standard),
+    color var(--duration-1) var(--ease-standard);
 }
 
 .workspace-file-tree-row__chevron--spacer {
@@ -451,11 +451,11 @@
   text-align: left;
   cursor: pointer;
   transition:
-    background-color 0.14s ease,
-    border-color 0.14s ease,
-    color 0.14s ease,
-    box-shadow 0.14s ease,
-    opacity 0.14s ease;
+    background-color var(--duration-1) var(--ease-standard),
+    border-color var(--duration-1) var(--ease-standard),
+    color var(--duration-1) var(--ease-standard),
+    box-shadow var(--duration-1) var(--ease-standard),
+    opacity var(--duration-1) var(--ease-standard);
 }
 
 .workspace-file-context-menu__item:hover:not(:disabled),
@@ -599,9 +599,9 @@
   outline: none;
   box-shadow: none;
   transition:
-    border-color 0.14s ease,
-    box-shadow 0.14s ease,
-    background-color 0.14s ease;
+    border-color var(--duration-1) var(--ease-standard),
+    box-shadow var(--duration-1) var(--ease-standard),
+    background-color var(--duration-1) var(--ease-standard);
 }
 
 .workspace-files-editor-input:focus {
@@ -751,8 +751,8 @@ html[data-tone="light"] .workspace-files-editor-footer__error {
   border-radius: 4px 4px 0 0;
   background: var(--we-tab-inactive-bg);
   transition:
-    background-color 0.14s ease,
-    border-color 0.14s ease;
+    background-color var(--duration-1) var(--ease-standard),
+    border-color var(--duration-1) var(--ease-standard);
 }
 
 .workspace-editor-tab::after {
@@ -876,10 +876,10 @@ html[data-tone="light"] .workspace-files-editor-footer__error {
   opacity: 0;
   pointer-events: none;
   transition:
-    color 0.14s ease,
-    background-color 0.14s ease,
-    opacity 0.14s ease,
-    transform 0.14s ease;
+    color var(--duration-1) var(--ease-standard),
+    background-color var(--duration-1) var(--ease-standard),
+    opacity var(--duration-1) var(--ease-standard),
+    transform var(--duration-1) var(--ease-standard);
 }
 
 .workspace-editor-tab:hover .workspace-editor-tab__close,

@@ -142,30 +142,6 @@
   padding: 10px;
 }
 
-/* Animations */
-.global-config-drawer-enter-active,
-.global-config-drawer-leave-active {
-  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.global-config-drawer-leave-to {
-  opacity: 0;
-}
-
-.global-config-drawer-enter-active .global-config-drawer-panel,
-.global-config-drawer-leave-active .global-config-drawer-panel {
-  transition:
-    transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 200ms ease;
-  will-change: transform, opacity;
-}
-
-.global-config-drawer-enter-from .global-config-drawer-panel,
-.global-config-drawer-leave-to .global-config-drawer-panel {
-  transform: translateX(30px) scale(0.98);
-  opacity: 0;
-}
-
 .global-config-status-refresh-fx {
   display: inline-flex;
   align-items: center;
@@ -348,7 +324,7 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 150ms ease;
+  transition: color var(--duration-2) var(--ease-standard);
 }
 
 .service-tier-option[aria-checked="true"] {

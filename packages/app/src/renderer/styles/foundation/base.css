@@ -80,9 +80,50 @@
     transparent
   );
   --floating-item-ring: 0 0 0 2px color-mix(in srgb, var(--accent-soft) 78%, transparent);
-  --floating-enter-duration: 180ms;
-  --floating-enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --floating-exit-ease: ease;
+
+  /* ============================================================
+     Motion 体系 —— 全局动效单一来源
+     缓动曲线 / 时长档位 / 微交互别名 / 折叠 / 列表 stagger
+     ============================================================ */
+  /* 缓动曲线（按全仓 cubic-bezier 频次收敛去重） */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* 通用进出，替代裸 ease / ease-in-out */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1); /* 主减速曲线：进入/展开/hover（全仓最高频） */
+  --ease-out-soft: cubic-bezier(0.25, 1, 0.5, 1); /* 更柔减速：折叠体 */
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1); /* 强调/大位移 */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1); /* 退出/收起 */
+  --ease-linear: linear; /* 仅 spinner/进度匀速 */
+
+  /* 时长档位（收敛离散值，统一 ms 书写） */
+  --duration-1: 120ms; /* 微反馈：颜色/透明度 hover */
+  --duration-2: 150ms; /* 小位移：transform/小尺寸 */
+  --duration-3: 180ms; /* 标准：主流过渡 */
+  --duration-4: 220ms; /* 大元素/布局：侧栏列宽、面板 */
+  --duration-5: 300ms; /* 展开折叠/大幅移动 */
+  --duration-slow: 420ms; /* 视图/主题切换 */
+
+  /* 微交互语义别名（hover/active/focus 体系映射到档位） */
+  --motion-fast: var(--duration-1);
+  --motion-base: var(--duration-3);
+  --motion-slow: var(--duration-4);
+  --hover-lift: -1px;
+  --press-drop: 0.5px;
+  --press-scale: 0.97;
+  --focus-ring-shadow: 0 0 0 2px color-mix(in srgb, var(--focus-ring, var(--accent-soft)) 84%, transparent);
+
+  /* 折叠专用（让多套折叠共用一条曲线/时长） */
+  --collapse-duration: var(--duration-4);
+  --collapse-duration-out: var(--duration-3);
+  --collapse-ease: var(--ease-out-soft);
+  --collapse-shift: 3px;
+
+  /* 列表 stagger */
+  --list-stagger-step: 26ms;
+  --list-stagger-max: 16; /* min(var(--i), 16) 封顶，防长列表末项延迟过大 */
+
+  /* 既有浮层变量回收复用（修掉退化的裸 ease） */
+  --floating-enter-duration: var(--duration-3);
+  --floating-enter-ease: var(--ease-out);
+  --floating-exit-ease: var(--ease-in);
 }
 
 :root[data-font-family="alibaba-puhuiti"] {

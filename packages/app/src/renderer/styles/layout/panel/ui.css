@@ -3,12 +3,12 @@
   grid-template-rows: 0fr;
   opacity: 0;
   overflow: hidden;
-  transform: translateY(-4px);
+  transform: translateY(calc(-1 * var(--collapse-shift)));
   pointer-events: none;
   transition:
-    grid-template-rows 0.2s ease,
-    opacity 0.18s ease,
-    transform 0.22s ease;
+    grid-template-rows var(--collapse-duration) var(--collapse-ease),
+    opacity var(--collapse-duration-out) var(--ease-out),
+    transform var(--collapse-duration) var(--collapse-ease);
   will-change: grid-template-rows, opacity, transform;
 }
 
@@ -31,29 +31,27 @@
   overflow: hidden;
 }
 
-.ui-collapsible-fade-enter-active,
-.ui-collapsible-fade-leave-active {
-  transition:
-    opacity 0.18s ease,
-    transform 0.22s ease;
+.ui-collapsible-fade-content {
+  display: block;
+  animation: ui-collapsible-fade-in var(--duration-3) var(--ease-out) both;
+  will-change: opacity, transform;
 }
 
-.ui-collapsible-fade-enter-from,
-.ui-collapsible-fade-leave-to {
-  opacity: 0;
-  transform: translate3d(0, 4px, 0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ui-collapsible-fade-enter-active,
-  .ui-collapsible-fade-leave-active {
-    transition: none;
+@keyframes ui-collapsible-fade-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--collapse-shift), 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
 }
 
-.ui-collapsible-fade-content {
-  display: block;
-  will-change: opacity, transform;
+@media (prefers-reduced-motion: reduce) {
+  .ui-collapsible-fade-content {
+    animation: none;
+  }
 }
 
 .ui-leading-icon-slot {
@@ -90,8 +88,8 @@
   flex: 0 0 auto;
   color: var(--text-muted);
   transition:
-    transform 0.2s ease,
-    color 0.16s ease;
+    transform var(--duration-3) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard);
 }
 
 .ui-select-chevron.open {
@@ -135,10 +133,10 @@
   justify-content: flex-start;
   text-align: left;
   transition:
-    border-color 180ms ease,
-    background-color 180ms ease,
-    box-shadow 180ms ease,
-    color 180ms ease;
+    border-color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard),
+    box-shadow var(--duration-3) var(--ease-standard),
+    color var(--duration-3) var(--ease-standard);
 }
 
 .ui-select-option-label {
@@ -214,25 +212,44 @@
   border-color: var(--border-danger);
 }
 
-.ui-select-popover-enter-active,
-.ui-select-popover-leave-active {
-  transition:
-    opacity var(--floating-enter-duration) var(--floating-exit-ease),
-    transform var(--floating-enter-duration) var(--floating-enter-ease),
-    filter var(--floating-enter-duration) var(--floating-enter-ease);
+.ui-select-popover {
+  animation: ui-select-popover-in var(--floating-enter-duration) var(--floating-enter-ease) both;
+  transform-origin: top center;
 }
 
-.ui-select-popover-enter-from,
-.ui-select-popover-leave-to {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.986);
-  filter: blur(4px);
+@keyframes ui-select-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.986);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.ui-select-popover .ui-select-option {
+  animation: ui-select-option-in var(--duration-3) var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), var(--list-stagger-max)) * var(--list-stagger-step));
+}
+
+@keyframes ui-select-option-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--collapse-shift));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ui-select-popover-enter-active,
-  .ui-select-popover-leave-active {
-    transition: none;
+  .ui-select-popover,
+  .ui-select-popover .ui-select-option {
+    animation: none;
   }
 }
 
@@ -426,7 +443,7 @@
   gap: 6px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.12s ease;
+  transition: opacity var(--duration-1) var(--ease-standard);
 }
 
 .agent-row:hover .agent-row-actions,
@@ -618,10 +635,10 @@ svg.spin {
   opacity: 0;
   transform: translateY(2px);
   transition:
-    opacity 0.15s ease,
-    transform 0.15s ease,
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+    opacity var(--duration-2) var(--ease-standard),
+    transform var(--duration-2) var(--ease-standard),
+    border-color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard);
   pointer-events: none;
 }
 

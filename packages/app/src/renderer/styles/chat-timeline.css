@@ -312,49 +312,6 @@
   height: 14px;
 }
 
-.chat-pinned-prompt-content-up-enter-active,
-.chat-pinned-prompt-content-up-leave-active,
-.chat-pinned-prompt-content-down-enter-active,
-.chat-pinned-prompt-content-down-leave-active {
-  transition:
-    opacity 130ms ease,
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
-}
-
-.chat-pinned-prompt-content-up-enter-from {
-  opacity: 0;
-  transform: translateY(100%);
-}
-
-.chat-pinned-prompt-content-up-leave-to {
-  opacity: 0;
-  transform: translateY(-100%);
-}
-
-.chat-pinned-prompt-content-down-enter-from {
-  opacity: 0;
-  transform: translateY(-100%);
-}
-
-.chat-pinned-prompt-content-down-leave-to {
-  opacity: 0;
-  transform: translateY(100%);
-}
-
-.chat-pinned-prompt-enter-active,
-.chat-pinned-prompt-leave-active {
-  transition:
-    opacity 140ms ease,
-    transform 140ms ease;
-}
-
-.chat-pinned-prompt-enter-from,
-.chat-pinned-prompt-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
 .timeline-pane--chat .chat-row--tail {
   margin-top: var(--chat-row-gap-tail);
 }
@@ -423,9 +380,9 @@
   white-space: nowrap;
   cursor: pointer;
   transition:
-    border-color 150ms ease,
-    background 150ms ease,
-    color 150ms ease;
+    border-color var(--duration-2) var(--ease-standard),
+    background var(--duration-2) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard);
 }
 
 .timeline-pane--chat .chat-inline-file-token:hover {
@@ -636,8 +593,8 @@
   background: var(--chat-aux-bg);
   box-shadow: none;
   transition:
-    border-color 160ms ease,
-    background-color 160ms ease;
+    border-color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard);
 }
 
 .timeline-pane--chat .chat-aux-activity__meteor {
@@ -827,7 +784,7 @@
 .timeline-pane--chat .chat-aux-activity__chevron {
   flex: 0 0 auto;
   opacity: 0.78;
-  transition: transform 170ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 170ms var(--ease-out);
 }
 
 .timeline-pane--chat .chat-aux-activity__body-shell {
@@ -837,9 +794,9 @@
   pointer-events: none;
   transform: translate3d(0, -3px, 0);
   transition:
-    grid-template-rows 210ms cubic-bezier(0.25, 1, 0.5, 1),
-    opacity 140ms ease,
-    transform 210ms cubic-bezier(0.25, 1, 0.5, 1);
+    grid-template-rows 210ms var(--ease-out-soft),
+    opacity var(--duration-1) var(--ease-standard),
+    transform 210ms var(--ease-out-soft);
 }
 
 .timeline-pane--chat .chat-aux-activity__body-shell.is-open {
@@ -1395,7 +1352,7 @@
 .timeline-pane--chat .command-session__chevron {
   display: block;
   flex: none;
-  transition: transform 150ms ease;
+  transition: transform var(--duration-2) var(--ease-standard);
 }
 
 .timeline-pane--chat .command-session__chevron.is-open {
@@ -1480,9 +1437,13 @@
   overflow: hidden;
   opacity: 1;
   transition:
-    max-height 0.24s ease,
-    opacity 0.18s ease;
-  max-height: none;
+    grid-template-rows var(--collapse-duration) var(--collapse-ease),
+    opacity var(--collapse-duration-out) var(--ease-out);
+}
+
+.timeline-pane--chat .markdown-plan-card-body-shell > .markdown-plan-card-body {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .timeline-pane--chat .markdown-plan-card-body-shell.is-expanded {
@@ -1490,9 +1451,15 @@
 }
 
 .timeline-pane--chat .markdown-plan-card-body-shell.is-collapsed {
-  max-height: 0;
+  grid-template-rows: 0fr;
   opacity: 0;
   pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-pane--chat .markdown-plan-card-body-shell {
+    transition: none;
+  }
 }
 
 .timeline-pane--chat .markdown-plan-card.is-expanded .markdown-plan-card-head {
@@ -1639,7 +1606,7 @@
   height: 14px;
   width: 14px;
   flex: 0 0 auto;
-  transition: transform 160ms ease;
+  transition: transform var(--duration-2) var(--ease-standard);
 }
 
 .timeline-pane--chat .chat-token-usage__chevron.is-open {
@@ -1783,11 +1750,7 @@
   .timeline-pane--chat .chat-inline-file-token,
   .timeline-pane--chat .chat-aux-activity__chevron,
   .timeline-pane--chat .chat-aux-activity__body-shell,
-  .timeline-pane--chat .chat-aux-activity__body-shell.is-open,
-  .chat-pinned-prompt-content-up-enter-active,
-  .chat-pinned-prompt-content-up-leave-active,
-  .chat-pinned-prompt-content-down-enter-active,
-  .chat-pinned-prompt-content-down-leave-active {
+  .timeline-pane--chat .chat-aux-activity__body-shell.is-open {
     transition: none;
     transform: none;
   }

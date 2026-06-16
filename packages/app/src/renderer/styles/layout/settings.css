@@ -66,9 +66,9 @@
   align-items: center;
   text-align: left;
   transition:
-    background-color 0.14s ease,
-    border-color 0.14s ease,
-    color 0.14s ease;
+    background-color var(--duration-1) var(--ease-standard),
+    border-color var(--duration-1) var(--ease-standard),
+    color var(--duration-1) var(--ease-standard);
 }
 
 .settings-nav-item:hover:not(.is-active) {
@@ -423,7 +423,7 @@
 }
 
 .integrations-panel .chevron {
-  transition: transform 0.15s ease;
+  transition: transform var(--duration-2) var(--ease-standard);
 }
 
 .integrations-panel .chevron.open,
@@ -719,16 +719,6 @@
   padding: 12px;
 }
 
-.codex-provider-page-fade-enter-active,
-.codex-provider-page-fade-leave-active {
-  transition: opacity 160ms ease;
-}
-
-.codex-provider-page-fade-enter-from,
-.codex-provider-page-fade-leave-to {
-  opacity: 0;
-}
-
 .codex-provider-enable,
 .codex-provider-float-btn {
   display: inline-flex;
@@ -777,9 +767,9 @@
     color-mix(in srgb, var(--surface-1) 90%, transparent)
   );
   transition:
-    background-color 0.14s ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease;
+    background-color var(--duration-1) var(--ease-standard),
+    border-color var(--duration-2) var(--ease-standard),
+    box-shadow var(--duration-2) var(--ease-standard);
 }
 
 .codex-provider-card:hover {
@@ -888,9 +878,9 @@
   font-weight: 650;
   cursor: pointer;
   transition:
-    border-color 0.14s ease,
-    background-color 0.14s ease,
-    color 0.14s ease;
+    border-color var(--duration-1) var(--ease-standard),
+    background-color var(--duration-1) var(--ease-standard),
+    color var(--duration-1) var(--ease-standard);
 }
 
 .codex-provider-enable:hover:not(:disabled) {
@@ -983,9 +973,9 @@
   font-weight: 650;
   cursor: pointer;
   transition:
-    border-color 0.14s ease,
-    background-color 0.14s ease,
-    color 0.14s ease;
+    border-color var(--duration-1) var(--ease-standard),
+    background-color var(--duration-1) var(--ease-standard),
+    color var(--duration-1) var(--ease-standard);
 }
 
 .codex-provider-float-btn:hover:not(:disabled) {
@@ -1163,8 +1153,8 @@
     inset 0 1px 0 color-mix(in srgb, white 24%, transparent),
     inset 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
   transition:
-    border-color 0.14s ease,
-    box-shadow 0.14s ease;
+    border-color var(--duration-1) var(--ease-standard),
+    box-shadow var(--duration-1) var(--ease-standard);
 }
 
 .codex-file-editor-textarea:focus {

@@ -22,7 +22,7 @@
   overflow: visible;
   backdrop-filter: var(--composer-shell-backdrop, none);
   -webkit-backdrop-filter: var(--composer-shell-backdrop, none);
-  transition: filter 180ms ease;
+  transition: filter var(--duration-3) var(--ease-standard);
 }
 
 .composer-queue-tray.has-failed {
@@ -62,8 +62,8 @@
   pointer-events: none;
   transform-origin: center bottom;
   transition:
-    opacity 180ms ease,
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity var(--duration-3) var(--ease-standard),
+    transform var(--duration-4) var(--ease-out);
 }
 
 .composer-queue-main::before {
@@ -129,11 +129,11 @@
     0 4px 12px color-mix(in srgb, var(--bg) 16%, transparent),
     inset 0 1px 0 color-mix(in srgb, var(--text) 5%, transparent);
   transition:
-    border-color 180ms ease,
-    background-color 180ms ease,
-    box-shadow 180ms ease,
-    opacity 180ms ease,
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    border-color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard),
+    box-shadow var(--duration-3) var(--ease-standard),
+    opacity var(--duration-3) var(--ease-standard),
+    transform var(--duration-3) var(--ease-out);
 }
 
 .composer-queue-item--primary {
@@ -178,8 +178,8 @@
   grid-template-columns: repeat(3, 38px);
   gap: 7px;
   transition:
-    opacity 180ms ease,
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity var(--duration-3) var(--ease-standard),
+    transform var(--duration-3) var(--ease-out);
 }
 
 .composer-queue-tray.has-failed .composer-queue-actions {
@@ -198,8 +198,8 @@
   background: transparent;
   color: color-mix(in srgb, var(--text-muted) 90%, var(--text) 10%);
   transition:
-    color 160ms ease,
-    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+    color var(--duration-2) var(--ease-standard),
+    transform var(--duration-1) var(--ease-out);
 }
 
 .composer-queue-action:hover:not(:disabled),
@@ -314,9 +314,9 @@
   text-align: left;
   isolation: isolate;
   transition:
-    background-color 160ms ease,
-    box-shadow 160ms ease,
-    color 160ms ease;
+    background-color var(--duration-2) var(--ease-standard),
+    box-shadow var(--duration-2) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard);
 }
 
 .composer-slash-option:last-child {
@@ -358,7 +358,7 @@
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
-  transition: color 160ms ease;
+  transition: color var(--duration-2) var(--ease-standard);
 }
 
 .composer-slash-option:hover:not(:disabled) .composer-slash-code,
@@ -389,56 +389,6 @@
   display: inline-flex;
   align-items: center;
   min-height: 20px;
-}
-
-.composer-slash-content-enter-active,
-.composer-slash-content-leave-active {
-  transition:
-    opacity 0.09s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.1s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
-}
-
-.composer-slash-content-leave-active {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.composer-slash-content-enter-from,
-.composer-slash-content-leave-to {
-  opacity: 0;
-  transform: translateY(2px) scale(0.996);
-}
-
-.composer-slash-popover-enter-active,
-.composer-slash-popover-leave-active {
-  transition:
-    opacity var(--floating-enter-duration) var(--floating-exit-ease),
-    transform var(--floating-enter-duration) var(--floating-enter-ease),
-    filter var(--floating-enter-duration) var(--floating-enter-ease);
-  will-change: opacity, transform, filter;
-}
-
-.composer-slash-popover-enter-from,
-.composer-slash-popover-leave-to {
-  opacity: 0;
-  transform: translateY(8px) scale(0.986);
-  filter: blur(4px);
-}
-
-.composer-slash-popover[data-dir="down"].composer-slash-popover-enter-from,
-.composer-slash-popover[data-dir="down"].composer-slash-popover-leave-to {
-  transform: translateY(-8px) scale(0.986);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .composer-slash-content-enter-active,
-  .composer-slash-content-leave-active,
-  .composer-slash-popover-enter-active,
-  .composer-slash-popover-leave-active {
-    transition: none;
-  }
 }
 
 .composer-lightbox-overlay {
@@ -514,7 +464,7 @@
   max-height: 84vh;
   transform-origin: center center;
   will-change: transform;
-  transition: transform 80ms ease-out;
+  transition: transform var(--duration-1) var(--ease-out);
   cursor: inherit;
   user-select: none;
   -webkit-user-drag: none;
@@ -630,23 +580,6 @@
 
 .composer-lightbox-close:active:not(:disabled) {
   transform: none;
-}
-
-.composer-lightbox-enter-active,
-.composer-lightbox-leave-active {
-  transition: opacity 150ms ease;
-}
-
-.composer-lightbox-enter-from,
-.composer-lightbox-leave-to {
-  opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .composer-lightbox-enter-active,
-  .composer-lightbox-leave-active {
-    transition: none;
-  }
 }
 
 .sandbox-risk-icon {
@@ -792,9 +725,9 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   background: var(--floating-item-bg);
   color: var(--text);
   transition:
-    border-color 180ms ease,
-    background-color 180ms ease,
-    box-shadow 180ms ease;
+    border-color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard),
+    box-shadow var(--duration-3) var(--ease-standard);
 }
 
 .codex-modal-input:focus {
@@ -826,11 +759,11 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   background: var(--floating-item-bg);
   color: var(--text);
   transition:
-    border-color 180ms ease,
-    background-color 180ms ease,
-    box-shadow 180ms ease,
-    color 180ms ease,
-    transform 180ms ease;
+    border-color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard),
+    box-shadow var(--duration-3) var(--ease-standard),
+    color var(--duration-3) var(--ease-standard),
+    transform var(--duration-3) var(--ease-standard);
 }
 
 .codex-modal-btn:hover:not(:disabled),
@@ -1006,12 +939,12 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   border: 1px solid color-mix(in srgb, var(--button-border, var(--border)) 90%, transparent);
   background: color-mix(in srgb, var(--button-bg, var(--surface-1)) 92%, transparent);
   transition:
-    color 180ms ease,
-    border-color 180ms ease,
-    background-color 180ms ease,
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    opacity 180ms ease;
+    color var(--duration-3) var(--ease-standard),
+    border-color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard),
+    transform var(--duration-3) var(--ease-standard),
+    box-shadow var(--duration-3) var(--ease-standard),
+    opacity var(--duration-3) var(--ease-standard);
 }
 
 .codex-toast-close:hover:not(:disabled) {
@@ -1125,9 +1058,9 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   -webkit-backdrop-filter: var(--composer-shell-backdrop);
   isolation: isolate;
   transition:
-    border-color 160ms ease,
-    background-color 160ms ease,
-    box-shadow 160ms ease;
+    border-color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard),
+    box-shadow var(--duration-2) var(--ease-standard);
 }
 
 .composer-shell.is-agent {
@@ -1441,9 +1374,9 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   background: var(--surface-1);
   box-shadow: none;
   transition:
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 160ms ease,
-    background-color 160ms ease;
+    transform var(--duration-4) var(--ease-out),
+    border-color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard);
 }
 
 .composer-shell.is-agent .composer-mode-thumb {
@@ -1471,7 +1404,7 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   color: var(--text-muted);
   -webkit-font-smoothing: antialiased;
   white-space: nowrap;
-  transition: color 160ms ease;
+  transition: color var(--duration-2) var(--ease-standard);
 }
 
 .composer-mode-button:hover:not(:disabled) {
@@ -1510,9 +1443,9 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   box-shadow: none;
   cursor: pointer;
   transition:
-    border-color 160ms ease,
-    background-color 160ms ease,
-    color 160ms ease;
+    border-color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard);
 }
 
 .composer-select:hover:not(:disabled),
@@ -1562,10 +1495,10 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   -webkit-backdrop-filter: blur(14px) saturate(124%);
   text-align: left;
   transition:
-    border-color 160ms ease,
-    background-color 160ms ease,
-    box-shadow 160ms ease,
-    color 160ms ease;
+    border-color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard),
+    box-shadow var(--duration-2) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard);
 }
 
 .composer-model-reasoning-trigger:hover:not(:disabled),
@@ -1626,8 +1559,8 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   height: 14px;
   color: var(--text-muted);
   transition:
-    transform 180ms ease,
-    color 160ms ease;
+    transform var(--duration-3) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard);
 }
 
 .composer-model-reasoning-chevron.is-open {
@@ -1727,8 +1660,8 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   cursor: pointer;
   text-align: left;
   transition:
-    background-color 160ms ease,
-    color 160ms ease;
+    background-color var(--duration-2) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard);
 }
 
 .composer-model-reasoning-option:last-child {
@@ -1822,10 +1755,10 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   -webkit-backdrop-filter: blur(16px) saturate(142%);
   text-align: left;
   transition:
-    border-color 160ms ease,
-    background-color 160ms ease,
-    box-shadow 160ms ease,
-    color 160ms ease;
+    border-color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard),
+    box-shadow var(--duration-2) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard);
 }
 
 .composer-sandbox-trigger:hover:not(:disabled),
@@ -1864,8 +1797,8 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   height: 13px;
   color: var(--text-muted);
   transition:
-    transform 180ms ease,
-    color 160ms ease;
+    transform var(--duration-3) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard);
 }
 
 .composer-sandbox-chevron.is-open {
@@ -1913,8 +1846,8 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   cursor: pointer;
   text-align: left;
   transition:
-    background-color 160ms ease,
-    color 160ms ease;
+    background-color var(--duration-2) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard);
 }
 
 .composer-sandbox-option:last-child {
@@ -2020,10 +1953,10 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   );
   color: var(--button-primary-text, var(--text));
   transition:
-    border-color 160ms ease,
-    background-color 160ms ease,
-    color 160ms ease,
-    transform 160ms ease;
+    border-color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard),
+    transform var(--duration-2) var(--ease-standard);
 }
 
 .composer-send-button:hover:not(:disabled) {
@@ -2070,7 +2003,7 @@ textarea:not(#input):not(.instruction-file-editor):not(.instruction-file-editor-
   width: 16px;
   height: 16px;
   stroke-width: 2.25;
-  transition: transform 160ms ease;
+  transition: transform var(--duration-2) var(--ease-standard);
 }
 
 .composer-send-button:hover:not(:disabled) .composer-send-icon {

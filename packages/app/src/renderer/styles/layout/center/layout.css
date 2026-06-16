@@ -74,8 +74,8 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--border) 84%, transparent);
   transition:
-    background-color 0.14s ease,
-    box-shadow 0.14s ease;
+    background-color var(--duration-2) var(--ease-standard),
+    box-shadow var(--duration-2) var(--ease-standard);
 }
 
 .center-workbench-sash:hover::after,

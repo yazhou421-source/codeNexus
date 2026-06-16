@@ -665,10 +665,10 @@
   align-items: center;
   animation: app-closing-row-breathe 1.8s ease-in-out infinite;
   transition:
-    border-color 180ms ease,
-    background-color 180ms ease,
-    box-shadow 180ms ease,
-    opacity 180ms ease;
+    border-color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard),
+    box-shadow var(--duration-3) var(--ease-standard),
+    opacity var(--duration-3) var(--ease-standard);
 }
 
 .app-closing-step-item::before,
@@ -722,9 +722,9 @@
   border: 1px solid color-mix(in srgb, var(--border-accent) 72%, transparent);
   background: color-mix(in srgb, var(--bg-accent-soft) 82%, transparent);
   transition:
-    border-color 180ms ease,
-    background-color 180ms ease,
-    color 180ms ease;
+    border-color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard),
+    color var(--duration-3) var(--ease-standard);
 }
 
 .app-closing-step-item.is-completed .app-closing-refresh-badge,
@@ -773,32 +773,11 @@
   }
 }
 
-.app-closing-overlay-enter-active,
-.app-closing-overlay-leave-active {
-  transition: opacity 180ms ease;
-}
-
-.app-closing-overlay-enter-active .app-closing-overlay-backdrop,
-.app-closing-overlay-leave-active .app-closing-overlay-backdrop {
-  transition: opacity 180ms ease;
-}
-
-.app-closing-overlay-enter-active .app-closing-panel,
-.app-closing-overlay-leave-active .app-closing-panel {
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease;
-}
-
-.app-closing-overlay-enter-from,
-.app-closing-overlay-leave-to,
-.app-closing-overlay-enter-from .app-closing-overlay-backdrop,
-.app-closing-overlay-leave-to .app-closing-overlay-backdrop {
-  opacity: 0;
-}
-
-.app-closing-overlay-enter-from .app-closing-panel,
-.app-closing-overlay-leave-to .app-closing-panel {
-  opacity: 0;
-  transform: translate3d(0, 10px, 0) scale(0.985);
+@media (prefers-reduced-motion: reduce) {
+  .app-closing-step-item,
+  .app-closing-task-step,
+  .app-closing-step-item::before,
+  .app-closing-task-step::before {
+    animation: none;
+  }
 }

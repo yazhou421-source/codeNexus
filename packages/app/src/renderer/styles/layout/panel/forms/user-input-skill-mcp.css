@@ -127,9 +127,9 @@
   background: var(--input-bg-strong, var(--input-bg));
   color: var(--input-text, var(--text));
   transition:
-    border-color 0.12s ease,
-    background 0.12s ease,
-    color 0.12s ease;
+    border-color var(--duration-1) var(--ease-standard),
+    background var(--duration-1) var(--ease-standard),
+    color var(--duration-1) var(--ease-standard);
 }
 
 .user-input-actions {
@@ -178,10 +178,10 @@ button.danger:hover:not(:disabled),
   overflow: hidden;
   max-width: 100%;
   transition:
-    border-color 150ms ease,
-    transform 150ms ease,
-    background 150ms ease,
-    box-shadow 150ms ease;
+    border-color var(--duration-2) var(--ease-standard),
+    transform var(--duration-2) var(--ease-standard),
+    background var(--duration-2) var(--ease-standard),
+    box-shadow var(--duration-2) var(--ease-standard);
 }
 
 .skill-details:hover {
@@ -388,7 +388,7 @@ button.danger:hover:not(:disabled),
   width: 16px;
   height: 16px;
   stroke-width: 2.2;
-  transition: transform 0.15s ease;
+  transition: transform var(--duration-2) var(--ease-standard);
 }
 
 .skill-summary-toggle-icon.open {
@@ -419,8 +419,8 @@ button.danger:hover:not(:disabled),
   border: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
   background: color-mix(in srgb, var(--text-muted) 24%, transparent);
   transition:
-    background 150ms ease,
-    border-color 150ms ease;
+    background var(--duration-2) var(--ease-standard),
+    border-color var(--duration-2) var(--ease-standard);
 }
 
 .skill-switch-thumb {
@@ -432,7 +432,7 @@ button.danger:hover:not(:disabled),
   border-radius: 999px;
   background: color-mix(in srgb, var(--surface-1) 92%, transparent);
   box-shadow: 0 1px 4px rgb(from var(--ui-shadow-source) r g b / 0.22);
-  transition: transform 150ms ease;
+  transition: transform var(--duration-2) var(--ease-standard);
 }
 
 .skill-switch-input:checked + .skill-switch-track {
@@ -630,7 +630,7 @@ button.danger:hover:not(:disabled),
 
 .mcp-summary .chevron {
   color: var(--text-muted);
-  transition: transform 0.15s ease;
+  transition: transform var(--duration-2) var(--ease-standard);
   flex: 0 0 auto;
 }
 

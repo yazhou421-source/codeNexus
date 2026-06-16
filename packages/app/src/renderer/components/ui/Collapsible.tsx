@@ -97,7 +97,12 @@ export default function Collapsible({
       {typeof trigger === "function" ? trigger(renderArgs) : trigger}
       {motion === "fade" ? (
         shouldRenderFade ? (
-          <div id={resolvedContentId} className="ui-collapsible-fade-content" aria-hidden={isOpen ? "false" : "true"} hidden={!isOpen}>
+          <div
+            id={resolvedContentId}
+            className={["ui-collapsible-fade-content", isOpen ? "is-open" : ""].filter(Boolean).join(" ")}
+            data-state={isOpen ? "open" : "closed"}
+            aria-hidden={isOpen ? "false" : "true"}
+          >
             {content}
           </div>
         ) : null

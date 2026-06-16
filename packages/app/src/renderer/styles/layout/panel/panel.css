@@ -96,7 +96,7 @@
   border-radius: 3px;
   cursor: pointer;
   user-select: none;
-  transition: background-color 0.16s ease;
+  transition: background-color var(--duration-2) var(--ease-standard);
 }
 
 .panel-head-collapsible:hover {
@@ -126,8 +126,8 @@
   color: var(--text-muted);
   flex: 0 0 auto;
   transition:
-    transform 0.2s ease,
-    color 0.16s ease;
+    transform var(--duration-3) var(--ease-standard),
+    color var(--duration-1) var(--ease-standard);
 }
 
 .panel-head-collapsible.is-open .panel-head-collapsible-chevron {
@@ -141,9 +141,9 @@
   opacity: 0;
   margin-top: 0;
   transition:
-    grid-template-rows 0.2s ease,
-    opacity 0.18s ease,
-    margin-top 0.2s ease;
+    grid-template-rows var(--collapse-duration) var(--collapse-ease),
+    opacity var(--collapse-duration-out) var(--ease-out),
+    margin-top var(--collapse-duration) var(--collapse-ease);
 }
 
 .panel-fold-content.is-open {
@@ -154,6 +154,12 @@
 
 .panel-fold-content:not(.is-open) {
   pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-fold-content {
+    transition: none;
+  }
 }
 
 .panel-fold-content-inner {

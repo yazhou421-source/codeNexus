@@ -19,12 +19,12 @@
 .lsb-group-head-toggle,
 .lsb-thread-attention-btn {
   transition:
-    border-color 140ms ease,
-    background-color 140ms ease,
-    color 140ms ease,
-    box-shadow 140ms ease,
-    transform 120ms ease,
-    opacity 140ms ease;
+    border-color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard),
+    color var(--duration-2) var(--ease-standard),
+    box-shadow var(--duration-2) var(--ease-standard),
+    transform var(--duration-1) var(--ease-standard),
+    opacity var(--duration-2) var(--ease-standard);
 }
 
 .lsb-nav-row {
@@ -249,7 +249,7 @@
 }
 
 .lsb-chevron {
-  transition: transform 140ms ease;
+  transition: transform var(--duration-2) var(--ease-standard);
 }
 
 .lsb-chevron.open {
@@ -339,9 +339,9 @@
   opacity: 0;
   transform: scaleY(0.72);
   transition:
-    opacity 140ms ease,
-    transform 140ms ease,
-    background-color 140ms ease;
+    opacity var(--duration-2) var(--ease-standard),
+    transform var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard);
 }
 
 .lsb-thread-row[class*="is-status-"] .lsb-thread-item::before {

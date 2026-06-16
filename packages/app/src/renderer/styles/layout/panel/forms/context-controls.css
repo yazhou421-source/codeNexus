@@ -19,9 +19,9 @@
   background: var(--input-bg-strong, var(--input-bg));
   color: var(--input-text, var(--text));
   transition:
-    border-color 0.12s ease,
-    background 0.12s ease,
-    color 0.12s ease;
+    border-color var(--duration-1) var(--ease-standard),
+    background var(--duration-1) var(--ease-standard),
+    color var(--duration-1) var(--ease-standard);
 }
 
 .context-input:hover:not(:disabled) {
@@ -57,8 +57,8 @@
   width: 0;
   background: linear-gradient(90deg, rgb(from var(--success) r g b / 0.8), rgb(from var(--accent) r g b / 0.85));
   transition:
-    width 0.25s ease,
-    background 0.25s ease;
+    width var(--duration-4) var(--ease-standard),
+    background var(--duration-4) var(--ease-standard);
 }
 
 .meter-fill.warn {
