@@ -525,23 +525,13 @@ export default function CenterPane() {
   }, [currentThreadId, runtime, timelineViewportAdapter, updateTimelineViewportState]);
 
   useEffect(() => {
-    const onWindowKeydown = (event: KeyboardEvent) => {
-      if (event.isComposing) return;
-      if (!(event.ctrlKey || event.metaKey) || !event.altKey) return;
-      if (event.code !== "KeyJ") return;
-      event.preventDefault();
-      event.stopPropagation();
-      uiPrefsStore.toggleTimelineDebugEnabled();
-    };
-    window.addEventListener("keydown", onWindowKeydown);
     window.addEventListener("scroll", refreshSlashPopoverPlacement, true);
     window.addEventListener("resize", refreshSlashPopoverPlacement);
     return () => {
-      window.removeEventListener("keydown", onWindowKeydown);
       window.removeEventListener("scroll", refreshSlashPopoverPlacement, true);
       window.removeEventListener("resize", refreshSlashPopoverPlacement);
     };
-  }, [refreshSlashPopoverPlacement, uiPrefsStore]);
+  }, [refreshSlashPopoverPlacement]);
 
   const closeComposeLightbox = useCallback(() => {
     setComposeLightboxAttachmentId("");
