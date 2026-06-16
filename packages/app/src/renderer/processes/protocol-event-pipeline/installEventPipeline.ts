@@ -4,6 +4,7 @@ import { useThreadStore } from "../../stores/thread.store";
 import { useGoalShutdownStore } from "../../stores/goalShutdown.store";
 import { useTimelineStore } from "../../stores/timeline.store";
 import { useRuntimeStore } from "../../stores/runtime.store";
+import { useUiPrefsStore } from "../../stores/uiPrefs.store";
 import { safeJsonStringify } from "../../utils/safeJson";
 import { useDebugTimelineStore } from "../../stores/debugTimeline.store";
 import { resolveThreadTitle } from "../../features/history/threadTitle";
@@ -252,6 +253,7 @@ export function installEventPipeline(storeScope: unknown) {
   const goalShutdownStore = useGoalShutdownStore(storeScope);
   const timelineStore = useTimelineStore(storeScope);
   const runtimeStore = useRuntimeStore(storeScope);
+  const uiPrefsStore = useUiPrefsStore(storeScope);
   const debugTimelineStore = useDebugTimelineStore(storeScope);
   const bridge = createEventBridge();
   // 思考状态定时器映射
@@ -706,7 +708,7 @@ export function installEventPipeline(storeScope: unknown) {
         threadStore.setThreadGoal(goalThreadId, params.goal);
         goalShutdownStore.observeGoalTransition(previousGoal, threadStore.goalByThread.get(goalThreadId) ?? null);
       }
-      if (runtimeStore.timelineDebugEnabled) {
+      if (uiPrefsStore.timelineDebugEnabled) {
         debugTimelineStore.appendEvent({
           threadId: goalThreadId || effectiveThreadId,
           method: n.method,
@@ -725,7 +727,7 @@ export function installEventPipeline(storeScope: unknown) {
       if (goalThreadId && goalThreadId !== "__app__") {
         threadStore.clearThreadGoal(goalThreadId);
       }
-      if (runtimeStore.timelineDebugEnabled) {
+      if (uiPrefsStore.timelineDebugEnabled) {
         debugTimelineStore.appendEvent({
           threadId: goalThreadId || effectiveThreadId,
           method: n.method,
@@ -739,7 +741,7 @@ export function installEventPipeline(storeScope: unknown) {
     }
 
     if (HIDDEN_OFFICIAL_NOTIFICATION_METHODS.has(n.method)) {
-      if (runtimeStore.timelineDebugEnabled) {
+      if (uiPrefsStore.timelineDebugEnabled) {
         debugTimelineStore.appendEvent({
           threadId: effectiveThreadId,
           method: n.method,
@@ -848,7 +850,7 @@ export function installEventPipeline(storeScope: unknown) {
         paramsText,
         params,
       });
-      if (runtimeStore.timelineDebugEnabled) {
+      if (uiPrefsStore.timelineDebugEnabled) {
         debugTimelineStore.appendEvent({
           threadId: effectiveThreadId,
           method: n.method,
@@ -885,7 +887,7 @@ export function installEventPipeline(storeScope: unknown) {
         paramsText: debugParamsText,
         params,
       });
-      if (runtimeStore.timelineDebugEnabled) {
+      if (uiPrefsStore.timelineDebugEnabled) {
         debugTimelineStore.appendEvent({
           threadId: effectiveThreadId,
           method: n.method,
@@ -959,7 +961,7 @@ export function installEventPipeline(storeScope: unknown) {
           hidden: false,
         });
       }
-      if (runtimeStore.timelineDebugEnabled) {
+      if (uiPrefsStore.timelineDebugEnabled) {
         debugTimelineStore.appendEvent({
           threadId: effectiveThreadId,
           method: n.method,
@@ -1359,7 +1361,7 @@ export function installEventPipeline(storeScope: unknown) {
       const statusRecord = toRecord(params.status);
       const statusType = String(statusRecord.type ?? "").trim();
       if (statusThreadId && statusThreadId !== "__app__") {
-        if (runtimeStore.timelineDebugEnabled) {
+        if (uiPrefsStore.timelineDebugEnabled) {
           debugTimelineStore.appendEvent({
             threadId: statusThreadId,
             method: n.method,
@@ -1558,7 +1560,7 @@ export function installEventPipeline(storeScope: unknown) {
         bindTurnThread(planThreadId, planTurnId, n.serverId);
         threadStore.setTurnPlan(planThreadId, planTurnId, explanation, normalizePlanItems(params.plan));
       }
-      if (runtimeStore.timelineDebugEnabled && planThreadId) {
+      if (uiPrefsStore.timelineDebugEnabled && planThreadId) {
         debugTimelineStore.appendEvent({
           threadId: planThreadId,
           method: n.method,
@@ -1595,7 +1597,7 @@ export function installEventPipeline(storeScope: unknown) {
           ),
           params: { threadId: effectiveThreadId, turnId: usageTurnId || null, tokenUsage },
         });
-        if (runtimeStore.timelineDebugEnabled) {
+        if (uiPrefsStore.timelineDebugEnabled) {
           debugTimelineStore.appendEvent({
             threadId: effectiveThreadId,
             method: n.method,
@@ -1630,7 +1632,7 @@ export function installEventPipeline(storeScope: unknown) {
     if (n.method === "account/rateLimits/updated") {
       const params = n.params;
       const rateLimits = params.rateLimits;
-      if (runtimeStore.timelineDebugEnabled) {
+      if (uiPrefsStore.timelineDebugEnabled) {
         debugTimelineStore.appendEvent({
           threadId: effectiveThreadId,
           method: n.method,

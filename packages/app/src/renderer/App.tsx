@@ -22,6 +22,7 @@ import { useAppShellStore } from "./stores/appShell.store";
 import { useGoalShutdownStore } from "./stores/goalShutdown.store";
 import { useNotificationSoundStore } from "./stores/notificationSound.store";
 import { useRuntimeStore } from "./stores/runtime.store";
+import { useUiPrefsStore } from "./stores/uiPrefs.store";
 import { useModelCatalogStore } from "./stores/modelCatalog.store";
 import { useWorkspaceFilesStore } from "./stores/workspaceFiles.store";
 import type { AppWindowState } from "@codenexus/shared/ipc/contracts";
@@ -57,6 +58,7 @@ export default function App() {
   const appClosingStore = useAppClosingStore();
   const goalShutdownStore = useGoalShutdownStore();
   const runtimeStore = useRuntimeStore();
+  const uiPrefsStore = useUiPrefsStore();
   const notificationSoundStore = useNotificationSoundStore();
   const modelCatalogStore = useModelCatalogStore();
   const workspaceFilesStore = useWorkspaceFilesStore();
@@ -96,7 +98,7 @@ export default function App() {
     shouldShowDefaultLeftSidebar(mainView);
   const showLeftPane = Boolean(featureWorkspaceSidebar) || showLeftSidebar;
   const showDebugSidebar =
-    !settingsOpen && runtimeStore.timelineDebugEnabled && (isCustomMode || mainView === "chat");
+    !settingsOpen && uiPrefsStore.timelineDebugEnabled && (isCustomMode || mainView === "chat");
   const showFilesSidebar =
     !isCustomMode &&
     !settingsOpen &&
@@ -157,7 +159,7 @@ export default function App() {
       if (!isCustomMode || !isToggleDebugTimelineShortcut(event)) return;
       event.preventDefault();
       event.stopPropagation();
-      runtimeStore.toggleTimelineDebugEnabled();
+      uiPrefsStore.toggleTimelineDebugEnabled();
     };
     window.addEventListener("keydown", onWindowKeydown);
 
@@ -180,7 +182,7 @@ export default function App() {
         stopWindowStateListener?.();
       } catch {}
     };
-  }, [isCustomMode, runtimeStore]);
+  }, [isCustomMode, uiPrefsStore]);
 
   useEffect(() => {
     if (appClosingStore.phase !== "preparing") return;

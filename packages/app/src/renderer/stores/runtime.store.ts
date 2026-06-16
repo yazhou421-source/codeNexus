@@ -186,7 +186,6 @@ export const useRuntimeStore = defineStore("runtime", {
     historyRewriteSavedAttachments: [] as ComposeImageAttachment[],
     historyRewriteSavedMentions: [] as ComposeWorkspaceFileMention[],
     composerFocusSeq: 0,
-    timelineDebugEnabled: false,
     pendingThreadInitSendCountByThread: new Map<string, number>(),
     timelineScrollToBottomSeq: 0,
   }),
@@ -672,12 +671,6 @@ export const useRuntimeStore = defineStore("runtime", {
         // 同步映射表并持久化：输入框与运行参数均按线程隔离。
         state.saveThreadComposeState(state.currentThreadId, { save: true });
       });
-    },
-    setTimelineDebugEnabled(enabled: boolean) {
-      this.timelineDebugEnabled = Boolean(enabled);
-    },
-    toggleTimelineDebugEnabled() {
-      this.timelineDebugEnabled = !this.timelineDebugEnabled;
     },
     setPendingThreadInitSendCount(threadIdValue: string, countValue: number) {
       const key = threadKey(threadIdValue);

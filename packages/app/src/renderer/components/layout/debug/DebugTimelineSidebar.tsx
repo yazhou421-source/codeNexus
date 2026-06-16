@@ -3,6 +3,7 @@ import { useAppShellStore } from "../../../stores/appShell.store";
 import { useCustomChatStore } from "../../../stores/customChat.store";
 import { useDebugTimelineStore } from "../../../stores/debugTimeline.store";
 import { useRuntimeStore } from "../../../stores/runtime.store";
+import { useUiPrefsStore } from "../../../stores/uiPrefs.store";
 import { useTimelineStore } from "../../../stores/timeline.store";
 import ChatPane from "../chat/ChatPane";
 
@@ -14,6 +15,7 @@ export default function DebugTimelineSidebar({ className }: DebugTimelineSidebar
   const appShellStore = useAppShellStore();
   const customChatStore = useCustomChatStore();
   const runtimeStore = useRuntimeStore();
+  const uiPrefsStore = useUiPrefsStore();
   const timelineStore = useTimelineStore();
   const debugTimelineStore = useDebugTimelineStore();
   const isCustomMode = appShellStore.runtimeMode === "custom";
@@ -42,7 +44,7 @@ export default function DebugTimelineSidebar({ className }: DebugTimelineSidebar
         </div>
         <div className="debug-timeline-sidebar-actions">
           <span className="mono dim text-[10px]">Ctrl/⌘ + Alt + J</span>
-          <button className="btn-mini" type="button" onClick={() => runtimeStore.setTimelineDebugEnabled(false)}>
+          <button className="btn-mini" type="button" onClick={() => uiPrefsStore.setTimelineDebugEnabled(false)}>
             关闭
           </button>
         </div>

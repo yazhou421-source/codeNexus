@@ -30,7 +30,7 @@ import {
   type CustomChatToolPart,
   type CustomToolActivity,
 } from "../../stores/customChat.store";
-import { useRuntimeStore } from "../../stores/runtime.store";
+import { useUiPrefsStore } from "../../stores/uiPrefs.store";
 import AgentMarkdownContent from "../ui/AgentMarkdownContent";
 import ExecutionWaveText from "../ui/ExecutionWaveText";
 import SelectDropdown from "../ui/SelectDropdown";
@@ -290,7 +290,7 @@ function ToolPartView({
 
 export default function CustomWorkbench() {
   const appShellStore = useAppShellStore();
-  const runtimeStore = useRuntimeStore();
+  const uiPrefsStore = useUiPrefsStore();
   const customChatStore = useCustomChatStore();
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -406,6 +406,9 @@ export default function CustomWorkbench() {
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
+    // 仅当用户已贴近底部时才自动跟随；向上翻历史时不打扰
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceToBottom > 56) return;
     el.scrollTop = el.scrollHeight;
   }, [customChatStore.messages, customChatStore.sending]);
 
@@ -430,11 +433,19 @@ export default function CustomWorkbench() {
     setDraft("");
   };
 
+  const scrollMessagesToBottom = (behavior: ScrollBehavior = "auto") => {
+    const el = listRef.current;
+    if (!el) return;
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    el.scrollTo({ top: el.scrollHeight, behavior: reduce ? "auto" : behavior });
+  };
+
   const submit = async () => {
     const text = draft.trim();
     if (!text || !hasActiveProvider) return;
     setDraft("");
     resetComposerHeight();
+    requestAnimationFrame(() => scrollMessagesToBottom("smooth"));
     await customChatStore.send(text, snapshot);
   };
 
@@ -621,9 +632,9 @@ export default function CustomWorkbench() {
           <div className="cw-header__actions">
             <button
               type="button"
-              className={`cw-btn${runtimeStore.timelineDebugEnabled ? " is-on" : ""}`}
-              aria-pressed={runtimeStore.timelineDebugEnabled ? "true" : "false"}
-              onClick={() => runtimeStore.toggleTimelineDebugEnabled()}
+              className={`cw-btn${uiPrefsStore.timelineDebugEnabled ? " is-on" : ""}`}
+              aria-pressed={uiPrefsStore.timelineDebugEnabled ? "true" : "false"}
+              onClick={() => uiPrefsStore.toggleTimelineDebugEnabled()}
             >
               <ScrollText className="cw-btn__icon" aria-hidden="true" />
               日志
@@ -706,7 +717,7 @@ export default function CustomWorkbench() {
                 <h2>{editingId ? "编辑 Provider" : "新增 Provider"}</h2>
                 <label className="cw-field">
                   <span>协议</span>
-                  <select value={form.kind} onChange={(event) => setForm((current) => ({ ...current, kind: event.currentTarget.value as CustomProviderKind }))}>
+                  <select value={form.kind} onChange={(event) => setForm((current) => ({ ...current, kind: event.target.value as CustomProviderKind }))}>
                     <option value="openai-compatible">OpenAI 兼容</option>
                     <option value="anthropic">Claude（Anthropic）</option>
                     <option value="gemini">Gemini</option>
@@ -714,30 +725,30 @@ export default function CustomWorkbench() {
                 </label>
                 <label className="cw-field">
                   <span>名称</span>
-                  <input value={form.name} type="text" placeholder="My Provider" onChange={(event) => setForm((current) => ({ ...current, name: event.currentTarget.value }))} />
+                  <input value={form.name} type="text" placeholder="My Provider" onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
                 </label>
                 <label className="cw-field">
                   <span>Base URL</span>
-                  <input value={form.baseUrl} type="text" placeholder={baseUrlPlaceholder} onChange={(event) => setForm((current) => ({ ...current, baseUrl: event.currentTarget.value }))} />
+                  <input value={form.baseUrl} type="text" placeholder={baseUrlPlaceholder} onChange={(event) => setForm((current) => ({ ...current, baseUrl: event.target.value }))} />
                 </label>
                 <label className="cw-field">
                   <span>API Key</span>
-                  <input value={form.apiKey} type="password" placeholder="sk-..." autoComplete="off" onChange={(event) => setForm((current) => ({ ...current, apiKey: event.currentTarget.value }))} />
+                  <input value={form.apiKey} type="text" placeholder="sk-..." autoComplete="off" onChange={(event) => setForm((current) => ({ ...current, apiKey: event.target.value }))} />
                 </label>
                 <label className="cw-field">
                   <span>模型</span>
-                  <input value={form.model} type="text" placeholder={modelPlaceholder} onChange={(event) => setForm((current) => ({ ...current, model: event.currentTarget.value }))} />
+                  <input value={form.model} type="text" placeholder={modelPlaceholder} onChange={(event) => setForm((current) => ({ ...current, model: event.target.value }))} />
                 </label>
                 <label className="cw-field">
                   <span>最大输出 tokens</span>
-                  <input value={form.maxOutputTokens} type="number" min="1" step="1" placeholder="留空用服务端默认" onChange={(event) => setForm((current) => ({ ...current, maxOutputTokens: event.currentTarget.value }))} />
+                  <input value={form.maxOutputTokens} type="number" min="1" step="1" placeholder="留空用服务端默认" onChange={(event) => setForm((current) => ({ ...current, maxOutputTokens: event.target.value }))} />
                 </label>
                 <label className="cw-field">
                   <span>上下文长度（输入 tokens）</span>
-                  <input value={form.contextLimit} type="number" min="1" step="1" placeholder="留空不裁剪历史" onChange={(event) => setForm((current) => ({ ...current, contextLimit: event.currentTarget.value }))} />
+                  <input value={form.contextLimit} type="number" min="1" step="1" placeholder="留空不裁剪历史" onChange={(event) => setForm((current) => ({ ...current, contextLimit: event.target.value }))} />
                 </label>
                 <label className="cw-check">
-                  <input checked={form.thinking} type="checkbox" onChange={(event) => setForm((current) => ({ ...current, thinking: event.currentTarget.checked }))} />
+                  <input checked={form.thinking} type="checkbox" onChange={(event) => setForm((current) => ({ ...current, thinking: event.target.checked }))} />
                   <span>启用思考 / 推理输出（支持的模型：Claude thinking · Gemini · DeepSeek-R1 等；不支持的模型请勿开启）</span>
                 </label>
                 <div className="cw-config__actions">
@@ -800,8 +811,9 @@ export default function CustomWorkbench() {
                     placeholder="给自定义模型发消息…（Enter 发送，Shift+Enter 换行）"
                     disabled={customChatStore.sending}
                     onChange={(event) => {
-                      setDraft(event.currentTarget.value);
-                      autoGrowComposer(event.currentTarget);
+                      const el = event.target as HTMLTextAreaElement;
+                      setDraft(el.value);
+                      autoGrowComposer(el);
                     }}
                     onKeyDown={(event) => {
                       if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;

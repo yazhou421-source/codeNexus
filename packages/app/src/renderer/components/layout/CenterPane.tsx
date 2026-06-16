@@ -12,6 +12,7 @@ import { useConfigStore } from "../../stores/config.store";
 import { useMessageQueueStore } from "../../stores/messageQueue.store";
 import { useModelCatalogStore } from "../../stores/modelCatalog.store";
 import { useRuntimeStore, type SandboxMode } from "../../stores/runtime.store";
+import { useUiPrefsStore } from "../../stores/uiPrefs.store";
 import { useSkillsUiStore } from "../../stores/skillsUi.store";
 import { useThreadStore } from "../../stores/thread.store";
 import { useTimelineStore } from "../../stores/timeline.store";
@@ -166,6 +167,7 @@ function findNextEnabledSlashIndex(
 
 export default function CenterPane() {
   const runtimeStore = useRuntimeStore();
+  const uiPrefsStore = useUiPrefsStore();
   const threadStore = useThreadStore();
   const timelineStore = useTimelineStore();
   const messageQueueStore = useMessageQueueStore();
@@ -231,7 +233,7 @@ export default function CenterPane() {
   const timelinePaneClass = [
     "center-pane timeline-pane",
     skillsUiStore.managerOpen ? "timeline-pane--skills-page" : "timeline-pane--chat",
-    runtimeStore.timelineDebugEnabled && !skillsUiStore.managerOpen ? "is-debug-open" : "",
+    uiPrefsStore.timelineDebugEnabled && !skillsUiStore.managerOpen ? "is-debug-open" : "",
     isTimelineCompact && !skillsUiStore.managerOpen ? "is-compact" : "",
   ]
     .filter(Boolean)
@@ -421,12 +423,15 @@ export default function CenterPane() {
   }, []);
 
   const scrollTimelineToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
+    const reduce =
+      typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const resolved: ScrollBehavior = reduce ? "auto" : behavior;
     const adapter = timelineViewportAdapter;
     const el = timelineRef.current;
     if (adapter) {
-      adapter.scrollToBottom(behavior);
+      adapter.scrollToBottom(resolved);
     } else if (el) {
-      el.scrollTo({ top: el.scrollHeight, behavior });
+      el.scrollTo({ top: el.scrollHeight, behavior: resolved });
     }
     requestAnimationFrame(updateTimelineViewportState);
   }, [timelineViewportAdapter, updateTimelineViewportState]);
@@ -526,7 +531,7 @@ export default function CenterPane() {
       if (event.code !== "KeyJ") return;
       event.preventDefault();
       event.stopPropagation();
-      runtimeStore.toggleTimelineDebugEnabled();
+      uiPrefsStore.toggleTimelineDebugEnabled();
     };
     window.addEventListener("keydown", onWindowKeydown);
     window.addEventListener("scroll", refreshSlashPopoverPlacement, true);
@@ -536,7 +541,7 @@ export default function CenterPane() {
       window.removeEventListener("scroll", refreshSlashPopoverPlacement, true);
       window.removeEventListener("resize", refreshSlashPopoverPlacement);
     };
-  }, [refreshSlashPopoverPlacement, runtimeStore]);
+  }, [refreshSlashPopoverPlacement, uiPrefsStore]);
 
   const closeComposeLightbox = useCallback(() => {
     setComposeLightboxAttachmentId("");
@@ -689,7 +694,7 @@ export default function CenterPane() {
   const onSendClick = async () => {
     if (sendDisabled) return;
     await runtime.send();
-    scrollTimelineToBottom("auto");
+    scrollTimelineToBottom("smooth");
   };
 
   return (
@@ -743,7 +748,7 @@ export default function CenterPane() {
                     void runtime.editQueuedMessage(messageId).then(() => document.getElementById("input")?.focus());
                   }}
                   onSendNow={(messageId) => {
-                    void runtime.sendQueuedMessageNow(messageId).then(() => scrollTimelineToBottom("auto"));
+                    void runtime.sendQueuedMessageNow(messageId).then(() => scrollTimelineToBottom("smooth"));
                   }}
                   onRemove={(messageId) => void runtime.removeQueuedMessage(messageId)}
                 />
