@@ -272,11 +272,11 @@
   box-shadow: 0 2px 8px color-mix(in srgb, var(--bg) 16%, transparent);
   opacity: 0;
   transition:
-    background-color 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease,
-    color 180ms ease,
-    transform 180ms ease;
+    background-color var(--duration-3) var(--ease-standard),
+    border-color var(--duration-3) var(--ease-standard),
+    box-shadow var(--duration-3) var(--ease-standard),
+    color var(--duration-3) var(--ease-standard),
+    transform var(--duration-3) var(--ease-standard);
 }
 
 .center-empty-history__item:hover,
@@ -464,9 +464,9 @@
   background: var(--surface-2);
   border: 1px solid var(--border);
   transition:
-    transform 0.12s ease,
-    border-color 0.12s ease,
-    background 0.12s ease;
+    transform var(--duration-1) var(--ease-standard),
+    border-color var(--duration-1) var(--ease-standard),
+    background var(--duration-1) var(--ease-standard);
 }
 
 .mode-card:hover {
@@ -817,6 +817,48 @@
   gap: 10px;
 }
 
+/* 自定义模式顶栏标题 */
+.topbar--custom .topbar-custom-title {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  color: var(--topbar-text);
+}
+
+.topbar--custom .topbar-custom-title strong {
+  white-space: nowrap;
+}
+
+.topbar--custom .topbar-custom-tag {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 跨页"切换模式"按钮：默认沿用底栏 mode-switch 外观，可被作用域类覆写 */
+.mode-switch-button {
+  height: 24px;
+  margin-left: 8px;
+  padding: 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+}
+
+.mode-switch-button:hover {
+  color: var(--text);
+  border-color: var(--border-accent, var(--border));
+}
+
 .cw-header__title strong {
   white-space: nowrap;
 }
@@ -1061,6 +1103,7 @@
   min-height: 0;
   gap: 12px;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 16px;
 }
 
@@ -1848,9 +1891,9 @@
     inset 0 0 0 1px rgb(from var(--progress-color) r g b / 0.04),
     0 0 6px var(--progress-shadow);
   transition:
-    background 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease;
+    background var(--duration-3) var(--ease-standard),
+    border-color var(--duration-3) var(--ease-standard),
+    box-shadow var(--duration-3) var(--ease-standard);
 }
 
 .ui-waterball-progress__value {

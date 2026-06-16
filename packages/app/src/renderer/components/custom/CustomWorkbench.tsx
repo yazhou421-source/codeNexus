@@ -1,5 +1,4 @@
 import {
-  ArrowRightLeft,
   ArrowUp,
   ChevronDown,
   FileDiff,
@@ -8,7 +7,6 @@ import {
   Folder,
   FolderOpen,
   Globe,
-  ScrollText,
   Settings2,
   Square,
   Terminal,
@@ -21,7 +19,6 @@ import { estimateTokens } from "@codenexus/agent-core/contextWindow";
 import type { CustomProviderKind, LocalCustomProvider } from "@codenexus/shared/localSettings";
 import { codexDesktop } from "../../api/codexDesktopClient";
 import { getCachedUserLocalSettings, loadUserLocalSettings, patchUserLocalSettings } from "../../domain/localSettings";
-import { useAppShellStore } from "../../stores/appShell.store";
 import {
   useCustomChatStore,
   type CustomApprovalRequest,
@@ -30,7 +27,6 @@ import {
   type CustomChatToolPart,
   type CustomToolActivity,
 } from "../../stores/customChat.store";
-import { useUiPrefsStore } from "../../stores/uiPrefs.store";
 import AgentMarkdownContent from "../ui/AgentMarkdownContent";
 import ExecutionWaveText from "../ui/ExecutionWaveText";
 import SelectDropdown from "../ui/SelectDropdown";
@@ -289,8 +285,6 @@ function ToolPartView({
 }
 
 export default function CustomWorkbench() {
-  const appShellStore = useAppShellStore();
-  const uiPrefsStore = useUiPrefsStore();
   const customChatStore = useCustomChatStore();
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -625,20 +619,7 @@ export default function CustomWorkbench() {
 
       <section className="cw-main">
         <header className="cw-header">
-          <div className="cw-header__title">
-            <strong>自定义运行时</strong>
-            <span className="cw-tag">实验 · 不依赖 codex-app-server</span>
-          </div>
           <div className="cw-header__actions">
-            <button
-              type="button"
-              className={`cw-btn${uiPrefsStore.timelineDebugEnabled ? " is-on" : ""}`}
-              aria-pressed={uiPrefsStore.timelineDebugEnabled ? "true" : "false"}
-              onClick={() => uiPrefsStore.toggleTimelineDebugEnabled()}
-            >
-              <ScrollText className="cw-btn__icon" aria-hidden="true" />
-              日志
-            </button>
             <button
               type="button"
               className={`cw-btn${showConfig ? " is-on" : ""}`}
@@ -647,10 +628,6 @@ export default function CustomWorkbench() {
             >
               <Settings2 className="cw-btn__icon" aria-hidden="true" />
               配置 Provider
-            </button>
-            <button className="cw-btn cw-btn--ghost cw-header__mode-switch" type="button" onClick={() => appShellStore.openModeChooser()}>
-              <ArrowRightLeft className="cw-btn__icon" aria-hidden="true" />
-              切换模式
             </button>
           </div>
         </header>

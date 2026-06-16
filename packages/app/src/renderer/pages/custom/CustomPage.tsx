@@ -1,31 +1,27 @@
-import TopBar from "../../components/layout/TopBar";
-import BottomBar from "../../components/layout/BottomBar";
 import CustomWorkbench from "../../components/custom/CustomWorkbench";
 import DebugTimelineSidebar from "../../components/layout/debug/DebugTimelineSidebar";
-import SettingsPage from "../../components/layout/SettingsPage";
-import { useAppShellStore } from "../../stores/appShell.store";
 import { useUiPrefsStore } from "../../stores/uiPrefs.store";
+import CustomTopBar from "./shell/CustomTopBar";
+import CustomBottomBar from "./shell/CustomBottomBar";
 
-// 自定义运行模式整页外壳。Step 2 阶段先沿用全局 TopBar/BottomBar 以保持行为不变，
-// Step 3 会把 codex 外壳从本页剥离、换成 custom 专属轻量外壳。
+// 自定义运行模式整页外壳：custom 专属顶栏 + 工作台主体（可选调试侧栏）+ custom 底栏。
+// 不再渲染 codex 的 TopBar / BottomBar / SettingsPage。
 export default function CustomPage() {
-  const appShellStore = useAppShellStore();
   const uiPrefsStore = useUiPrefsStore();
-  const settingsOpen = appShellStore.settingsOpen;
-  const showDebugSidebar = !settingsOpen && uiPrefsStore.timelineDebugEnabled;
+  const showDebugSidebar = uiPrefsStore.timelineDebugEnabled;
 
-  const mainClass = ["main", showDebugSidebar ? "has-files-sidebar" : "", settingsOpen ? "has-settings" : ""]
-    .filter(Boolean)
-    .join(" ");
+  const mainClass = ["main", showDebugSidebar ? "has-files-sidebar" : ""].filter(Boolean).join(" ");
 
   return (
     <>
-      <TopBar />
+      <CustomTopBar />
       <main className={mainClass}>
-        <div className="center-content-host">{settingsOpen ? <SettingsPage /> : <CustomWorkbench />}</div>
+        <div className="center-content-host">
+          <CustomWorkbench />
+        </div>
         {showDebugSidebar ? <DebugTimelineSidebar className="files-pane-host" /> : null}
       </main>
-      <BottomBar />
+      <CustomBottomBar />
     </>
   );
 }
