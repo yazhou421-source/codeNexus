@@ -1,5 +1,5 @@
 // 配置 Store：读写 Codex 全局配置，并维护草稿与“未保存改动”状态。
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { GlobalConfigDraft } from "../domain/types";
 import { createDefaultGlobalConfigDraft } from "../domain/serverInterop";
 import { translate } from "../i18n/translate";

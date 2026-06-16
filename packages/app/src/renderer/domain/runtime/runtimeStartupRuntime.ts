@@ -1,4 +1,3 @@
-import type { Pinia } from "pinia";
 import type { useThreadStore } from "../../stores/thread.store";
 import { installEventPipeline } from "../../processes/protocol-event-pipeline/installEventPipeline";
 import { installRequestResponder } from "../../processes/protocol-request-responder/installRequestResponder";
@@ -8,7 +7,7 @@ type ThreadStore = ReturnType<typeof useThreadStore>;
 type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 
 export type RuntimeStartupRuntimeDeps = {
-  pinia: Pinia;
+  storeScope: unknown;
   threadStore: ThreadStore;
   subscribeHistoryUpdates: () => () => void;
   subscribeCodexServerEvents: () => () => void;
@@ -26,8 +25,8 @@ export function createRuntimeStartupRuntime(deps: RuntimeStartupRuntimeDeps): Ru
     const disposers: Array<() => void> = [];
     disposers.push(deps.subscribeHistoryUpdates());
     disposers.push(deps.subscribeCodexServerEvents());
-    disposers.push(installEventPipeline(deps.pinia));
-    disposers.push(installRequestResponder(deps.pinia));
+    disposers.push(installEventPipeline(deps.storeScope));
+    disposers.push(installRequestResponder(deps.storeScope));
 
     const historyTitleOverridesRuntime = createHistoryTitleOverridesRuntime({ threadStore: deps.threadStore });
     void historyTitleOverridesRuntime.refreshThreadTitleOverrides();

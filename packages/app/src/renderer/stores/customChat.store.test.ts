@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createPinia, setActivePinia } from "pinia";
 import type { CustomAgentStreamEvent, CustomSession } from "@codenexus/shared/ipc/contracts";
 
 type AgentRunArgs = {
@@ -79,7 +78,6 @@ async function loadStoreWithAgent(
       },
     },
   });
-  setActivePinia(createPinia());
   const mod = await import("./customChat.store");
   return mod.useCustomChatStore();
 }

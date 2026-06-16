@@ -1,4 +1,3 @@
-import { nextTick } from "vue";
 import { codexDesktop } from "../../api/codexDesktopClient";
 import { appendDebugLog } from "../../shared/debugLog";
 import {
@@ -308,7 +307,7 @@ export function createThreadCreationRuntime(deps: ThreadCreationRuntimeDeps): Th
         totalElapsedMs: elapsedMs(createStartedAt),
       });
       const nextTickStartedAt = perfNow();
-      await nextTick();
+      await Promise.resolve();
       appendDebugLog("thread.create", "nextTick flushed", {
         attemptId,
         threadId: id,

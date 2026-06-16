@@ -176,6 +176,10 @@ const ATTRIBUTE_SKIP_SELECTOR = [
 
 const TRANSLATABLE_ATTRIBUTES = ["aria-label", "title", "placeholder"];
 
+function hasChineseText(value: string): boolean {
+  return /[\u4e00-\u9fff]/u.test(value);
+}
+
 function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -230,7 +234,7 @@ function translatePattern(value: string): string {
 }
 
 function translatePreservingOuterWhitespace(value: string): string {
-  if (!/[\u4e00-\u9fff]/u.test(value)) return value;
+  if (!hasChineseText(value)) return value;
   const leading = value.match(/^\s*/u)?.[0] ?? "";
   const trailing = value.match(/\s*$/u)?.[0] ?? "";
   const translated = translatePattern(value);
@@ -246,12 +250,31 @@ function shouldSkipNode(node: Node): boolean {
 function translateTextNode(node: Text, language: UiLanguage): void {
   if (shouldSkipNode(node)) return;
   const current = node.nodeValue ?? "";
-  let original = textOriginalByNode.get(node) ?? current;
-  if (!textOriginalByNode.has(node) || /[\u4e00-\u9fff]/u.test(current)) {
-    original = current;
-    textOriginalByNode.set(node, original);
+  const trackedOriginal = textOriginalByNode.get(node);
+
+  if (trackedOriginal != null) {
+    const trackedTranslation = translatePreservingOuterWhitespace(trackedOriginal);
+    const isFallbackManagedValue = current === trackedOriginal || current === trackedTranslation;
+    if (!isFallbackManagedValue) {
+      if (!hasChineseText(current)) {
+        textOriginalByNode.delete(node);
+        return;
+      }
+      textOriginalByNode.set(node, current);
+      const translatedCurrent = translatePreservingOuterWhitespace(current);
+      const nextCurrent = language === "en-US" ? translatedCurrent : current;
+      if (node.nodeValue !== nextCurrent) node.nodeValue = nextCurrent;
+      return;
+    }
+
+    const next = language === "en-US" ? trackedTranslation : trackedOriginal;
+    if (node.nodeValue !== next) node.nodeValue = next;
+    return;
   }
-  const next = language === "en-US" ? translatePreservingOuterWhitespace(original) : original;
+
+  if (!hasChineseText(current)) return;
+  textOriginalByNode.set(node, current);
+  const next = language === "en-US" ? translatePreservingOuterWhitespace(current) : current;
   if (node.nodeValue !== next) node.nodeValue = next;
 }
 
@@ -265,9 +288,30 @@ function translateAttributes(element: Element, language: UiLanguage): void {
   for (const attr of TRANSLATABLE_ATTRIBUTES) {
     const current = element.getAttribute(attr);
     if (current == null) continue;
-    if (!(attr in snapshot) || /[\u4e00-\u9fff]/u.test(current)) snapshot[attr] = current;
-    const original = snapshot[attr] ?? current;
-    const next = language === "en-US" ? translatePreservingOuterWhitespace(original) : original;
+    const trackedOriginal = snapshot[attr];
+    if (trackedOriginal != null) {
+      const trackedTranslation = translatePreservingOuterWhitespace(trackedOriginal);
+      const isFallbackManagedValue = current === trackedOriginal || current === trackedTranslation;
+      if (!isFallbackManagedValue) {
+        if (!hasChineseText(current)) {
+          delete snapshot[attr];
+          continue;
+        }
+        snapshot[attr] = current;
+        const translatedCurrent = translatePreservingOuterWhitespace(current);
+        const nextCurrent = language === "en-US" ? translatedCurrent : current;
+        if (current !== nextCurrent) element.setAttribute(attr, nextCurrent);
+        continue;
+      }
+
+      const next = language === "en-US" ? trackedTranslation : trackedOriginal;
+      if (current !== next) element.setAttribute(attr, next);
+      continue;
+    }
+
+    if (!hasChineseText(current)) continue;
+    snapshot[attr] = current;
+    const next = language === "en-US" ? translatePreservingOuterWhitespace(current) : current;
     if (current !== next) element.setAttribute(attr, next);
   }
 }

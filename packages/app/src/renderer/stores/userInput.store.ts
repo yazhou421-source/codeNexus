@@ -1,5 +1,5 @@
 // 用户问答 Store：接收 requestUserInput 事件、维护题目队列，并回包用户答案。
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { UserInputPrompt, UserInputQuestion } from "../domain/types";
 
 type StoredUserInputPrompt = {

@@ -1,4 +1,4 @@
-import type { IconifyIcon } from "@iconify/vue";
+type IconifyIcon = unknown;
 import defaultFileIcon from "@iconify/icons-vscode-icons/default-file";
 import defaultFolderIcon from "@iconify/icons-vscode-icons/default-folder";
 import defaultFolderOpenedIcon from "@iconify/icons-vscode-icons/default-folder-opened";

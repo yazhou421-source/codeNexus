@@ -2,7 +2,7 @@
 
 ## 目录用途
 
-渲染层应用壳目录，负责 Vue 启动、Pinia 状态、协议事件流水线、运行时编排与功能包挂载。
+渲染层应用壳目录，负责 React 启动、Zustand 兼容状态、协议事件流水线、运行时编排与功能包挂载。
 
 Paper、flowchart、image generation 等完整工作台已经拆到独立 workspace 包，渲染层通过包导出接入它们。
 
@@ -10,10 +10,10 @@ Paper、flowchart、image generation 等完整工作台已经拆到独立 worksp
 
 | 目录 / 文件                           | 说明                                           |
 | ------------------------------------- | ---------------------------------------------- |
-| `main.ts`                             | 渲染层启动、主题/字体初始化、本地状态 hydrate  |
-| `App.vue`                             | 应用骨架，承载 chat、settings 和外部功能工作台 |
+| `main.tsx`                            | 渲染层启动、主题/字体初始化、本地状态 hydrate  |
+| `App.tsx`                             | 应用骨架，承载 chat、settings 和外部功能工作台 |
 | `components/`                         | 壳层布局、时间线卡片与通用 UI                  |
-| `stores/`                             | 应用壳 Pinia 状态容器                          |
+| `stores/`                             | 应用壳 Zustand 兼容状态容器                    |
 | `domain/`                             | 运行时编排、互操作与本地状态                   |
 | `features/`                           | app 内部保留的轻量业务域能力                   |
 | `processes/`                          | 协议事件流水线与请求响应流程                   |

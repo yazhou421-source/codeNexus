@@ -1,5 +1,5 @@
 // Skills Store：读取技能列表、启停写回，并维护右侧面板展示状态。
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { SkillState } from "../domain/types";
 
 export const useSkillsStore = defineStore("skills", {

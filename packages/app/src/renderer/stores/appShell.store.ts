@@ -1,5 +1,5 @@
 // UI 壳层 Store：管理侧栏开合、布局偏好等应用外壳状态。
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { ServerConnState } from "../domain/types";
 import { getCachedUserLocalSettings, patchUserLocalSettings } from "../domain/localSettings";
 import {
@@ -80,6 +80,14 @@ export const useAppShellStore = defineStore("appShell", {
     workspaceFileIconTheme: DEFAULT_UI_WORKSPACE_FILE_ICON_THEME as UiWorkspaceFileIconTheme,
     threadWorkspaceGroupsCollapsed: {} as Record<string, boolean>,
   }),
+  getters: {
+    isThreadWorkspaceGroupCollapsed(state): (groupKeyValue: string) => boolean {
+      return (groupKeyValue: string) => {
+        const key = normalizeThreadWorkspaceGroupKey(groupKeyValue);
+        return Boolean(key && state.threadWorkspaceGroupsCollapsed[key]);
+      };
+    },
+  },
   actions: {
     // 统一维护服务连接状态与错误文案。
     setServerConnState(next: ServerConnState, error = "") {
@@ -262,10 +270,6 @@ export const useAppShellStore = defineStore("appShell", {
       this.centerEditorWidthPx = clamped;
       if (!shouldSave) return;
       void patchUserLocalSettings({ ui: { centerEditorWidthPx: clamped } });
-    },
-    isThreadWorkspaceGroupCollapsed(groupKeyValue: string): boolean {
-      const key = normalizeThreadWorkspaceGroupKey(groupKeyValue);
-      return Boolean(key && this.threadWorkspaceGroupsCollapsed[key]);
     },
     setThreadWorkspaceGroupCollapsed(groupKeyValue: string, collapsed: boolean, opts?: { save?: boolean }) {
       const key = normalizeThreadWorkspaceGroupKey(groupKeyValue);

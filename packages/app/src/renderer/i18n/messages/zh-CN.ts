@@ -6,6 +6,7 @@ export default {
     confirm: "确认",
     copy: "复制",
     delete: "删除",
+    discard: "放弃",
     closeNotification: "关闭提示",
     input: "输入",
     language: "语言",
@@ -973,6 +974,9 @@ export default {
     deleteHistory: "删除历史",
   },
   centerEmpty: {
+    defaultTitle: "选择一个工作区开始",
+    defaultDescription: "Codex 会话需要绑定本地工作区。",
+    selectWorkspace: "选择工作区",
     loadingMemory: "正在读取时空记忆...",
     creatingThread: "正在创建线程",
     initializingContext: "初始化工作区和模型上下文",

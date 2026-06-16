@@ -1,17 +1,13 @@
-import { defineAsyncComponent } from "vue";
+import { lazy } from "react";
 
-export const DebugTimelineSidebar = defineAsyncComponent(() => import("./layout/debug/DebugTimelineSidebar.vue"));
-export const AppClosingOverlay = defineAsyncComponent(() => import("./layout/overlays/AppClosingOverlay.vue"));
-export const GoalShutdownCountdownOverlay = defineAsyncComponent(
-  () => import("./layout/overlays/GoalShutdownCountdownOverlay.vue")
-);
-export const LeftSidebar = defineAsyncComponent(() => import("./layout/LeftSidebar.vue"));
-export const SettingsPage = defineAsyncComponent(() => import("./layout/SettingsPage.vue"));
-export const WorkspaceEditorPane = defineAsyncComponent(() => import("./layout/workspace/WorkspaceEditorPane.vue"));
-export const WorkspaceFilesSidebar = defineAsyncComponent(() => import("./layout/workspace/WorkspaceFilesSidebar.vue"));
-export const ComposerQueueList = defineAsyncComponent(() => import("./layout/composer/ComposerQueueList.vue"));
-export const ComposerSlashCommandList = defineAsyncComponent(
-  () => import("./layout/composer/ComposerSlashCommandList.vue")
-);
-export const SkillsManagerOverlay = defineAsyncComponent(() => import("./layout/skills/SkillsManagerOverlay.vue"));
-export const ChatPane = defineAsyncComponent(() => import("./layout/chat/ChatPane.vue"));
+export const DebugTimelineSidebar = lazy(() => import("./layout/debug/DebugTimelineSidebar"));
+export const AppClosingOverlay = lazy(() => import("./layout/overlays/AppClosingOverlay"));
+export const GoalShutdownCountdownOverlay = lazy(() => import("./layout/overlays/GoalShutdownCountdownOverlay"));
+export const LeftSidebar = lazy(() => import("./layout/LeftSidebar"));
+export const SettingsPage = lazy(() => import("./layout/SettingsPage"));
+export const WorkspaceEditorPane = lazy(() => import("./layout/workspace/WorkspaceEditorPane"));
+export const WorkspaceFilesSidebar = lazy(() => import("./layout/workspace/WorkspaceFilesSidebar"));
+export const ComposerQueueList = lazy(() => import("./layout/composer/ComposerQueueList"));
+export const ComposerSlashCommandList = lazy(() => import("./layout/composer/ComposerSlashCommandList"));
+export const SkillsManagerOverlay = lazy(() => import("./layout/skills/SkillsManagerOverlay"));
+export const ChatPane = lazy(() => import("./layout/chat/ChatPane"));

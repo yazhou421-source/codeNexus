@@ -1,5 +1,5 @@
 module.exports = {
-  content: ["./src/renderer/index.html", "./src/renderer/**/*.{vue,js,ts,jsx,tsx,html}", "!./src/renderer/dist/**"],
+  content: ["./src/renderer/index.html", "./src/renderer/**/*.{js,ts,jsx,tsx,html}", "!./src/renderer/dist/**"],
   theme: {
     borderRadius: {
       none: "0px",

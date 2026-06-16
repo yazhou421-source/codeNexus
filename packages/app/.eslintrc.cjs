@@ -1,4 +1,4 @@
-// ESLint 配置：统一约束 TypeScript、Vue 与脚本目录的静态检查规则。
+// ESLint 配置：统一约束 TypeScript、React 与脚本目录的静态检查规则。
 const tsParser = require.resolve("@typescript-eslint/parser");
 
 /** @type {import('eslint').Linter.Config} */
@@ -12,8 +12,15 @@ module.exports = {
   ignorePatterns: ["dist/", "release/", "node_modules/"],
   overrides: [
     {
-      files: ["**/*.ts"],
+      files: ["**/*.ts", "**/*.tsx"],
       parser: tsParser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
       plugins: ["@typescript-eslint", "unused-imports"],
       rules: {
         "no-undef": "off",
@@ -30,29 +37,19 @@ module.exports = {
       },
     },
     {
-      files: ["**/*.vue"],
-      parser: "vue-eslint-parser",
+      files: ["**/*.tsx"],
+      parser: tsParser,
       parserOptions: {
-        parser: tsParser,
-        extraFileExtensions: [".vue"],
         ecmaVersion: "latest",
         sourceType: "module",
+        ecmaFeatures: {
+          jsx: true,
+        },
       },
-      extends: ["plugin:vue/vue3-essential"],
-      plugins: ["@typescript-eslint", "unused-imports"],
+      plugins: ["react-hooks"],
       rules: {
-        "no-undef": "off",
-        "no-unused-vars": "off",
-        "@typescript-eslint/no-unused-vars": [
-          "error",
-          { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true },
-        ],
-        "unused-imports/no-unused-imports": "error",
-        "unused-imports/no-unused-vars": [
-          "error",
-          { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true },
-        ],
-        "vue/multi-word-component-names": "off",
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "off",
       },
     },
     {

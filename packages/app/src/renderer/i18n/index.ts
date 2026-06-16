@@ -1,20 +1,27 @@
-import { createI18n } from "vue-i18n";
+import i18next from "i18next";
+import { initReactI18next } from "react-i18next";
 import type { UiLanguage } from "@codenexus/shared/localSettings";
 import zhCN from "./messages/zh-CN";
 import enUS from "./messages/en-US";
 
-export const i18n = createI18n({
-  legacy: false,
-  locale: "zh-CN" as UiLanguage,
-  fallbackLocale: "zh-CN",
-  messages: {
-    "zh-CN": zhCN,
-    "en-US": enUS,
+export const i18n = i18next.createInstance();
+
+void i18n.use(initReactI18next).init({
+  lng: "zh-CN" as UiLanguage,
+  fallbackLng: "zh-CN",
+  interpolation: {
+    escapeValue: false,
+    prefix: "{",
+    suffix: "}",
+  },
+  resources: {
+    "zh-CN": { translation: zhCN },
+    "en-US": { translation: enUS },
   },
 });
 
 export function setUiI18nLanguage(language: UiLanguage): void {
-  i18n.global.locale.value = language;
+  void i18n.changeLanguage(language);
   try {
     document.documentElement.lang = language;
   } catch {}

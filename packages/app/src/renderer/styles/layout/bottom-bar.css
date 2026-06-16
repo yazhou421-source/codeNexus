@@ -1,0 +1,245 @@
+.bottom-bar {
+  height: var(--bottombar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  border-top: 1px solid var(--panel-border, var(--border));
+  background: var(--shell-chrome-bg, var(--topbar-bg, var(--panel-bg)));
+  backdrop-filter: var(--shell-backdrop-filter, none);
+  -webkit-backdrop-filter: var(--shell-backdrop-filter, none);
+}
+
+.bottom-bar__left,
+.bottom-bar__right {
+  min-width: 0;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+}
+
+.bottom-bar__right {
+  justify-content: flex-end;
+}
+
+.bottom-bar .bottom-bar__profile-switch {
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: min(230px, 42vw);
+  height: 26px;
+  margin-left: 6px;
+  margin-right: 4px;
+}
+
+.bottom-bar .bottom-bar__profile-switch .codex-profile-switch__select {
+  width: clamp(148px, 18vw, 220px);
+  height: 24px;
+}
+
+.bottom-bar__mode-switch {
+  height: 24px;
+  margin-left: 8px;
+  padding: 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bottom-bar__mode-switch:hover {
+  color: var(--text);
+  border-color: var(--border-accent, var(--border));
+}
+
+.bottom-bar__clock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 10px 0 8px;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.bottom-bar__conn {
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 0 10px;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--text-muted) 74%, transparent);
+  user-select: none;
+}
+
+.bottom-bar__conn-icon {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 62%, transparent);
+}
+
+.bottom-bar__conn-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-muted) 70%, transparent);
+}
+
+.bottom-bar__conn.is-connected .bottom-bar__conn-icon {
+  border-color: var(--border-success);
+  background: var(--bg-success-soft);
+}
+
+.bottom-bar__conn.is-connected .bottom-bar__conn-dot {
+  background: var(--success);
+}
+
+.bottom-bar__conn.is-connecting .bottom-bar__conn-icon {
+  border-color: var(--border-accent);
+  background: var(--bg-accent-soft);
+}
+
+.bottom-bar__conn.is-connecting .bottom-bar__conn-dot {
+  background: var(--accent);
+  animation: connPulse 1.2s ease-in-out infinite;
+}
+
+.bottom-bar__conn.is-failed .bottom-bar__conn-icon {
+  border-color: var(--border-danger);
+  background: var(--bg-danger-soft);
+}
+
+.bottom-bar__conn.is-failed .bottom-bar__conn-dot {
+  background: var(--danger);
+}
+
+.codex-profile-switch {
+  min-width: 0;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  -webkit-app-region: no-drag;
+}
+
+.codex-profile-switch__select {
+  width: clamp(148px, 18vw, 220px);
+  min-width: 0;
+  height: 24px;
+  padding: 0 7px 0 10px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--panel-border, var(--border)) 76%, transparent);
+  background: color-mix(in srgb, var(--control-surface, var(--button-bg)) 88%, transparent);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 7%, transparent);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
+}
+
+.codex-profile-switch__select:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--border-accent, var(--accent)) 48%, var(--panel-border, var(--border)));
+  background: color-mix(in srgb, var(--control-surface, var(--button-bg)) 78%, var(--accent) 8%);
+}
+
+.codex-profile-switch__select:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--border-accent, var(--accent)) 68%, var(--panel-border, var(--border)));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.codex-profile-switch__select:disabled {
+  opacity: 0.55;
+}
+
+.codex-profile-switch__select .ui-select-value {
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.codex-profile-switch__select .ui-select-chevron {
+  font-size: 11px;
+  margin-left: 2px;
+  color: color-mix(in srgb, var(--text-muted) 78%, transparent);
+}
+
+#codex-profile-select__listbox {
+  padding: 4px 0;
+  gap: 0;
+}
+
+#codex-profile-select__listbox .ui-select-option {
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--floating-border, var(--border)) 58%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#codex-profile-select__listbox .ui-select-option:last-child {
+  border-bottom: 0;
+}
+
+#codex-profile-select__listbox .ui-select-option:hover:not(:disabled),
+#codex-profile-select__listbox .ui-select-option.is-active:not(:disabled) {
+  border-color: color-mix(in srgb, var(--floating-border, var(--border)) 58%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  box-shadow: none;
+}
+
+#codex-profile-select__listbox .ui-select-option.is-selected:not(:disabled) {
+  border-color: color-mix(in srgb, var(--floating-border, var(--border)) 58%, transparent);
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+#codex-profile-select__listbox .ui-select-option.is-selected:hover:not(:disabled),
+#codex-profile-select__listbox .ui-select-option.is-selected.is-active:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+@keyframes connPulse {
+  0% {
+    transform: scale(0.82);
+    opacity: 0.62;
+  }
+  100% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 860px) {
+  .codex-profile-switch {
+    max-width: 240px;
+  }
+
+  .codex-profile-switch__select {
+    width: clamp(130px, 36vw, 170px);
+  }
+}

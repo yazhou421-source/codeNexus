@@ -269,27 +269,27 @@
   overflow: hidden;
 }
 
-.flowchart-canvas .vue-flow {
+.flowchart-canvas .react-flow {
   width: 100%;
   height: 100%;
   background: linear-gradient(180deg, var(--flowchart-canvas-bg-start), var(--flowchart-canvas-bg-end));
 }
 
-.flowchart-canvas.is-connecting .vue-flow__pane {
+.flowchart-canvas.is-connecting .react-flow__pane {
   cursor: crosshair;
 }
 
-.flowchart-canvas .vue-flow__node {
+.flowchart-canvas .react-flow__node {
   border: 0;
   background: transparent;
   box-shadow: none;
 }
 
-.flowchart-canvas .vue-flow__node.selected {
+.flowchart-canvas .react-flow__node.selected {
   filter: drop-shadow(0 0 0.35rem color-mix(in srgb, var(--accent) 40%, transparent));
 }
 
-.flowchart-canvas .vue-flow__node.flowchart-shape-node-shell {
+.flowchart-canvas .react-flow__node.flowchart-shape-node-shell {
   color: var(--flowchart-node-color);
   font-weight: 700;
 }
@@ -354,7 +354,7 @@
   text-align: left;
 }
 
-.flowchart-canvas .vue-flow__node.selected .flowchart-shape-node--text.is-empty .flowchart-shape-node__surface,
+.flowchart-canvas .react-flow__node.selected .flowchart-shape-node--text.is-empty .flowchart-shape-node__surface,
 .flowchart-shape-node--text.is-empty:hover .flowchart-shape-node__surface {
   border-color: color-mix(in srgb, var(--accent) 38%, var(--border) 62%);
   border-style: dashed;
@@ -396,7 +396,7 @@
   content: "";
 }
 
-.flowchart-shape-node .vue-flow__handle {
+.flowchart-shape-node .react-flow__handle {
   width: 8px;
   height: 8px;
   border: 1px solid color-mix(in srgb, var(--surface-0, var(--bg)) 84%, transparent);
@@ -422,7 +422,7 @@
 }
 
 .flowchart-workbench.is-connecting
-  .vue-flow__node.selected
+  .react-flow__node.selected
   .flowchart-shape-node.is-connectable
   .flowchart-shape-node__surface {
   border-color: color-mix(in srgb, var(--accent) 82%, var(--flowchart-node-border) 18%);
@@ -432,27 +432,27 @@
     0 12px 28px rgb(from var(--ui-shadow-source) r g b / 0.18);
 }
 
-.flowchart-canvas .vue-flow__node.flowchart-frame-node {
+.flowchart-canvas .react-flow__node.flowchart-frame-node {
   opacity: 0.96;
 }
 
-.flowchart-canvas .vue-flow__node.flowchart-frame-node:hover {
+.flowchart-canvas .react-flow__node.flowchart-frame-node:hover {
   filter: drop-shadow(0 0 0.24rem color-mix(in srgb, var(--accent) 26%, transparent));
 }
 
-.flowchart-canvas .vue-flow__node.flowchart-frame-node.selected {
+.flowchart-canvas .react-flow__node.flowchart-frame-node.selected {
   filter: drop-shadow(0 0 0.42rem color-mix(in srgb, var(--accent) 46%, transparent));
 }
 
-.flowchart-canvas .vue-flow__node.flowchart-frame-node--lane-frame {
+.flowchart-canvas .react-flow__node.flowchart-frame-node--lane-frame {
   opacity: 0.9;
 }
 
-.flowchart-canvas .vue-flow__node.flowchart-frame-node--system-frame {
+.flowchart-canvas .react-flow__node.flowchart-frame-node--system-frame {
   opacity: 0.92;
 }
 
-.flowchart-canvas .vue-flow__node.flowchart-frame-node--phase-frame {
+.flowchart-canvas .react-flow__node.flowchart-frame-node--phase-frame {
   opacity: 0.94;
 }
 
@@ -503,7 +503,7 @@
   pointer-events: none;
 }
 
-.flowchart-canvas .vue-flow__controls {
+.flowchart-canvas .react-flow__controls {
   border: 1px solid var(--border);
   overflow: hidden;
   border-radius: 8px;
@@ -511,7 +511,7 @@
   box-shadow: 0 10px 26px rgb(from var(--ui-shadow-source) r g b / 0.14);
 }
 
-.flowchart-canvas .vue-flow__controls-button {
+.flowchart-canvas .react-flow__controls-button {
   width: 18px;
   height: 18px;
   border: 0;
@@ -520,25 +520,25 @@
   color: var(--text);
 }
 
-.flowchart-canvas .vue-flow__controls-button:last-child {
+.flowchart-canvas .react-flow__controls-button:last-child {
   border-bottom: 0;
 }
 
-.flowchart-canvas .vue-flow__controls-button:hover:not(:disabled) {
+.flowchart-canvas .react-flow__controls-button:hover:not(:disabled) {
   background: var(--flowchart-control-bg-hover);
 }
 
-.flowchart-canvas .vue-flow__controls-button svg {
+.flowchart-canvas .react-flow__controls-button svg {
   fill: currentColor;
   stroke: currentColor;
 }
 
-.flowchart-canvas .vue-flow__controls-button:disabled {
+.flowchart-canvas .react-flow__controls-button:disabled {
   color: color-mix(in srgb, var(--text-muted) 62%, transparent);
   opacity: 0.58;
 }
 
-.flowchart-canvas .vue-flow__minimap {
+.flowchart-canvas .react-flow__minimap {
   overflow: hidden;
   border: 1px solid var(--flowchart-control-border);
   border-radius: 8px;
@@ -546,16 +546,16 @@
   box-shadow: 0 12px 28px rgb(from var(--ui-shadow-source) r g b / 0.16);
 }
 
-.flowchart-canvas .vue-flow__minimap svg {
+.flowchart-canvas .react-flow__minimap svg {
   background: var(--flowchart-minimap-bg);
 }
 
-.flowchart-canvas .vue-flow__minimap-node {
+.flowchart-canvas .react-flow__minimap-node {
   fill: var(--flowchart-minimap-node);
   stroke: color-mix(in srgb, var(--border) 80%, transparent);
 }
 
-.flowchart-canvas .vue-flow__minimap-mask {
+.flowchart-canvas .react-flow__minimap-mask {
   fill: var(--flowchart-minimap-mask);
   stroke: color-mix(in srgb, var(--accent) 38%, var(--border) 62%);
 }

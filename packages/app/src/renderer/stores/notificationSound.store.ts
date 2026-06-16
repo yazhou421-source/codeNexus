@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { NotificationSoundItem } from "@codenexus/shared/ipc";
 import { codexDesktop } from "../api/codexDesktopClient";
 import { getCachedUserLocalSettings, patchUserLocalSettings } from "../domain/localSettings";

@@ -1,6 +1,5 @@
 // 运行时 Store：当前工作区、服务连接、会话与基础运行参数（model / sandbox 等）。
-import { defineStore } from "pinia";
-import { watch } from "vue";
+import { defineStore } from "./zustandCompat";
 import type { CollaborationModeKind, ComposeImageAttachment, ComposeWorkspaceFileMention } from "../domain/types";
 import type { SandboxMode } from "@codenexus/generated/codex-app-server/v2/SandboxMode";
 import { DEFAULT_LOCAL_THREAD_COMPOSE_STATE, type LocalDraftState } from "@codenexus/shared/localDraftState";
@@ -660,23 +659,19 @@ export const useRuntimeStore = defineStore("runtime", {
       this.loadThreadComposeFileMentions(this.currentThreadId);
 
       if (stopComposeStateSaveWatch) return;
-      stopComposeStateSaveWatch = watch(
-        () =>
-          [
-            this.currentThreadId,
-            this.sandboxMode,
-            this.composeInput,
-            this.composeMode,
-            this.model,
-            this.reasoningEffort,
-            this.reasoningSummary,
-          ] as const,
-        () => {
-          // 同步映射表并持久化：输入框与运行参数均按线程隔离。
-          this.saveThreadComposeState(this.currentThreadId, { save: true });
-        },
-        { flush: "post" }
-      );
+      stopComposeStateSaveWatch = useRuntimeStore.subscribe((state, previousState) => {
+        const changed =
+          state.currentThreadId !== previousState.currentThreadId ||
+          state.sandboxMode !== previousState.sandboxMode ||
+          state.composeInput !== previousState.composeInput ||
+          state.composeMode !== previousState.composeMode ||
+          state.model !== previousState.model ||
+          state.reasoningEffort !== previousState.reasoningEffort ||
+          state.reasoningSummary !== previousState.reasoningSummary;
+        if (!changed) return;
+        // 同步映射表并持久化：输入框与运行参数均按线程隔离。
+        state.saveThreadComposeState(state.currentThreadId, { save: true });
+      });
     },
     setTimelineDebugEnabled(enabled: boolean) {
       this.timelineDebugEnabled = Boolean(enabled);

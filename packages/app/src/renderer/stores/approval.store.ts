@@ -1,5 +1,5 @@
 // Approval store: queue and manage v2 server approval requests.
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { OfficialCodexServerRequest } from "@codenexus/shared/codex-protocol";
 
 export type ApprovalPromptKind = "fileChange" | "commandExecution" | "permissions";

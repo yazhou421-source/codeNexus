@@ -6,7 +6,7 @@ import type {
   TokenUsageState,
 } from "../../../domain/types";
 import type { EnvironmentContextBlock } from "../../../domain/taggedMessageBlocks";
-import type { IconifyIcon } from "@iconify/vue";
+type IconifyIcon = unknown;
 import type { DynamicToolTimelineItem } from "../../../domain/dynamicTools";
 import type {
   ReasoningBlockNode,

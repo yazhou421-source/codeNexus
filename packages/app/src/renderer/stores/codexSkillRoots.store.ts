@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import {
   createDefaultCodexSkillRootsState,
   getCodexSkillRootsForWorkspace,
@@ -19,15 +19,18 @@ export const useCodexSkillRootsStore = defineStore("codexSkillRoots", {
     exists: false,
     rootsByWorkspace: {} as Record<string, string[]>,
   }),
+  getters: {
+    rootsForWorkspace(state) {
+      return (workspacePath: string): string[] =>
+        getCodexSkillRootsForWorkspace({ version: 1, rootsByWorkspace: state.rootsByWorkspace }, workspacePath);
+    },
+  },
   actions: {
     applyStateSnapshot(snapshot: { path?: string; exists?: boolean; state?: CodexSkillRootsState }) {
       const normalized = normalizeCodexSkillRootsState(snapshot?.state ?? createDefaultCodexSkillRootsState());
       this.path = String(snapshot?.path ?? "").trim();
       this.exists = Boolean(snapshot?.exists);
       this.rootsByWorkspace = { ...normalized.rootsByWorkspace };
-    },
-    rootsForWorkspace(workspacePath: string): string[] {
-      return getCodexSkillRootsForWorkspace({ version: 1, rootsByWorkspace: this.rootsByWorkspace }, workspacePath);
     },
     async refresh() {
       if (this.loadState === "loading") return;

@@ -1,5 +1,5 @@
 // MCP Store：展示/维护 MCP 服务器列表与连接状态，并处理 OAuth 登录回调刷新。
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { McpServerState } from "../domain/types";
 
 export const useMcpStore = defineStore("mcp", {

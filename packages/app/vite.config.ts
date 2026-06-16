@@ -1,6 +1,6 @@
 // Vite 配置：仅用于渲染进程构建与本地开发端口设置。
 import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
+import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 
 // 代码高亮包
@@ -15,8 +15,9 @@ const CODEMIRROR_RESOLVE_PACKAGES = [
 ];
 
 const MANUAL_VENDOR_CHUNKS: Array<{ chunk: string; packages: string[] }> = [
-  { chunk: "vue", packages: ["vue", "pinia"] },
-  { chunk: "ui", packages: ["lucide-vue-next", "@iconify/vue", "@iconify/icons-vscode-icons"] },
+  { chunk: "react", packages: ["react", "react-dom", "zustand", "i18next", "react-i18next"] },
+  { chunk: "ui", packages: ["lucide-react", "@iconify/react", "@iconify/icons-vscode-icons"] },
+  { chunk: "flowchart", packages: ["@xyflow/react"] },
   { chunk: "markdown", packages: ["markdown-it", "dompurify"] },
   {
     chunk: "editor",
@@ -43,7 +44,7 @@ function manualChunks(id: string) {
 
 export default defineConfig(({ command }) => {
   return {
-    plugins: [vue()],
+    plugins: [react()],
     root: resolve(__dirname, "src/renderer"),
     resolve: {
       alias: CODEMIRROR_RESOLVE_PACKAGES.map((packageName) => ({

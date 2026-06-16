@@ -18,7 +18,7 @@ export type DiffLineStats = {
 const MAX_DIFF_LINES = 1400;
 const parsedDiffCache = new Map<string, ParsedDiff>();
 
-// 解析 unified diff 文本为行模型，供 Vue 列表直接渲染。
+// 解析 unified diff 文本为行模型，供 UI 列表直接渲染。
 export function parseUnifiedDiffLines(diffText: string): ParsedDiff {
   const text = String(diffText ?? "");
   const rawLines = text.split(/\r?\n/);

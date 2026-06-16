@@ -6,7 +6,7 @@
 //   - approval_request：写改/命令需审批，挂到 pendingApprovals，由 UI 弹卡片回传决策
 // run() 的 Promise 返回最终文本仅作非流式兜底；不覆盖已经按顺序累积的 parts。
 // 仍用最简消息列表（不复用 Codex 时间线渲染——其事件形状与 Codex 协议耦合）。
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import { codexDesktop } from "../api/codexDesktopClient";
 import { useDebugTimelineStore } from "./debugTimeline.store";
 import { safeJsonStringify } from "../utils/safeJson";

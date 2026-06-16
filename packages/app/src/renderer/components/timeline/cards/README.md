@@ -8,13 +8,13 @@
 
 | 文件                               | 说明               |
 | ---------------------------------- | ------------------ |
-| `FileChangeCardContent.vue`        | 文件变更展示       |
-| `WorkspaceFileSaveCardContent.vue` | 工作区文件保存事件 |
-| `McpToolCardContent.vue`           | MCP 工具调用       |
-| `McpResourceReadCardContent.vue`   | MCP 资源读取       |
-| `DynamicToolCallCardContent.vue`   | 动态工具调用       |
-| `TurnDiffSummaryCard.vue`          | 本回合 diff 摘要   |
-| `UnifiedDiffViewer.vue`            | 统一 diff 视图     |
+| `FileChangeCardContent`        | 文件变更展示       |
+| `WorkspaceFileSaveCardContent` | 工作区文件保存事件 |
+| `McpToolCardContent`           | MCP 工具调用       |
+| `McpResourceReadCardContent`   | MCP 资源读取       |
+| `DynamicToolCallCardContent`   | 动态工具调用       |
+| `TurnDiffSummaryCard`          | 本回合 diff 摘要   |
+| `UnifiedDiffViewer`            | 统一 diff 视图     |
 
 ## 维护边界
 

@@ -65,7 +65,7 @@ function extractChatCompletionContent(value: unknown): string {
 
 function buildFlowchartAiSystemPrompt() {
   return [
-    "You generate and edit flowchart documents for a Vue Flow based workbench.",
+    "You generate and edit flowchart documents for a React Flow based workbench.",
     "Return strict JSON only. Do not wrap it in Markdown.",
     "Schema: {id,title,templateType,prompt,nodes,edges,viewport,createdAt,updatedAt}.",
     "Allowed templateType values: basic, swimlane, architecture, org, sequence.",

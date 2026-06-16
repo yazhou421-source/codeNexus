@@ -23,7 +23,7 @@
   </a>
   <img src="https://img.shields.io/badge/platform-Windows-0078D4" alt="Windows" />
   <img src="https://img.shields.io/badge/Electron-40.8.5-47848F?logo=electron&logoColor=white" alt="Electron 40.8.5" />
-  <img src="https://img.shields.io/badge/Vue-3.5.28-42b883?logo=vuedotjs&logoColor=white" alt="Vue 3.5.28" />
+  <img src="https://img.shields.io/badge/React-19.2.7-61DAFB?logo=react&logoColor=111111" alt="React 19.2.7" />
   <img src="https://img.shields.io/badge/TypeScript-5.7.3-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5.7.3" />
   <img src="https://img.shields.io/badge/pnpm-10.32.1-F69220?logo=pnpm&logoColor=white" alt="pnpm 10.32.1" />
 </p>
@@ -145,7 +145,7 @@ Release 发布由项目维护者通过 GitHub Actions 处理。普通贡献不�
 | `packages/app`               | Electron 应用壳、主进程、preload、渲染层、脚本和静态资源。 |
 | `packages/shared`            | 跨进程基础契约、IPC 通道、设置和协议类型。                 |
 | `packages/generated`         | Codex app-server 生成协议类型。                            |
-| `packages/feature-paper`     | Paper 工作区状态和 Vue 工作台/侧栏组件。                   |
+| `packages/feature-paper`     | Paper 工作区状态和 React 工作台/侧栏组件。                 |
 | `packages/feature-flowchart` | 流程图文档类型、历史服务、工作台和 AI 设置页。             |
 | `packages/feature-imagegen`  | 图片生成类型、任务/历史服务、状态和组件。                  |
 | `pnpm-workspace.yaml`        | workspace 包成员配置。                                     |

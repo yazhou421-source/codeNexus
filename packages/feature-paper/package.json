@@ -6,20 +6,22 @@
   "scripts": {
     "typecheck": "pnpm exec tsc --noEmit --project tsconfig.json"
   },
-  "sideEffects": ["**/*.vue"],
+  "sideEffects": ["**/*.css", "**/*.tsx"],
   "exports": {
     ".": "./src/index.ts",
     "./store": "./src/store.ts",
-    "./components/*": "./src/components/*.vue"
+    "./components/*": "./src/components/*.tsx"
   },
   "peerDependencies": {
-    "lucide-vue-next": "^0.574.0",
-    "pinia": "^3.0.4",
-    "vue": "^3.5.28",
-    "vue-i18n": "^11.4.4"
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.8",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/react": "^19.2.17",
     "typescript": "^5.7.3"
   }
 }

@@ -7,7 +7,8 @@
     "typecheck": "pnpm exec tsc --noEmit --project tsconfig.json"
   },
   "sideEffects": [
-    "**/*.vue"
+    "**/*.css",
+    "**/*.tsx"
   ],
   "exports": {
     ".": "./src/index.ts",
@@ -17,18 +18,20 @@
     "./main/ImageGenerationTaskService": "./src/main/ImageGenerationTaskService.ts",
     "./renderer/store": "./src/renderer/store.ts",
     "./renderer/runtimeBridge": "./src/renderer/runtimeBridge.ts",
-    "./renderer/components/ImageWorkbench": "./src/renderer/components/ImageWorkbench.vue",
-    "./renderer/components/ImageWorkspaceSidebar": "./src/renderer/components/ImageWorkspaceSidebar.vue",
-    "./renderer/components/ImageSettingsSidebar": "./src/renderer/components/ImageSettingsSidebar.vue"
+    "./renderer/components/ImageWorkbench": "./src/renderer/components/ImageWorkbench.tsx",
+    "./renderer/components/ImageWorkspaceSidebar": "./src/renderer/components/ImageWorkspaceSidebar.tsx",
+    "./renderer/components/ImageSettingsSidebar": "./src/renderer/components/ImageSettingsSidebar.tsx"
   },
   "peerDependencies": {
-    "lucide-vue-next": "^0.574.0",
-    "pinia": "^3.0.4",
-    "vue": "^3.5.28",
-    "vue-i18n": "^11.4.4"
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.8",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/react": "^19.2.17",
     "typescript": "^5.7.3"
   }
 }

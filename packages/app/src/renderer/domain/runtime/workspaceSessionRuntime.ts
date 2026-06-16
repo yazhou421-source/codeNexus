@@ -1,8 +1,8 @@
 import { codexDesktop } from "../../api/codexDesktopClient";
-import type { useAppShellStore } from "../../stores/appShell.store";
-import type { useRuntimeStore } from "../../stores/runtime.store";
-import type { useThreadStore } from "../../stores/thread.store";
-import type { useWorkspaceFilesStore } from "../../stores/workspaceFiles.store";
+import { useAppShellStore } from "../../stores/appShell.store";
+import { useRuntimeStore } from "../../stores/runtime.store";
+import { useThreadStore } from "../../stores/thread.store";
+import { useWorkspaceFilesStore } from "../../stores/workspaceFiles.store";
 import type { LocalThreadItem, ThreadHistoryItem } from "../types";
 
 type AppShellStore = ReturnType<typeof useAppShellStore>;
@@ -65,10 +65,6 @@ function readErrorMessage(error: unknown): string {
 export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps): WorkspaceSessionRuntime {
   const {
     appTimelineId,
-    runtimeStore,
-    threadStore,
-    appShellStore,
-    workspaceFilesStore,
     normalizeWorkspacePath,
     findThreadListItem,
     resetSidePanelStores,
@@ -85,6 +81,12 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
   const workspaceByServerId = new Map<string, string>();
   const workspaceByThreadId = new Map<string, string>();
   let warnedExperimentalApiUnavailable = false;
+
+  const runtimeState = () => useRuntimeStore.getState();
+  const threadState = () => useThreadStore.getState();
+  const appShellState = () => useAppShellStore.getState();
+  const workspaceFilesState = () => useWorkspaceFilesStore.getState();
+  const getActiveWorkspace = () => normalizeWorkspacePath(runtimeState().workspacePath);
 
   const setThreadWorkspace = (threadIdValue: string, workspacePathValue: string | undefined) => {
     const threadId = String(threadIdValue ?? "").trim();
@@ -113,7 +115,7 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
       workspaceByThreadId.set(threadId, fromHistory);
       return fromHistory;
     }
-    return normalizeWorkspacePath(runtimeStore.workspacePath);
+    return getActiveWorkspace();
   };
 
   const getWorkspaceForServerId = (serverIdValue: string): string => {
@@ -139,7 +141,7 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
   };
 
   const requireActiveWorkspaceServerId = (): string => {
-    const serverId = getServerIdForWorkspace(runtimeStore.workspacePath);
+    const serverId = getServerIdForWorkspace(getActiveWorkspace());
     if (!serverId) throw new Error("server not running");
     return serverId;
   };
@@ -148,13 +150,13 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
     const workspace = normalizeWorkspacePath(workspacePathValue);
     const serverId = getServerIdForWorkspace(workspace);
     if (!serverId) {
-      runtimeStore.clearServer();
-      appShellStore.setServerConnState("disconnected");
+      runtimeState().clearServer();
+      appShellState().setServerConnState("disconnected");
       resetSidePanelStores(translate("runtime.noService"));
       return "";
     }
-    runtimeStore.setServer(serverId);
-    appShellStore.setServerConnState("connected");
+    runtimeState().setServer(serverId);
+    appShellState().setServerConnState("connected");
     return serverId;
   };
 
@@ -197,15 +199,15 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
     if (!workspace) return "";
     const existingServerId = getServerIdForWorkspace(workspace);
     if (existingServerId) {
-      if (normalizeWorkspacePath(runtimeStore.workspacePath) === workspace) {
+      if (getActiveWorkspace() === workspace) {
         syncActiveServerByWorkspace(workspace);
       }
       void hydrateThreadMetadataForWorkspace(workspace);
       return existingServerId;
     }
     try {
-      if (normalizeWorkspacePath(runtimeStore.workspacePath) === workspace) {
-        appShellStore.setServerConnState("connecting");
+      if (getActiveWorkspace() === workspace) {
+        appShellState().setServerConnState("connecting");
       }
       const requestedExperimentalApi = true;
       const res = await codexDesktop.codexServer.start({ cwd: workspace, experimentalApi: requestedExperimentalApi });
@@ -213,9 +215,9 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
       if (!serverId) throw new Error("serverStart did not return serverId");
       const experimentalApi = Boolean(res.capabilities?.experimentalApi);
       registerServerForWorkspace(workspace, serverId);
-      if (normalizeWorkspacePath(runtimeStore.workspacePath) === workspace) {
-        runtimeStore.setServer(serverId);
-        appShellStore.setServerConnState("connected");
+      if (getActiveWorkspace() === workspace) {
+        runtimeState().setServer(serverId);
+        appShellState().setServerConnState("connected");
       }
       if (requestedExperimentalApi && !experimentalApi) {
         warnExperimentalApiUnavailableOnce(translate("runtime.experimentalApiUnavailableDetail"));
@@ -229,15 +231,15 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
       void Promise.allSettled([
         refreshHistory(false),
         hydrateThreadMetadataForWorkspace(workspace),
-        normalizeWorkspacePath(runtimeStore.workspacePath) === workspace
+        getActiveWorkspace() === workspace
           ? refreshRightPanels({ forceSkills: true, forceMcp: true })
           : Promise.resolve(),
       ]);
       return serverId;
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
-      if (normalizeWorkspacePath(runtimeStore.workspacePath) === workspace) {
-        appShellStore.setServerConnState("failed", msg);
+      if (getActiveWorkspace() === workspace) {
+        appShellState().setServerConnState("failed", msg);
       }
       pushEvent("server:error", msg, { threadId: appTimelineId, level: "error" });
       showToast({ kind: "error", title: translate("runtime.serverStartFailedTitle"), message: msg });
@@ -246,7 +248,7 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
   };
 
   const startServer = async () => {
-    const workspace = normalizeWorkspacePath(runtimeStore.workspacePath);
+    const workspace = getActiveWorkspace();
     if (!workspace) {
       showToast({
         kind: "warn",
@@ -262,14 +264,14 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
   const applyWorkspaceSelection = async (selectedValue: string) => {
     const selected = normalizeWorkspacePath(selectedValue);
     if (!selected) return false;
-    if (selected !== normalizeWorkspacePath(runtimeStore.workspacePath)) {
-      const confirmed = await workspaceFilesStore.confirmResetDirtyTabsForWorkspaceChange(selected);
+    if (selected !== getActiveWorkspace()) {
+      const confirmed = await workspaceFilesState().confirmResetDirtyTabsForWorkspaceChange(selected);
       if (!confirmed) return false;
     }
-    runtimeStore.setWorkspace(selected);
-    threadStore.setWorkspace(selected);
+    runtimeState().setWorkspace(selected);
+    threadState().setWorkspace(selected);
     pushEvent("workspace", selected, { threadId: appTimelineId });
-    void workspaceFilesStore.ensureReady(true);
+    void workspaceFilesState().ensureReady(true);
     const activeServerId = syncActiveServerByWorkspace(selected);
     if (activeServerId) {
       applyCachedRightPanels(selected);
@@ -279,7 +281,7 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
   };
 
   const ensureWorkspaceForSend = async (): Promise<boolean> => {
-    const cwd = String(runtimeStore.workspacePath ?? "").trim();
+    const cwd = getActiveWorkspace();
     if (cwd) return true;
     const selected = await codexDesktop.workspace.select();
     if (!selected) {

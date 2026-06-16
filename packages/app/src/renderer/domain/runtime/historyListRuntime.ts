@@ -2,7 +2,7 @@ import { codexDesktop } from "../../api/codexDesktopClient";
 import { toThreadHistoryItem as toThreadHistoryItemFromHistory } from "../../features/history/threadHistoryItem";
 import { fallbackThreadTitle } from "../../features/history/threadTitle";
 import { appendDebugLog } from "../../shared/debugLog";
-import type { useThreadStore } from "../../stores/thread.store";
+import { useThreadStore } from "../../stores/thread.store";
 import type { HistoryThread } from "@codenexus/shared/ipc";
 import { invalidateThreadContentCache, type ThreadContentCacheEntry } from "./rendererCacheRuntime";
 
@@ -43,7 +43,6 @@ function readErrorMessage(error: unknown): string {
 
 export function createHistoryListRuntime(deps: HistoryListRuntimeDeps): HistoryListRuntime {
   const {
-    threadStore,
     threadContentCacheByKey,
     getWorkspacePath,
     setThreadWorkspace,
@@ -51,6 +50,7 @@ export function createHistoryListRuntime(deps: HistoryListRuntimeDeps): HistoryL
   } = deps;
 
   const applyHistoryItems = (items: HistoryThread[]) => {
+    const currentThreadStore = useThreadStore.getState();
     invalidateThreadContentCache(threadContentCacheByKey);
     const now = Date.now();
     const incomingThreadIds = new Set<string>();
@@ -59,12 +59,12 @@ export function createHistoryListRuntime(deps: HistoryListRuntimeDeps): HistoryL
       if (threadId) incomingThreadIds.add(threadId);
     }
     const previousTitleById = new Map(
-      [...threadStore.threadHistory, ...threadStore.localThreads].map((item) => [
+      [...currentThreadStore.threadHistory, ...currentThreadStore.localThreads].map((item) => [
         String(item.id ?? "").trim(),
         String(item.title ?? "").trim(),
       ])
     );
-    threadStore.localThreads = threadStore.localThreads.filter((item) => {
+    const nextLocalThreads = currentThreadStore.localThreads.filter((item) => {
       const threadId = String(item.id ?? "").trim();
       if (!threadId || incomingThreadIds.has(threadId)) return false;
       const createdAt = Number(item.createdAt ?? item.updatedAt ?? now);
@@ -84,16 +84,20 @@ export function createHistoryListRuntime(deps: HistoryListRuntimeDeps): HistoryL
       })
       .sort((a, b) => b.updatedAt - a.updatedAt);
 
-    threadStore.threadHistory = historyItems;
+    useThreadStore.setState({
+      localThreads: nextLocalThreads,
+      threadHistory: historyItems,
+    });
+    const updatedThreadStore = useThreadStore.getState();
     for (const item of items) {
       const threadId = String(item.id ?? "").trim();
       if (!threadId) continue;
       const running = Boolean(item.running);
       const activeTurnId = running ? String(item.activeTurnId ?? "").trim() : "";
-      threadStore.setThreadRunning(threadId, running);
-      threadStore.setActiveTurn(threadId, activeTurnId);
+      updatedThreadStore.setThreadRunning(threadId, running);
+      updatedThreadStore.setActiveTurn(threadId, activeTurnId);
     }
-    for (const item of [...historyItems, ...threadStore.localThreads]) {
+    for (const item of [...historyItems, ...nextLocalThreads]) {
       setThreadWorkspace(item.id, item.cwd);
     }
   };

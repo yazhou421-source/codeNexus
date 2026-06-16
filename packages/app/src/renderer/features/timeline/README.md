@@ -11,7 +11,6 @@
 | `renderModel/`                | 事件到渲染节点的聚合层 |
 | `markdownRenderer.ts`         | Markdown 安全渲染      |
 | `mermaidRenderer.ts`          | Mermaid 渲染与主题适配 |
-| `useAgentMarkdownRenderer.ts` | 事件级渲染缓存         |
 | `webSearch.ts`                | Web 搜索结果展示辅助   |
 
 ## 维护边界

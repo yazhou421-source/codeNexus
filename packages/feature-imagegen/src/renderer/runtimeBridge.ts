@@ -1,4 +1,3 @@
-import { ref } from "vue";
 import {
   normalizeImageGenerationSettings,
   type LocalImageGenerationSettings,
@@ -57,7 +56,7 @@ type ImagegenRuntimeBridgeOptions = {
   workspacePath?: string | null;
 };
 
-const workspacePathRef = ref("");
+const workspacePathRef = { value: "" };
 let translateHandler: ImagegenRuntimeBridgeOptions["translate"] | null = null;
 const localImageDataUrlCache = new Map<string, Promise<string>>();
 

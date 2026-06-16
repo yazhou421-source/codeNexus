@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { UserTurnInput } from "../domain/types";
 import { cloneComposeTextElements } from "../domain/composeFileMentions";
 import type { LocalMessageOutbox } from "@codenexus/shared/localMessageOutbox";

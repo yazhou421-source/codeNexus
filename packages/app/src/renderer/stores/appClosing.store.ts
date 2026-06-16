@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import { codexDesktop } from "../api/codexDesktopClient";
 import { translate } from "../i18n/translate";
 import type { AppClosingStep, AppWindowClosingState } from "@codenexus/shared/ipc";

@@ -1,4 +1,3 @@
-import type { Pinia } from "pinia";
 import { codexDesktop } from "../../api/codexDesktopClient";
 import {
   buildAuthRefreshNotImplementedError,
@@ -321,12 +320,12 @@ async function buildSuccessfulImageToolResponse(
   };
 }
 
-export function installRequestResponder(pinia: Pinia) {
-  const timelineStore = useTimelineStore(pinia);
-  const userInputStore = useUserInputStore(pinia);
-  const approvalStore = useApprovalStore(pinia);
-  const imageWorkbenchStore = useImageWorkbenchStore(pinia);
-  const runtimeStore = useRuntimeStore(pinia);
+export function installRequestResponder(storeScope: unknown) {
+  const timelineStore = useTimelineStore(storeScope);
+  const userInputStore = useUserInputStore(storeScope);
+  const approvalStore = useApprovalStore(storeScope);
+  const imageWorkbenchStore = useImageWorkbenchStore(storeScope);
+  const runtimeStore = useRuntimeStore(storeScope);
 
   const unsubscribe = codexDesktop.codexServer.onEvent((payload) => {
     const msg = payload?.msg;

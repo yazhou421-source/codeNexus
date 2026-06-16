@@ -23,7 +23,7 @@
   </a>
   <img src="https://img.shields.io/badge/platform-Windows-0078D4" alt="Windows" />
   <img src="https://img.shields.io/badge/Electron-40.8.5-47848F?logo=electron&logoColor=white" alt="Electron 40.8.5" />
-  <img src="https://img.shields.io/badge/Vue-3.5.28-42b883?logo=vuedotjs&logoColor=white" alt="Vue 3.5.28" />
+  <img src="https://img.shields.io/badge/React-19.2.7-61DAFB?logo=react&logoColor=111111" alt="React 19.2.7" />
   <img src="https://img.shields.io/badge/TypeScript-5.7.3-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5.7.3" />
   <img src="https://img.shields.io/badge/pnpm-10.32.1-F69220?logo=pnpm&logoColor=white" alt="pnpm 10.32.1" />
 </p>
@@ -139,7 +139,7 @@ For local community discussion, a QQ group QR code can be added to the Chinese R
 | `packages/app`               | Electron app shell, main process, preload, renderer, scripts, assets.  |
 | `packages/shared`            | Cross-process base contracts, IPC channels, settings, protocol types.  |
 | `packages/generated`         | Generated Codex app-server protocol types.                             |
-| `packages/feature-paper`     | Paper workspace store and Vue workbench/sidebar components.            |
+| `packages/feature-paper`     | Paper workspace store and React workbench/sidebar components.          |
 | `packages/feature-flowchart` | Flowchart document types, history service, workbench, and AI settings. |
 | `packages/feature-imagegen`  | Image generation types, task/history services, store, and components.  |
 | `pnpm-workspace.yaml`        | Workspace package membership.                                          |

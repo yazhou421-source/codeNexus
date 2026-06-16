@@ -1,4 +1,3 @@
-import { nextTick } from "vue";
 import { appendDebugLog } from "../../shared/debugLog";
 import type { useRuntimeStore } from "../../stores/runtime.store";
 import type { useThreadStore } from "../../stores/thread.store";
@@ -145,7 +144,7 @@ export function createThreadSwitchRuntime(deps: ThreadSwitchRuntimeDeps): Thread
       void hydrateThreadHandoffDiagnostics(id, { force: true });
 
       const mode = didWorkspaceChange ? "full" : "light";
-      void nextTick().then(() => {
+      void Promise.resolve().then(() => {
         if (!isActiveSwitch()) return;
         void workspaceFilesStore.reloadTreeForThreadSwitch({ mode });
       });

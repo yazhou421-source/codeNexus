@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { Model } from "@codenexus/generated/codex-app-server/v2/Model";
 import type { ModelListParams } from "@codenexus/generated/codex-app-server/v2/ModelListParams";
 import { getCachedUserLocalSettings, patchUserLocalSettings } from "../domain/localSettings";

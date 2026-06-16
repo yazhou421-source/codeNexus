@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 
 export const useViewPrefsStore = defineStore("viewPrefs", {
   state: () => ({

@@ -6,6 +6,7 @@ export default {
     confirm: "Confirm",
     copy: "Copy",
     delete: "Delete",
+    discard: "Discard",
     closeNotification: "Close notification",
     input: "Input",
     language: "Language",
@@ -980,6 +981,9 @@ export default {
     deleteHistory: "Delete history",
   },
   centerEmpty: {
+    defaultTitle: "Select a workspace to start",
+    defaultDescription: "Codex threads need a local workspace.",
+    selectWorkspace: "Select workspace",
     loadingMemory: "Reading session memory...",
     creatingThread: "Creating thread",
     initializingContext: "Initializing workspace and model context",

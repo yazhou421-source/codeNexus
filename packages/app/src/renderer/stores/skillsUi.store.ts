@@ -1,19 +1,21 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 
 export const useSkillsUiStore = defineStore("skillsUi", {
   state: () => ({
     managerOpen: false,
     expandedByKey: {} as Record<string, boolean>,
   }),
+  getters: {
+    isExpanded(state): (key: string) => boolean {
+      return (key: string) => Boolean(state.expandedByKey[String(key ?? "").trim()]);
+    },
+  },
   actions: {
     openManager() {
       this.managerOpen = true;
     },
     closeManager() {
       this.managerOpen = false;
-    },
-    isExpanded(key: string): boolean {
-      return Boolean(this.expandedByKey[String(key ?? "").trim()]);
     },
     toggleExpanded(key: string) {
       const id = String(key ?? "").trim();

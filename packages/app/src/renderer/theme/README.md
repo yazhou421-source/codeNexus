@@ -15,7 +15,7 @@ Theme colors are centralized in layered CSS variable files. Edit the earliest la
 
 3. `component-tokens.css`
    - Derives UI-specific tokens such as `--topbar-bg`, `--sidebar-bg`, `--center-bg`, `--composer-bg`, `--chat-pane-bg`, `--button-bg`, and `--card-bg`.
-   - Put component color decisions here instead of in Vue files or layout CSS.
+   - Put component color decisions here instead of in React components or layout CSS.
 
 4. `app-themes.css`
    - Thin mount layer for applying token values to global regions.
@@ -35,7 +35,7 @@ Renderer theme ids, labels, tone metadata, and cycling order live in `src/render
 - Seed tokens define raw palette values only.
 - Global semantic tokens define meaning shared across the product, such as `--accent`, `--surface-1`, `--fg-danger`.
 - Component tokens define decisions for a UI region, such as `--composer-bg`, `--topbar-bg`, and `--chat-pane-bg`.
-- Vue files should use semantic or component tokens, not raw color utilities such as hard-coded purple/white values.
+- React components should use semantic or component tokens, not raw color utilities such as hard-coded purple/white values.
 
 ## Tailwind
 

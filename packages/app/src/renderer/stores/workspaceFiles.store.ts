@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import { codexDesktop } from "../api/codexDesktopClient";
 import { getRuntimeOrchestrator } from "../domain/runtimeOrchestrator";
 import type { WorkspaceDirectoryEntryState, WorkspaceFileMetadataState, WorkspaceFileSource } from "../domain/types";
@@ -317,7 +317,7 @@ export const useWorkspaceFilesStore = defineStore("workspaceFiles", {
         let selected: WorkspaceGitStatusEntry | null = state.gitStatusByPath[directoryKeyValue] ?? null;
         for (const [entryKey, entry] of Object.entries(state.gitStatusByPath)) {
           if (entryKey === directoryKeyValue || entryKey.startsWith(prefix)) {
-            selected = chooseHigherPriorityGitStatus(selected, entry);
+            selected = chooseHigherPriorityGitStatus(selected, entry as WorkspaceGitStatusEntry);
           }
         }
         return selected;
@@ -377,7 +377,7 @@ export const useWorkspaceFilesStore = defineStore("workspaceFiles", {
       }
     },
     syncWorkspace(): boolean {
-      const runtimeStore = useRuntimeStore();
+      const runtimeStore = useRuntimeStore.getState();
       const workspace = normalizeWorkspacePath(runtimeStore.workspacePath);
       if (workspace === this.workspacePath) return false;
       this.resetState(workspace);
@@ -742,7 +742,11 @@ export const useWorkspaceFilesStore = defineStore("workspaceFiles", {
         this.expandDirectory(this.workspacePath);
       }
       if (changed || force || this.entries.length === 0) {
-        await this.openDirectory(this.directoryPath || this.workspacePath, { force, keepActiveFile: !changed });
+        const directoryPath = this.directoryPath || this.workspacePath;
+        const keepActiveFile = !changed;
+        void Promise.resolve().then(() => {
+          void useWorkspaceFilesStore.getState().openDirectory(directoryPath, { force, keepActiveFile });
+        });
       }
       if (changed || force || Object.keys(this.gitStatusByPath).length === 0) {
         this.scheduleGitStatusRefresh(80);
@@ -946,8 +950,8 @@ export const useWorkspaceFilesStore = defineStore("workspaceFiles", {
       chars: number;
       errorText?: string;
     }) {
-      const runtimeStore = useRuntimeStore();
-      const timelineStore = useTimelineStore();
+      const runtimeStore = useRuntimeStore.getState();
+      const timelineStore = useTimelineStore.getState();
       const item = buildWorkspaceFileSaveTimelineItem({
         path: payload.path,
         source: payload.source,

@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import { getCachedUserLocalSettings, patchUserLocalSettings } from "../domain/localSettings";
 import {
   DEFAULT_UI_FONT_FAMILY_PRESET,

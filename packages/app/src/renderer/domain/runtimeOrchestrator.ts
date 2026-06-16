@@ -1,4 +1,3 @@
-import type { Pinia } from "pinia";
 import { codexDesktop } from "../api/codexDesktopClient";
 import { showToast } from "../ui/toast";
 import { translate } from "../i18n/translate";
@@ -206,27 +205,27 @@ export type RuntimeOrchestrator = {
 
 let runtimeOrchestrator: RuntimeOrchestrator | null = null;
 
-export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
+export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrator {
   if (runtimeOrchestrator) return runtimeOrchestrator;
 
-  const runtimeStore = useRuntimeStore(pinia);
-  const threadStore = useThreadStore(pinia);
-  const goalShutdownStore = useGoalShutdownStore(pinia);
-  const timelineStore = useTimelineStore(pinia);
-  const appShellStore = useAppShellStore(pinia);
-  const configStore = useConfigStore(pinia);
-  const configRequirementsStore = useConfigRequirementsStore(pinia);
-  const skillsStore = useSkillsStore(pinia);
-  const mcpStore = useMcpStore(pinia);
-  const mcpResourceStore = useMcpResourceStore(pinia);
-  const userInputStore = useUserInputStore(pinia);
-  const approvalStore = useApprovalStore(pinia);
-  const messageQueueStore = useMessageQueueStore(pinia);
-  const workspaceFilesStore = useWorkspaceFilesStore(pinia);
-  const codexProfilesStore = useCodexProfilesStore(pinia);
-  const codexSkillRootsStore = useCodexSkillRootsStore(pinia);
-  const codexConfigSwitcherStore = useCodexConfigSwitcherStore(pinia);
-  const paperStore = usePaperStore(pinia);
+  const runtimeStore = useRuntimeStore(storeScope);
+  const threadStore = useThreadStore(storeScope);
+  const goalShutdownStore = useGoalShutdownStore(storeScope);
+  const timelineStore = useTimelineStore(storeScope);
+  const appShellStore = useAppShellStore(storeScope);
+  const configStore = useConfigStore(storeScope);
+  const configRequirementsStore = useConfigRequirementsStore(storeScope);
+  const skillsStore = useSkillsStore(storeScope);
+  const mcpStore = useMcpStore(storeScope);
+  const mcpResourceStore = useMcpResourceStore(storeScope);
+  const userInputStore = useUserInputStore(storeScope);
+  const approvalStore = useApprovalStore(storeScope);
+  const messageQueueStore = useMessageQueueStore(storeScope);
+  const workspaceFilesStore = useWorkspaceFilesStore(storeScope);
+  const codexProfilesStore = useCodexProfilesStore(storeScope);
+  const codexSkillRootsStore = useCodexSkillRootsStore(storeScope);
+  const codexConfigSwitcherStore = useCodexConfigSwitcherStore(storeScope);
+  const paperStore = usePaperStore(storeScope);
 
   // 运行期缓存：会话恢复、历史分页、右侧面板快照。
   const resumedThreadIds = new Set<string>();
@@ -243,6 +242,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
   const disposers: Array<() => void> = [];
 
   const normalizeWorkspacePath = (value: string) => String(value ?? "").trim();
+  const getRuntimeWorkspacePath = () => String(useRuntimeStore.getState().workspacePath ?? "").trim();
 
   const runtimeTimelineEventRuntime = createRuntimeTimelineEventRuntime({
     appTimelineId: APP_TIMELINE_ID,
@@ -281,7 +281,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
 
   const workspaceFileRuntime = createWorkspaceFileRuntime(
     createWorkspacePathResolver({
-      getWorkspacePath: () => runtimeStore.workspacePath,
+      getWorkspacePath: getRuntimeWorkspacePath,
       normalizeWorkspacePath,
     })
   );
@@ -379,7 +379,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
 
   const configRuntime = createConfigRuntime({
     requireActiveWorkspaceServerId,
-    getWorkspacePath: () => String(runtimeStore.workspacePath ?? "").trim(),
+    getWorkspacePath: getRuntimeWorkspacePath,
   });
   const { requestConfigRead, requestConfigRequirementsRead, requestConfigBatchWrite } = configRuntime;
 
@@ -409,14 +409,14 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
   const skillsRuntime = createSkillsRuntime({
     requireActiveWorkspaceServerId,
     getServerIdForWorkspace,
-    getWorkspacePath: () => String(runtimeStore.workspacePath ?? "").trim(),
+    getWorkspacePath: getRuntimeWorkspacePath,
     getExtraSkillRootsForWorkspace: (workspacePath) => codexSkillRootsStore.rootsForWorkspace(workspacePath),
   });
   const { requestSkillsList, writeSkillConfig } = skillsRuntime;
 
   const mcpRuntime = createMcpRuntime({
     requireActiveWorkspaceServerId,
-    getWorkspacePath: () => String(runtimeStore.workspacePath ?? "").trim(),
+    getWorkspacePath: getRuntimeWorkspacePath,
     getWorkspaceForThread,
     ensureServerForWorkspace: (workspace) => ensureServerForWorkspace(workspace),
   });
@@ -463,7 +463,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
   const historyListRuntime = createHistoryListRuntime({
     threadStore,
     threadContentCacheByKey,
-    getWorkspacePath: () => String(runtimeStore.workspacePath ?? "").trim(),
+    getWorkspacePath: getRuntimeWorkspacePath,
     setThreadWorkspace,
     hydrateThreadMetadataForWorkspace,
   });
@@ -473,7 +473,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
     appTimelineId: APP_TIMELINE_ID,
     configStore,
     configRequirementsStore,
-    getWorkspacePath: () => String(runtimeStore.workspacePath ?? "").trim(),
+    getWorkspacePath: getRuntimeWorkspacePath,
     getServerIdForWorkspace,
     requestConfigRead,
     requestConfigRequirementsRead,
@@ -488,7 +488,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
   const codexProfileRuntime = createCodexProfileRuntime({
     appTimelineId: APP_TIMELINE_ID,
     codexProfilesStore,
-    getWorkspacePath: () => String(runtimeStore.workspacePath ?? "").trim(),
+    getWorkspacePath: getRuntimeWorkspacePath,
     getServerIdForWorkspace,
     requestConfigBatchWrite,
     refreshGlobalConfig,
@@ -516,7 +516,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
     skillsStore,
     codexSkillRootsStore,
     skillsRefreshDebounceMs: SKILLS_REFRESH_DEBOUNCE_MS,
-    getWorkspacePath: () => String(runtimeStore.workspacePath ?? "").trim(),
+    getWorkspacePath: getRuntimeWorkspacePath,
     getServerIdForWorkspace,
     requestSkillsList,
     writeSkillConfig,
@@ -538,7 +538,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
     refreshSkills,
     refreshMcp: () => refreshMcp(),
     invalidateMcpSnapshot,
-    getWorkspacePath: () => String(runtimeStore.workspacePath ?? "").trim(),
+    getWorkspacePath: getRuntimeWorkspacePath,
     translate,
     showToast,
   });
@@ -557,7 +557,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
     mcpStore,
     codexConfigSwitcherStore,
     mcpStatusRefreshDebounceMs: MCP_STATUS_REFRESH_DEBOUNCE_MS,
-    getWorkspacePath: () => String(runtimeStore.workspacePath ?? "").trim(),
+    getWorkspacePath: getRuntimeWorkspacePath,
     getServerIdForWorkspace,
     requestConfigRead,
     requestMcpStatusList,
@@ -593,15 +593,15 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
   const { readThreadContent, createThreadTask, updateThreadTask } = historyThreadRuntime;
 
   const mcpResourceReadRuntime = createMcpResourceReadRuntime({
-    getServers: () => mcpStore.servers,
-    getTemplateDraft: (templateKey) => mcpResourceStore.getTemplateDraft(templateKey),
+    getServers: () => useMcpStore.getState().servers,
+    getTemplateDraft: (templateKey) => useMcpResourceStore.getState().getTemplateDraft(templateKey),
     requestMcpResourceRead,
     upsertTimelineEvent: (params) => timelineStore.upsertEvent(params),
   });
   const { readMcpResource } = mcpResourceReadRuntime;
 
   const rightPanelRefreshRuntime = createRightPanelRefreshRuntime({
-    getWorkspacePath: () => runtimeStore.workspacePath,
+    getWorkspacePath: getRuntimeWorkspacePath,
     normalizeWorkspacePath,
     getServerIdForWorkspace,
     hasSkillsSnapshot,
@@ -1137,7 +1137,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
     translate,
   });
   const runtimeStartupRuntime = createRuntimeStartupRuntime({
-    pinia,
+    storeScope,
     threadStore,
     subscribeHistoryUpdates,
     subscribeCodexServerEvents: codexServerEventRuntime.subscribeCodexServerEvents,

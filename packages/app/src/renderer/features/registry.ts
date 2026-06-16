@@ -1,4 +1,4 @@
-import { defineAsyncComponent, type Component } from "vue";
+import { lazy, type ComponentType } from "react";
 import type { MainView } from "@codenexus/shared/localSettings";
 import {
   codexInstructionProfileForMainView,
@@ -26,15 +26,15 @@ export type FeatureRegistryEntry = {
   id: FeatureMainView;
   mainView: FeatureMainView;
   order: number;
-  workbenchComponent: Component;
-  workspaceSidebarComponent?: Component;
-  settingsSidebarComponent?: Component;
+  workbenchComponent: ComponentType<any>;
+  workspaceSidebarComponent?: ComponentType<any>;
+  settingsSidebarComponent?: ComponentType<any>;
   settings?: {
     tab: FeatureSettingsTab;
     labelKey: string;
     descKey: string;
     icon: "image" | "workflow";
-    component: Component;
+    component: ComponentType<any>;
   };
   layout: {
     hideDefaultLeftSidebar?: boolean;
@@ -45,31 +45,31 @@ export type FeatureRegistryEntry = {
   resolveInstructionProfile?: (context?: { paperMode?: unknown }) => CodexInstructionProfile;
 };
 
-const ImageWorkbench = defineAsyncComponent(
+const ImageWorkbench = lazy(
   () => import("@codenexus/feature-imagegen/renderer/components/ImageWorkbench")
 );
-const ImageWorkspaceSidebar = defineAsyncComponent(
+const ImageWorkspaceSidebar = lazy(
   () => import("@codenexus/feature-imagegen/renderer/components/ImageWorkspaceSidebar")
 );
-const ImageSettingsSidebar = defineAsyncComponent(
+const ImageSettingsSidebar = lazy(
   () => import("@codenexus/feature-imagegen/renderer/components/ImageSettingsSidebar")
 );
-const SettingsImageGenerationTab = defineAsyncComponent(
-  () => import("../components/layout/settings/SettingsImageGenerationTab.vue")
+const SettingsImageGenerationTab = lazy(
+  () => import("../components/layout/settings/SettingsImageGenerationTab")
 );
 
-const FlowchartWorkbench = defineAsyncComponent(
+const FlowchartWorkbench = lazy(
   () => import("@codenexus/feature-flowchart/renderer/components/FlowchartWorkbench")
 );
-const SettingsFlowchartAiTab = defineAsyncComponent(
+const SettingsFlowchartAiTab = lazy(
   () => import("@codenexus/feature-flowchart/renderer/settings/SettingsFlowchartAiTab")
 );
 
-const PaperWorkbench = defineAsyncComponent(() => import("@codenexus/feature-paper/components/PaperWorkbench"));
-const PaperWorkspaceSidebar = defineAsyncComponent(
+const PaperWorkbench = lazy(() => import("@codenexus/feature-paper/components/PaperWorkbench"));
+const PaperWorkspaceSidebar = lazy(
   () => import("@codenexus/feature-paper/components/PaperWorkspaceSidebar")
 );
-const PaperSettingsSidebar = defineAsyncComponent(
+const PaperSettingsSidebar = lazy(
   () => import("@codenexus/feature-paper/components/PaperSettingsSidebar")
 );
 

@@ -190,6 +190,297 @@
   padding: 12px;
 }
 
+.integrations-head-grid {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.integrations-head-left {
+  min-width: 0;
+  justify-self: start;
+}
+
+.integrations-head-center {
+  justify-self: center;
+}
+
+.integrations-head-right {
+  min-width: 0;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.integrations-head-chip {
+  min-width: 104px;
+  justify-content: center;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.integrations-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 72%, transparent);
+}
+
+.integrations-tab {
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: color-mix(in srgb, var(--text) 76%, transparent);
+  font-size: 12px;
+}
+
+.integrations-tab.is-active {
+  background: color-mix(in srgb, var(--bg-accent-soft, var(--accent-soft)) 86%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--border-accent, var(--accent-soft)) 58%, transparent);
+  color: var(--text);
+}
+
+.integrations-tab:hover:not(.is-active) {
+  background: color-mix(in srgb, var(--surface-1) 56%, transparent);
+}
+
+.integrations-panel {
+  margin-bottom: 0;
+  --panel-bg: transparent;
+  --panel-border: transparent;
+  --panel-shadow: none;
+  padding: 0;
+}
+
+.integrations-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.integrations-toolbar-hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.integrations-toolbar-actions,
+.integrations-inline-actions {
+  gap: 6px;
+}
+
+.integrations-mcp-tab {
+  display: grid;
+  gap: 12px;
+}
+
+.integrations-config-section {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 76%, transparent);
+}
+
+.integrations-section-head {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.integrations-section-subtitle {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.integrations-section-subtitle.is-error {
+  color: var(--fg-danger, var(--danger));
+}
+
+.integrations-root-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.integrations-root-list {
+  display: grid;
+  gap: 6px;
+}
+
+.integrations-root-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-2) 52%, transparent);
+}
+
+.integrations-root-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.integrations-json-textarea,
+.integrations-small-textarea {
+  min-height: 88px;
+  height: auto;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.integrations-small-textarea {
+  min-height: 62px;
+}
+
+.integrations-form-actions,
+.integrations-mcp-resource {
+  display: grid;
+}
+
+.integrations-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.integrations-mcp-resource {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 76%, transparent);
+}
+
+.integrations-mcp-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text) 72%, transparent);
+}
+
+.integrations-panel .mcp-list {
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.integrations-panel .mcp-details {
+  padding: 10px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-1) 78%, transparent);
+}
+
+.integrations-panel .mcp-summary {
+  gap: 10px;
+}
+
+.integrations-panel .mcp-dot {
+  width: 9px;
+  height: 9px;
+}
+
+.integrations-panel .mcp-title {
+  font-weight: 650;
+}
+
+.integrations-panel .mcp-title-wrap {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 2px;
+}
+
+.integrations-panel .mcp-subtitle {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.integrations-panel .chevron {
+  transition: transform 0.15s ease;
+}
+
+.integrations-panel .chevron.open,
+.integrations-panel .mcp-details.is-open .mcp-summary .chevron {
+  transform: rotate(90deg);
+}
+
+.integrations-panel .mcp-body {
+  gap: 10px;
+}
+
+.integrations-panel .mcp-meta {
+  display: grid;
+  gap: 8px;
+}
+
+.integrations-panel .mcp-meta-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+}
+
+.integrations-panel .mcp-meta-key {
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.integrations-panel .mcp-meta-val {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  color: color-mix(in srgb, var(--text) 76%, transparent);
+}
+
+.integrations-panel .mcp-message {
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--surface-1) 78%, transparent);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 76%, transparent);
+}
+
+.integrations-panel .mcp-message.is-error {
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--border));
+  background: color-mix(in srgb, var(--bg-danger-soft) 42%, var(--surface-1));
+}
+
+.integrations-panel .btn-mini.danger {
+  border-color: var(--border-danger);
+  color: var(--fg-danger);
+  background: var(--bg-danger-soft);
+}
+
 .settings-grid {
   display: grid;
   gap: 10px;

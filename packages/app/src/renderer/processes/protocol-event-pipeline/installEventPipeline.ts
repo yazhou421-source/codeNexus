@@ -1,4 +1,3 @@
-import type { Pinia } from "pinia";
 import { createEventBridge } from "../../infra/ipc/eventBridge";
 import { normalizePlanItems } from "../../domain/serverInterop";
 import { useThreadStore } from "../../stores/thread.store";
@@ -248,13 +247,13 @@ function toCommandLifecycleEventId(
 }
 
 // 安装协议事件流水线：处理来自 codexDesktop 的协议通知并更新 store
-export function installEventPipeline(pinia: Pinia) {
+export function installEventPipeline(storeScope: unknown) {
   // 该流水线负责把协议通知标准化并写入 thread/timeline 两类 store。
-  const threadStore = useThreadStore(pinia);
-  const goalShutdownStore = useGoalShutdownStore(pinia);
-  const timelineStore = useTimelineStore(pinia);
-  const runtimeStore = useRuntimeStore(pinia);
-  const debugTimelineStore = useDebugTimelineStore(pinia);
+  const threadStore = useThreadStore(storeScope);
+  const goalShutdownStore = useGoalShutdownStore(storeScope);
+  const timelineStore = useTimelineStore(storeScope);
+  const runtimeStore = useRuntimeStore(storeScope);
+  const debugTimelineStore = useDebugTimelineStore(storeScope);
   const bridge = createEventBridge();
   // 思考状态定时器映射
   const thinkingGapTimers = new Map<string, ReturnType<typeof setTimeout>>();

@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { ConfigRequirements } from "@codenexus/generated/codex-app-server/v2/ConfigRequirements";
 import { translate } from "../i18n/translate";
 

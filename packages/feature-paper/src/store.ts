@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 
 export type PaperSectionStatus = "todo" | "drafting" | "review" | "done";
 export type PaperGenerationMode = "outline" | "draft" | "revise" | "citations";
@@ -75,15 +75,15 @@ export const usePaperStore = defineStore("paper", {
     totalWordTarget(state): number {
       return state.sections.reduce((sum, section) => sum + section.wordTarget, 0);
     },
-    progressPercent(): number {
-      if (this.sections.length === 0) return 0;
-      const weighted = this.sections.reduce((sum, section) => {
+    progressPercent(state): number {
+      if (state.sections.length === 0) return 0;
+      const weighted = state.sections.reduce((sum, section) => {
         if (section.status === "done") return sum + 1;
         if (section.status === "review") return sum + 0.72;
         if (section.status === "drafting") return sum + 0.38;
         return sum;
       }, 0);
-      return Math.round((weighted / this.sections.length) * 100);
+      return Math.round((weighted / state.sections.length) * 100);
     },
     promptPreview(state): string {
       const section = state.sections.find((item) => item.id === state.selectedSectionId) ?? state.sections[0];

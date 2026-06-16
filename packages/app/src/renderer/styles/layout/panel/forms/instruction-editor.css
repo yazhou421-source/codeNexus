@@ -80,7 +80,7 @@
   margin-top: 0;
 }
 
-/* 编辑器弹层使用 Vue Transition 进入和离开。 */
+/* 编辑器弹层沿用 enter/leave 状态类处理进入和离开。 */
 
 .instruction-editor-enter-active,
 .instruction-editor-leave-active {

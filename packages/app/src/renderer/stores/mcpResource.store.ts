@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type {
   McpResourceParameterEntry,
   McpResourceReadLoadState,
@@ -58,6 +58,25 @@ export const useMcpResourceStore = defineStore("mcpResource", {
           serverIdValue ?? state.selectedServerId,
           uriValue ?? state.selectedResourceUri
         );
+      };
+    },
+    getTemplateDraft(state) {
+      return (templateKeyValue: unknown): McpResourceTemplateDraftState => {
+        const templateKey = normalizeText(templateKeyValue);
+        const existing = templateKey ? state.templateDraftByKey[templateKey] : null;
+        return existing ?? { values: {}, manualUri: "" };
+      };
+    },
+    getResourceCacheStats(state) {
+      return () => {
+        const values = Object.values(state.cacheByKey ?? {});
+        let bytes = 0;
+        for (const value of values) bytes += JSON.stringify(value).length;
+        return {
+          items: values.length,
+          bytes,
+          updatedAt: Date.now(),
+        };
       };
     },
   },
@@ -138,11 +157,6 @@ export const useMcpResourceStore = defineStore("mcpResource", {
         },
       };
     },
-    getTemplateDraft(templateKeyValue: unknown): McpResourceTemplateDraftState {
-      const templateKey = normalizeText(templateKeyValue);
-      const existing = templateKey ? this.templateDraftByKey[templateKey] : null;
-      return existing ?? { values: {}, manualUri: "" };
-    },
     setLoadState(next: McpResourceReadLoadState, errorText = "") {
       this.loadState = next;
       this.errorText = errorText;
@@ -180,16 +194,6 @@ export const useMcpResourceStore = defineStore("mcpResource", {
       this.selectedContentIndex = 0;
       this.loadState = "idle";
       this.errorText = "";
-    },
-    getResourceCacheStats() {
-      const values = Object.values(this.cacheByKey ?? {});
-      let bytes = 0;
-      for (const value of values) bytes += JSON.stringify(value).length;
-      return {
-        items: values.length,
-        bytes,
-        updatedAt: Date.now(),
-      };
     },
     clearResourceCache() {
       this.cacheByKey = {};

@@ -2,6 +2,7 @@
 @import "./foundation/base.css";
 @import "./foundation/topbar.css";
 @import "./foundation/shell.css";
+@import "./layout/bottom-bar.css";
 @import "./layout/sidebar/rail.css";
 @import "./layout/sidebar/threads.css";
 @import "./layout/sidebar/workspace.css";
@@ -19,11 +20,11 @@
 @import "./timeline.css";
 @import "./chat-timeline.css";
 @import "./composer.css";
-@import "./tooltip.css";
 @import "./responsive/layout.css";
 @import "./responsive/center.css";
 @import "./responsive/composer.css";
 @import "./responsive/panel.css";
+@import "./react-recovery.css";
 @import "../theme/theme-seeds.css";
 @import "../theme/tokens.css";
 @import "../theme/component-tokens.css";

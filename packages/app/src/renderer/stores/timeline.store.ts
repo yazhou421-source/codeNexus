@@ -1,5 +1,5 @@
 // 时间线 Store：管理对话/事件时间线数据、加载状态与 UI 定位等。
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { TimelineEventItem, TimelineEventLevel } from "../domain/types";
 
 const MAX_EVENT_PARAMS_CHARS = 60_000;
@@ -84,7 +84,7 @@ function ensureEventId(threadId: string, id: unknown): string {
   return `${threadId}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
 }
 
-function scheduleFlush(store: { flushPendingAppends: () => void }) {
+function scheduleFlush(store: any) {
   if (flushScheduled) return;
   flushScheduled = true;
   const runner = () => {

@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore } from "./zustandCompat";
 import type { TimelineEventItem, TimelineEventLevel } from "../domain/types";
 
 const MAX_ITEMS_PER_THREAD = 2000;
