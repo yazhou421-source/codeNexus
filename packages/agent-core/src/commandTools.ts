@@ -111,6 +111,8 @@ export function createCommandTools(
   return [
     {
       name: "run_command",
+      // 命令可任意改动文件系统（写/删/move/git），内核据此与其他写类工具串行执行。
+      mutating: true,
       description:
         "Run a one-shot shell command (e.g. git status, node -v, npm test, pnpm build). " +
         "Waits for completion and returns exit code, stdout and stderr. " +

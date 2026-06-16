@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, unlinkSync, renameSync, mkdirSync, statSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, unlinkSync, renameSync, mkdirSync, statSync, readdirSync, existsSync, type Dirent } from "node:fs";
 import { resolve, relative, isAbsolute, join, dirname } from "node:path";
 import { spawnSync } from "node:child_process";
 import https from "node:https";
@@ -571,6 +571,7 @@ export function createWorkspaceTools(rootDir: string, options: WorkspaceToolsOpt
   // 7. apply_patch
   tools.push({
     name: "apply_patch",
+    mutating: true,
     description: "Apply a unified diff patch to create, modify, or delete files. All changes are applied atomically after approval.",
     parameters: {
       type: "object",
@@ -647,6 +648,7 @@ export function createWorkspaceTools(rootDir: string, options: WorkspaceToolsOpt
   // 8. delete_file
   tools.push({
     name: "delete_file",
+    mutating: true,
     description: "Delete a file (not directories). Requires approval.",
     parameters: {
       type: "object",
@@ -683,6 +685,7 @@ export function createWorkspaceTools(rootDir: string, options: WorkspaceToolsOpt
   // 9. move_file
   tools.push({
     name: "move_file",
+    mutating: true,
     description: "Move or rename a file or directory. Requires approval.",
     parameters: {
       type: "object",
@@ -722,6 +725,7 @@ export function createWorkspaceTools(rootDir: string, options: WorkspaceToolsOpt
   // 10. mkdir
   tools.push({
     name: "mkdir",
+    mutating: true,
     description: "Create a directory (recursive). Requires approval.",
     parameters: {
       type: "object",
@@ -773,9 +777,85 @@ export function createWorkspaceTools(rootDir: string, options: WorkspaceToolsOpt
     },
   });
 
+  // 11b. list_files (ls)：列出目录内容，区分文件/目录，可选递归。
+  tools.push({
+    name: "list_files",
+    description:
+      "List the contents of a directory (like `ls`). Returns each entry marked as a file or directory. " +
+      "Use this to explore the workspace structure before reading or editing. " +
+      "Ignores noise dirs (.git, node_modules, dist, build, .cache, coverage).",
+    parameters: {
+      type: "object",
+      properties: {
+        path: {
+          type: "string",
+          description:
+            "Directory path relative to workspace root. Defaults to the workspace root when omitted.",
+        },
+        recursive: {
+          type: "boolean",
+          description:
+            "When true, walk subdirectories recursively (depth-limited). Defaults to false (single level).",
+        },
+      },
+    },
+    execute: (args) => {
+      const rel = String(args.path ?? "").trim();
+      const target = rel ? resolveInsideRoot(rootDir, rel) : resolve(rootDir);
+      if (!existsSync(target) || !statSync(target).isDirectory()) {
+        throw new Error(`not a directory: ${rel || "."}`);
+      }
+
+      const recursive = args.recursive === true;
+      const MAX_ENTRIES = 1000;
+      const MAX_DEPTH = 8;
+      const lines: string[] = [];
+      let count = 0;
+      let truncated = false;
+
+      const walk = (dir: string, depth: number): void => {
+        if (truncated) return;
+        let entries: Dirent[];
+        try {
+          entries = readdirSync(dir, { withFileTypes: true }) as Dirent[];
+        } catch {
+          return;
+        }
+        // 目录在前、再按名字排序，输出稳定可读。
+        const sorted = [...entries].sort((a, b) => {
+          const ad = a.isDirectory() ? 0 : 1;
+          const bd = b.isDirectory() ? 0 : 1;
+          return ad !== bd ? ad - bd : a.name.localeCompare(b.name);
+        });
+        for (const entry of sorted) {
+          if (entry.isDirectory() && IGNORE_DIRS.has(entry.name)) continue;
+          if (count >= MAX_ENTRIES) {
+            truncated = true;
+            return;
+          }
+          const abs = join(dir, entry.name);
+          const display = getRelativePath(rootDir, abs);
+          lines.push(entry.isDirectory() ? `${display}/` : display);
+          count += 1;
+          if (recursive && entry.isDirectory() && depth < MAX_DEPTH) {
+            walk(abs, depth + 1);
+          }
+        }
+      };
+
+      walk(target, 0);
+      if (lines.length === 0) return "(empty directory)";
+      const header = truncated
+        ? `(truncated at ${MAX_ENTRIES} entries)\n`
+        : "";
+      return `${header}${lines.join("\n")}`;
+    },
+  });
+
   // 12. write_file
   tools.push({
     name: "write_file",
+    mutating: true,
     description: "Create or overwrite a file with complete content. Requires approval.",
     parameters: {
       type: "object",
@@ -827,6 +907,7 @@ export function createWorkspaceTools(rootDir: string, options: WorkspaceToolsOpt
   // 13. edit_file
   tools.push({
     name: "edit_file",
+    mutating: true,
     description: "Replace exact substring in file (must match exactly once). Requires approval. Use for simple targeted edits.",
     parameters: {
       type: "object",

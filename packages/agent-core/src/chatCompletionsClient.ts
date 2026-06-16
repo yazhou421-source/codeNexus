@@ -193,6 +193,17 @@ export function createChatCompletionsClient(
         } catch {
           continue;
         }
+        // 200 流中途的错误帧：上游开了 SSE 后才报错（限流/内容过滤/中转故障）。
+        // 不抛出的话会被当成正常完成（truncated=false），run 在残缺回复上继续。
+        const streamError = chunk.error;
+        if (streamError) {
+          const detail =
+            typeof streamError === "object" && streamError
+              ? ((streamError as Record<string, unknown>).message ??
+                JSON.stringify(streamError))
+              : String(streamError);
+          throw new Error(`chat/completions stream error: ${detail}`);
+        }
         const choices = Array.isArray(chunk.choices) ? chunk.choices : [];
         const choice = choices[0] as Record<string, unknown> | undefined;
         if (typeof choice?.finish_reason === "string" && choice.finish_reason) {

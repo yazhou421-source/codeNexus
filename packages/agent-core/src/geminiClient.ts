@@ -301,6 +301,25 @@ export function createGeminiClient(options: GeminiClientOptions): ChatClient {
         } catch {
           continue;
         }
+        // 200 流中途的错误/拦截帧：顶层 error，或 promptFeedback.blockReason（提示被安全拦截）。
+        // 不抛会被当成正常完成（truncated=false），run 在残缺/空回复上继续。
+        const streamError = chunk.error;
+        if (streamError) {
+          const detail =
+            typeof streamError === "object" && streamError
+              ? ((streamError as Record<string, unknown>).message ??
+                JSON.stringify(streamError))
+              : String(streamError);
+          throw new Error(`gemini stream error: ${detail}`);
+        }
+        const promptFeedback = chunk.promptFeedback as
+          | Record<string, unknown>
+          | undefined;
+        if (promptFeedback && typeof promptFeedback.blockReason === "string") {
+          throw new Error(
+            `gemini stream blocked: ${promptFeedback.blockReason}`,
+          );
+        }
         const candidates = Array.isArray(chunk.candidates)
           ? chunk.candidates
           : [];

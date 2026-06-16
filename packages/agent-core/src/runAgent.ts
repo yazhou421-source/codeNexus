@@ -146,6 +146,51 @@ async function executeToolCall(
 }
 
 /**
+ * 调度执行单轮的全部工具调用，返回与输入同序的 tool 消息。
+ *
+ * - 只读工具并行执行（互不影响）。
+ * - mutating（写/删/改/移动/命令）工具按模型给出的先后顺序串行执行，
+ *   且每个 mutating 工具在执行前等待此前已派发的所有调用完成，
+ *   从而避免同轮重叠路径的并发读-改-写交错导致后写覆盖、静默丢改。
+ */
+async function executeToolCalls(
+  calls: ToolCall[],
+  toolsByName: Map<string, ToolDefinition>,
+  onEvent: RunAgentOptions["onEvent"],
+  signal?: AbortSignal,
+  truncated?: boolean,
+): Promise<AgentMessage[]> {
+  const results: Promise<AgentMessage>[] = new Array(calls.length);
+  const pending: Promise<unknown>[] = [];
+  // 串行链：让每个 mutating 工具排在前一个 mutating 工具之后，保证写写有序。
+  let mutatingChain: Promise<unknown> = Promise.resolve();
+
+  for (let i = 0; i < calls.length; i += 1) {
+    const call = calls[i]!;
+    const isMutating = toolsByName.get(call.name)?.mutating === true;
+
+    if (isMutating) {
+      // 等待此前已派发的所有调用（读+写）完成，再执行本次写，确保读到最新状态。
+      const inFlight = [...pending];
+      const run = mutatingChain
+        .then(() => Promise.allSettled(inFlight))
+        .then(() =>
+          executeToolCall(call, toolsByName, onEvent, signal, truncated),
+        );
+      mutatingChain = run.catch(() => {});
+      results[i] = run;
+      pending.push(run);
+    } else {
+      const run = executeToolCall(call, toolsByName, onEvent, signal, truncated);
+      results[i] = run;
+      pending.push(run);
+    }
+  }
+
+  return Promise.all(results);
+}
+
+/**
  * Agent 内核：协议无关的「思考-行动」循环。
  *
  * 每一轮：把对话发给模型 → 模型要么给文字（结束）、要么要求调用工具。
@@ -238,13 +283,16 @@ export async function runAgent(
       };
     }
 
-    // 并行执行本轮所有工具调用，把每个结果作为独立的 tool 消息塞回历史。
+    // 执行本轮所有工具调用：只读工具并行；会改动状态的 mutating 工具按模型给出的
+    // 顺序串行，避免同轮多次编辑同一文件时并发读-改-写交错、后写覆盖丢改。
     let toolMessages: AgentMessage[];
     try {
-      toolMessages = await Promise.all(
-        reply.toolCalls.map((call) =>
-          executeToolCall(call, toolsByName, onEvent, signal, reply.truncated),
-        ),
+      toolMessages = await executeToolCalls(
+        reply.toolCalls,
+        toolsByName,
+        onEvent,
+        signal,
+        reply.truncated,
       );
     } catch (error: unknown) {
       if (isAbortError(error, signal)) {

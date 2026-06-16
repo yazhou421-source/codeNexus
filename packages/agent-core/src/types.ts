@@ -42,6 +42,12 @@ export type ToolDefinition = {
   description: string;
   /** JSON Schema，描述参数形状，原样转发给模型。 */
   parameters: Record<string, unknown>;
+  /**
+   * 该工具是否会改动文件系统/工作区状态（写、删、改、移动、执行命令等）。
+   * 内核据此在单轮多调用时把 mutating 工具串行执行，避免重叠路径的读-改-写竞态丢写；
+   * 只读工具仍并行。缺省（undefined/false）视为只读。
+   */
+  mutating?: boolean;
   /** 执行工具。入参是已解析的参数对象，返回喂回模型的文本结果。 */
   execute: (
     args: Record<string, unknown>,

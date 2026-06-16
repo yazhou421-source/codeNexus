@@ -417,4 +417,56 @@ describe("streaming clients", () => {
       },
     ]);
   });
+
+  it("openai-compatible: throws on a mid-stream error frame instead of completing silently", async () => {
+    stubSse(
+      [
+        'data: {"choices":[{"delta":{"content":"par"}}]}',
+        'data: {"error":{"message":"rate limited","type":"rate_limit_error"}}',
+      ].join("\n\n") + "\n\n",
+    );
+    const client = createChatCompletionsClient({
+      baseUrl: "https://x/v1",
+      apiKey: "k",
+      model: "m",
+    });
+    await expect(
+      client.stream!([{ role: "user", content: "hi" }], [], {
+        onTextDelta: () => {},
+      }),
+    ).rejects.toThrow(/rate limited/);
+  });
+
+  it("anthropic: throws on a mid-stream error event instead of completing silently", async () => {
+    stubSse(
+      [
+        'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hi"}}',
+        'event: error\ndata: {"type":"error","error":{"type":"overloaded_error","message":"overloaded"}}',
+      ].join("\n\n") + "\n\n",
+    );
+    const client = createAnthropicClient({
+      baseUrl: "https://api.anthropic.com",
+      apiKey: "k",
+      model: "m",
+    });
+    await expect(
+      client.stream!([{ role: "user", content: "hi" }], [], {
+        onTextDelta: () => {},
+      }),
+    ).rejects.toThrow(/overloaded/);
+  });
+
+  it("gemini: throws on a promptFeedback blockReason instead of completing silently", async () => {
+    stubSse('data: {"promptFeedback":{"blockReason":"SAFETY"}}\n\n');
+    const client = createGeminiClient({
+      baseUrl: "https://gl.example.com",
+      apiKey: "k",
+      model: "m",
+    });
+    await expect(
+      client.stream!([{ role: "user", content: "hi" }], [], {
+        onTextDelta: () => {},
+      }),
+    ).rejects.toThrow(/SAFETY/);
+  });
 });

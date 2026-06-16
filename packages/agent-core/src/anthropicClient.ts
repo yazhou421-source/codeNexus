@@ -304,6 +304,15 @@ export function createAnthropicClient(
         } catch {
           continue;
         }
+        // 200 流中途的错误帧（event: error → {type:"error", error:{...}}）：
+        // 上游开了 SSE 后才报错（overloaded/限流/中转故障）。不抛会被当成正常完成。
+        if (evt.type === "error") {
+          const err = evt.error as Record<string, unknown> | undefined;
+          const detail = err
+            ? (err.message ?? JSON.stringify(err))
+            : JSON.stringify(evt);
+          throw new Error(`anthropic messages stream error: ${detail}`);
+        }
         // message_delta 携带 stop_reason；"max_tokens" 表示被截断（工具参数 JSON 可能不完整）。
         if (evt.type === "message_delta") {
           const delta = evt.delta as Record<string, unknown> | undefined;

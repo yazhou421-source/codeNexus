@@ -381,4 +381,105 @@ describe("runAgent", () => {
 
     expect(original).toHaveLength(1);
   });
+
+  describe("single-turn tool concurrency", () => {
+    /** 记录每个工具的 start/end 相对顺序，用于断言串行 vs 并行。 */
+    function makeTrackedTool(
+      name: string,
+      mutating: boolean,
+      log: string[],
+      delayMs = 10,
+    ): ToolDefinition {
+      return {
+        name,
+        description: `tracked ${name}`,
+        parameters: { type: "object", properties: {} },
+        mutating,
+        execute: async () => {
+          log.push(`start:${name}`);
+          await new Promise((r) => setTimeout(r, delayMs));
+          log.push(`end:${name}`);
+          return name;
+        },
+      };
+    }
+
+    it("serializes mutating tools within one turn (no overlap)", async () => {
+      const log: string[] = [];
+      const client = scriptedClient([
+        {
+          content: null,
+          toolCalls: [
+            { id: "c1", name: "write_a", arguments: "{}" },
+            { id: "c2", name: "write_b", arguments: "{}" },
+          ],
+        },
+        { content: "done", toolCalls: [] },
+      ]);
+      const tools = [
+        makeTrackedTool("write_a", true, log),
+        makeTrackedTool("write_b", true, log),
+      ];
+
+      await runAgent({ client, tools, messages: [{ role: "user", content: "go" }] });
+
+      // 串行：第一个写完整结束后第二个才开始，绝不交错。
+      expect(log).toEqual([
+        "start:write_a",
+        "end:write_a",
+        "start:write_b",
+        "end:write_b",
+      ]);
+    });
+
+    it("runs read-only tools in parallel within one turn (overlap)", async () => {
+      const log: string[] = [];
+      const client = scriptedClient([
+        {
+          content: null,
+          toolCalls: [
+            { id: "c1", name: "read_a", arguments: "{}" },
+            { id: "c2", name: "read_b", arguments: "{}" },
+          ],
+        },
+        { content: "done", toolCalls: [] },
+      ]);
+      const tools = [
+        makeTrackedTool("read_a", false, log),
+        makeTrackedTool("read_b", false, log),
+      ];
+
+      await runAgent({ client, tools, messages: [{ role: "user", content: "go" }] });
+
+      // 并行：两个 read 都先 start 再 end（交错）。
+      expect(log.slice(0, 2)).toEqual(["start:read_a", "start:read_b"]);
+    });
+
+    it("keeps tool result messages in call order regardless of scheduling", async () => {
+      const log: string[] = [];
+      const client = scriptedClient([
+        {
+          content: null,
+          toolCalls: [
+            { id: "c1", name: "read_slow", arguments: "{}" },
+            { id: "c2", name: "write_fast", arguments: "{}" },
+          ],
+        },
+        { content: "done", toolCalls: [] },
+      ]);
+      const tools = [
+        makeTrackedTool("read_slow", false, log, 30),
+        makeTrackedTool("write_fast", true, log, 1),
+      ];
+
+      const result = await runAgent({
+        client,
+        tools,
+        messages: [{ role: "user", content: "go" }],
+      });
+
+      const toolMsgs = result.messages.filter((m) => m.role === "tool");
+      expect(toolMsgs.map((m) => m.toolCallId)).toEqual(["c1", "c2"]);
+    });
+  });
 });
