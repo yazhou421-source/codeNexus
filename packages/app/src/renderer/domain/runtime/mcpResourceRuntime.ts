@@ -4,7 +4,6 @@ import type {
   McpResourceTemplateDraftState,
   McpServerState,
 } from "../types";
-import { translate } from "../../i18n/translate";
 import { safeJsonStringify } from "../../utils/safeJson";
 
 export type McpResourceSourceTab = "resources" | "templates";
@@ -193,7 +192,7 @@ export function toMcpResourceTimelineContents(contents: McpResourceContentState[
       uri,
       mimeType,
       kind: "blob",
-      previewText: /^image\//i.test(mimeType) ? translate("mcpResources.imageContent") : "",
+      previewText: /^image\//i.test(mimeType) ? "图片内容" : "",
       sizeBytes: estimateBase64ByteLength(blob),
     };
   });
@@ -208,7 +207,7 @@ export function summarizeMcpResourceMimeTypes(contents: McpResourceTimelineConte
   return [...counts.entries()]
     .slice(0, 3)
     .map(([mimeType, count]) => (count > 1 ? `${mimeType} ×${count}` : mimeType))
-    .join(translate("timelineFormat.separator"));
+    .join(" ｜ ");
 }
 
 export function createMcpResourceReadRuntime(deps: McpResourceReadRuntimeDeps): McpResourceReadRuntime {
@@ -302,7 +301,7 @@ export function createMcpResourceReadRuntime(deps: McpResourceReadRuntimeDeps): 
         parameterEntries: readSummary.parameterEntries.map((entry) => ({ ...entry })),
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error ?? translate("mcpResources.readFailed"));
+      const message = error instanceof Error ? error.message : String(error ?? "读取失败");
       if (shouldTrackTimeline) {
         const failedPayload = buildTimelinePayload({
           status: "failed",

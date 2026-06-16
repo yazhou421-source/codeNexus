@@ -10,7 +10,6 @@ import type {
   McpToolCallStatus,
   McpToolGroupNode,
 } from "./buildTimelineNodes";
-import { translate } from "../../../i18n/translate";
 
 export function diffLineClass(kind: DiffLineKind) {
   if (kind === "meta") {
@@ -37,11 +36,11 @@ export function fileChangeEventClass(item: FileChangeNode) {
 }
 
 export function fileChangeStatusText(status: FileChangeNode["status"]) {
-  if (status === "running") return translate("timelineFormat.status.running");
-  if (status === "completed") return translate("timelineFormat.status.completed");
-  if (status === "failed") return translate("timelineFormat.status.failed");
-  if (status === "declined") return translate("timelineFormat.status.declined");
-  return translate("timelineFormat.status.unknown");
+  if (status === "running") return "进行中";
+  if (status === "completed") return "已完成";
+  if (status === "failed") return "失败";
+  if (status === "declined") return "已拒绝";
+  return "未知";
 }
 
 export function fileChangeCountsText(
@@ -49,10 +48,10 @@ export function fileChangeCountsText(
   files: Array<{ diffText: string; kind?: string }>
 ) {
   const parts: string[] = [];
-  if (counts.add) parts.push(translate("timelineFormat.fileCounts.add", { count: counts.add }));
-  if (counts.modify) parts.push(translate("timelineFormat.fileCounts.modify", { count: counts.modify }));
-  if (counts.delete) parts.push(translate("timelineFormat.fileCounts.delete", { count: counts.delete }));
-  if (counts.rename) parts.push(translate("timelineFormat.fileCounts.rename", { count: counts.rename }));
+  if (counts.add) parts.push(`新增 ${counts.add}`);
+  if (counts.modify) parts.push(`修改 ${counts.modify}`);
+  if (counts.delete) parts.push(`删除 ${counts.delete}`);
+  if (counts.rename) parts.push(`重命名 ${counts.rename}`);
 
   let addLines = 0;
   let delLines = 0;
@@ -64,10 +63,10 @@ export function fileChangeCountsText(
   if (addLines > 0 || delLines > 0) parts.push(`+${addLines} -${delLines}`);
 
   if (parts.length === 0) {
-    if (counts.unknown) return translate("timelineFormat.fileCounts.unknown", { count: counts.unknown });
-    return translate("timelineFormat.fileCounts.empty");
+    if (counts.unknown) return `变更 ${counts.unknown}`;
+    return "变更 —";
   }
-  return parts.join(translate("timelineFormat.separator"));
+  return parts.join(" ｜ ");
 }
 
 export function fileChangeFilesPreviewText(
@@ -98,11 +97,11 @@ export function fileChangeFilesPreviewTitle(
 }
 
 export function fileChangeKindText(kind: FileChangeKind) {
-  if (kind === "add") return translate("timelineFormat.changeKind.add");
-  if (kind === "modify") return translate("timelineFormat.changeKind.modify");
-  if (kind === "delete") return translate("timelineFormat.changeKind.delete");
-  if (kind === "rename") return translate("timelineFormat.changeKind.rename");
-  return translate("timelineFormat.status.unknown");
+  if (kind === "add") return "新增";
+  if (kind === "modify") return "修改";
+  if (kind === "delete") return "删除";
+  if (kind === "rename") return "重命名";
+  return "未知";
 }
 
 export function fileChangeKindClass(kind: FileChangeKind) {
@@ -126,14 +125,14 @@ export function fileChangeDiffMetaText(diffText: string, fileKind = "") {
   if (!text.trim()) return "—";
   const { add, del, lineCount } = getDiffLineStats(text, fileKind);
   if (add > 0 || del > 0) return `+${add} -${del}`;
-  return translate("timelineFormat.diffLines", { count: lineCount.toLocaleString() });
+  return `diff ${lineCount.toLocaleString()} 行`;
 }
 
 export function commandGroupItemStatusText(item: CommandGroupItem) {
-  if (item.status === "running") return translate("timelineFormat.status.running");
-  if (item.status === "completed") return translate("timelineFormat.status.success");
-  if (item.status === "failed") return translate("timelineFormat.status.failed");
-  return translate("timelineFormat.status.unknown");
+  if (item.status === "running") return "进行中";
+  if (item.status === "completed") return "成功";
+  if (item.status === "failed") return "失败";
+  return "未知";
 }
 
 const normalizeWhitespace = (value: string) =>
@@ -519,23 +518,23 @@ export function commandGroupItemActionText(item: CommandGroupItem) {
     const m = cmd.match(/\b(npm|pnpm|yarn)\b\s+run\s+([^\s]+)/i);
     const tool = String(m?.[1] ?? "npm").trim();
     const task = String(m?.[2] ?? "").trim();
-    if (task) return withPrefix(translate("timelineFormat.command.runTaskWithTask", { tool, task }));
-    return withPrefix(translate("timelineFormat.command.runTask", { tool }));
+    if (task) return withPrefix(`运行任务：${tool} run ${task}`);
+    return withPrefix(`运行任务：${tool} run`);
   }
 
   if (/\bnode\b/i.test(cmd)) {
     const quoted = extractFirstQuoted(cmd) || "";
-    if (quoted) return withPrefix(translate("timelineFormat.command.runScriptWithScript", { script: quoted }));
+    if (quoted) return withPrefix(`运行脚本：${quoted}`);
     const idx = tokens.findIndex((t) => String(t ?? "").toLowerCase() === "node");
     const next = idx >= 0 ? String(tokens[idx + 1] ?? "").trim() : "";
-    if (next) return withPrefix(translate("timelineFormat.command.runScriptWithScript", { script: next }));
-    return withPrefix(translate("timelineFormat.command.runScript"));
+    if (next) return withPrefix(`运行脚本：${next}`);
+    return withPrefix("运行脚本");
   }
 
-  if (/\btsc\b/i.test(cmd)) return withPrefix(translate("timelineFormat.command.typeCheck"));
-  if (/\beslint\b/i.test(cmd)) return withPrefix(translate("timelineFormat.command.lint"));
-  if (/\bvite\b/i.test(cmd) && lc.includes("build")) return withPrefix(translate("timelineFormat.command.buildOutput"));
-  if (/\belectron-builder\b/i.test(cmd)) return withPrefix(translate("timelineFormat.command.packageBuild"));
+  if (/\btsc\b/i.test(cmd)) return withPrefix("类型检查");
+  if (/\beslint\b/i.test(cmd)) return withPrefix("代码检查");
+  if (/\bvite\b/i.test(cmd) && lc.includes("build")) return withPrefix("构建产物");
+  if (/\belectron-builder\b/i.test(cmd)) return withPrefix("打包构建");
 
   // Git（版本控制）
   if (/(^|\s)git(\s|$)/i.test(cmd)) {
@@ -549,23 +548,19 @@ export function commandGroupItemActionText(item: CommandGroupItem) {
     const sub = String(tokens[1] ?? "")
       .trim()
       .toLowerCase();
-    if (sub === "ps") return withPrefix(translate("timelineFormat.command.dockerListContainers"));
+    if (sub === "ps") return withPrefix("Docker：列出容器");
     if (sub === "inspect") {
       const target = String(tokens[2] ?? "").trim();
-      return withPrefix(
-        target
-          ? translate("timelineFormat.command.dockerInspectWithTarget", { target })
-          : translate("timelineFormat.command.dockerInspect")
-      );
+      return withPrefix(target ? `Docker：查看配置：${target}` : "Docker：查看配置");
     }
     if (sub === "exec") {
       const target = String(tokens[2] ?? "").trim();
       const inner = tokens.slice(3).join(" ").trim();
       const innerShort = inner ? shortenText(inner, 80) : "";
       if (target && innerShort)
-        return withPrefix(translate("timelineFormat.command.dockerExecTargetCommand", { target, command: innerShort }));
-      if (target) return withPrefix(translate("timelineFormat.command.dockerExecTarget", { target }));
-      return withPrefix(translate("timelineFormat.command.dockerExec"));
+        return withPrefix(`Docker：执行：${target} ${innerShort}`);
+      if (target) return withPrefix(`Docker：执行：${target}`);
+      return withPrefix("Docker：执行");
     }
     if (sub) return withPrefix(`Docker：${sub}`);
     return withPrefix("Docker");
@@ -575,16 +570,16 @@ export function commandGroupItemActionText(item: CommandGroupItem) {
   if (String(tokens[0] ?? "").toLowerCase() === "curl") {
     const url = tokens.find((t) => /^https?:\/\//i.test(String(t ?? ""))) ?? "";
     const u = String(url ?? "").trim();
-    if (u) return withPrefix(translate("timelineFormat.command.httpRequestWithUrl", { url: u }));
-    return withPrefix(translate("timelineFormat.command.httpRequest"));
+    if (u) return withPrefix(`HTTP：请求 ${u}`);
+    return withPrefix("HTTP：请求");
   }
 
   // 端口 / 网络（netstat）
   if (/\bnetstat\b/i.test(cmd)) {
     const ports = Array.from(new Set((cmd.match(/:(\d{2,5})/g) ?? []).map((m) => m.slice(1))));
     if (ports.length > 0)
-      return withPrefix(translate("timelineFormat.command.portCheckWithPorts", { ports: ports.slice(0, 4).join(",") }));
-    return withPrefix(translate("timelineFormat.command.portCheck"));
+      return withPrefix(`端口检查：${ports.slice(0, 4).join(",")}`);
+    return withPrefix("端口检查");
   }
 
   // Windows where.exe（查找可执行文件）
@@ -595,20 +590,20 @@ export function commandGroupItemActionText(item: CommandGroupItem) {
       .map((t) => String(t ?? "").trim())
       .filter(Boolean);
     const shown = names.slice(0, 4).join(", ");
-    if (shown) return withPrefix(translate("timelineFormat.command.findCommandWithNames", { names: shown }));
-    return withPrefix(translate("timelineFormat.command.findCommand"));
+    if (shown) return withPrefix(`查找命令：${shown}`);
+    return withPrefix("查找命令");
   }
 
   // Get-Date（获取时间）
   if (/^get-date\b/i.test(cmd)) {
-    return withPrefix(translate("timelineFormat.command.getTime"));
+    return withPrefix("获取时间");
   }
 
   // Get-CimInstance Win32_Process（按 PID 查询）
   if (/^get-ciminstance\b/i.test(cmd) && /\bwin32_process\b/i.test(cmd)) {
     const pid = cmd.match(/\bprocessid\s*=\s*(\d{1,10})\b/i)?.[1] ?? "";
-    if (pid) return withPrefix(translate("timelineFormat.command.processQueryWithPid", { pid }));
-    return withPrefix(translate("timelineFormat.command.processQuery"));
+    if (pid) return withPrefix(`查询进程：PID=${pid}`);
+    return withPrefix("查询进程");
   }
 
   // Python / Django 命令识别
@@ -620,9 +615,9 @@ export function commandGroupItemActionText(item: CommandGroupItem) {
     firstLower.endsWith("python.exe")
   ) {
     if (tokens.includes("-V") || tokens.includes("--version"))
-      return withPrefix(translate("timelineFormat.command.pythonVersion"));
+      return withPrefix("Python：版本");
     const cIdx = tokens.findIndex((t) => String(t ?? "").toLowerCase() === "-c");
-    if (cIdx >= 0) return withPrefix(translate("timelineFormat.command.pythonExecC"));
+    if (cIdx >= 0) return withPrefix("Python：执行 -c");
     const manageIdx = tokens.findIndex((t) => /manage\.py$/i.test(String(t ?? "")));
     if (manageIdx >= 0) {
       const sub = String(tokens[manageIdx + 1] ?? "")
@@ -630,41 +625,33 @@ export function commandGroupItemActionText(item: CommandGroupItem) {
         .toLowerCase();
       const app = String(tokens[manageIdx + 2] ?? "").trim();
       if (sub === "migrate")
-        return withPrefix(
-          app
-            ? translate("timelineFormat.command.djangoMigrateApp", { app })
-            : translate("timelineFormat.command.djangoMigrate")
-        );
+        return withPrefix(app ? `Django：迁移 ${app}` : "Django：迁移");
       if (sub === "showmigrations")
-        return withPrefix(
-          app
-            ? translate("timelineFormat.command.djangoShowMigrationsApp", { app })
-            : translate("timelineFormat.command.djangoShowMigrations")
-        );
+        return withPrefix(app ? `Django：查看迁移 ${app}` : "Django：查看迁移");
       if (sub) return withPrefix(`Django：${sub}`);
-      return withPrefix(translate("timelineFormat.command.djangoManage"));
+      return withPrefix("Django：manage.py");
     }
-    return withPrefix(translate("timelineFormat.command.pythonExec"));
+    return withPrefix("Python：执行");
   }
 
   // 文件操作
   if (/^new-item\b/i.test(cmd) && /\b-itemtype\b/i.test(cmd) && /\bdirectory\b/i.test(cmd)) {
     const path = extractFlagValue(cmd, "-Path") || extractFirstQuoted(cmd) || String(tokens[tokens.length - 1] ?? "");
     if (path)
-      return withPrefix(translate("timelineFormat.command.createDirectoryWithPath", { path: unquoteToken(path) }));
-    return withPrefix(translate("timelineFormat.command.createDirectory"));
+      return withPrefix(`创建目录：${unquoteToken(path)}`);
+    return withPrefix("创建目录");
   }
 
   if (/^set-content\b/i.test(cmd)) {
     const path = extractFlagValue(cmd, "-Path") || extractFirstQuoted(cmd) || String(tokens[tokens.length - 1] ?? "");
-    if (path) return withPrefix(translate("timelineFormat.command.writeFileWithPath", { path: unquoteToken(path) }));
-    return withPrefix(translate("timelineFormat.command.writeFile"));
+    if (path) return withPrefix(`写入文件：${unquoteToken(path)}`);
+    return withPrefix("写入文件");
   }
 
   if (/^resolve-path\b/i.test(cmd)) {
     const path = extractFirstQuoted(cmd) || String(tokens[1] ?? "");
-    if (path) return withPrefix(translate("timelineFormat.command.resolvePathWithPath", { path: unquoteToken(path) }));
-    return withPrefix(translate("timelineFormat.command.resolvePath"));
+    if (path) return withPrefix(`解析路径：${unquoteToken(path)}`);
+    return withPrefix("解析路径");
   }
 
   // PowerShell 片段的脚本式兜底（多语句 / 管道 / 结构语句）
@@ -676,7 +663,7 @@ export function commandGroupItemActionText(item: CommandGroupItem) {
     (cmd.match(/;/g)?.length ?? 0) >= 2
   ) {
     const head = cmd.split(";")[0] ?? cmd;
-    return withPrefix(translate("timelineFormat.command.scriptPreview", { script: shortenText(head, 90) }));
+    return withPrefix(`脚本：${shortenText(head, 90)}`);
   }
 
   // 通用兜底：可执行文件 + 简短参数预览
@@ -689,13 +676,13 @@ export function commandGroupItemActionText(item: CommandGroupItem) {
       .trim();
     const tail = args ? ` ${shortenText(args, 72)}` : "";
     if (scope)
-      return withPrefix(translate("timelineFormat.command.executeWithScope", { command: `${exe}${tail}`, scope }));
-    return withPrefix(translate("timelineFormat.command.execute", { command: `${exe}${tail}` }));
+      return withPrefix(`执行：${exe}${tail}（${scope}）`);
+    return withPrefix(`执行：${exe}${tail}`);
   }
 
   const out = shortenText(String(item.outputPreview ?? ""), 80);
-  if (out) return withPrefix(translate("timelineFormat.command.execute", { command: out }));
-  return withPrefix(translate("timelineFormat.command.executeUnknown"));
+  if (out) return withPrefix(`执行：${out}`);
+  return withPrefix("执行：未知命令");
 }
 
 export function commandGroupItemActionDetailText(item: CommandGroupItem) {
@@ -705,7 +692,7 @@ export function commandGroupItemActionDetailText(item: CommandGroupItem) {
   if (/\b(get-content|cat|type)\b/i.test(cmd)) return "";
   if (/\b(get-childitem|gci|dir|ls)\b/i.test(cmd)) return "";
   const scope = inferScopeHint(cmd);
-  if (scope) return translate("timelineFormat.command.scope", { scope });
+  if (scope) return `范围：${scope}`;
   return "";
 }
 
@@ -759,8 +746,8 @@ export function commandActionNodeTitle(node: CommandActionNode) {
       const head = node.item.files.slice(0, MAX_GCI_FILES_PREVIEW);
       const remain = Math.max(0, node.item.filesCount - head.length);
       const listText = head.join(", ");
-      const suffix = remain > 0 ? translate("timelineFormat.remainingSuffix", { count: remain }) : "";
-      return [translate("timelineFormat.filesPreview", { count: node.item.filesCount, files: listText, suffix })];
+      const suffix = remain > 0 ? `…（剩余 ${remain}）` : "";
+      return [`文件（${node.item.filesCount}）：${listText}${suffix}`];
     }
 
     const { body } = splitRunnerOutput(node.item.outputFull ?? "");
@@ -770,7 +757,7 @@ export function commandActionNodeTitle(node: CommandActionNode) {
     lines.push("result:");
     if (previewLines.length === 0) lines.push("—");
     else lines.push(...previewLines);
-    if (truncated) lines.push(translate("timelineFormat.outputTruncatedLines", { count: MAX_PREVIEW_LINES }));
+    if (truncated) lines.push(`…（已截断，仅展示前 ${MAX_PREVIEW_LINES} 行）`);
     return lines;
   };
 
@@ -786,7 +773,7 @@ export function commandActionNodeTitle(node: CommandActionNode) {
 
   let text = parts.join("\n");
   if (text.length > MAX_TOOLTIP_CHARS) {
-    text = `${text.slice(0, Math.max(0, MAX_TOOLTIP_CHARS - 1))}${translate("timelineFormat.truncatedSuffix")}`;
+    text = `${text.slice(0, Math.max(0, MAX_TOOLTIP_CHARS - 1))}…（已截断）`;
   }
   return text;
 }
@@ -807,37 +794,30 @@ export function mcpToolGroupClass(group: McpToolGroupNode) {
 }
 
 export function mcpToolGroupTagText(group: McpToolGroupNode) {
-  if (group.stats.failed > 0) return translate("timelineFormat.mcp.groupFailed");
-  if (group.stats.running > 0) return translate("timelineFormat.mcp.groupRunning");
+  if (group.stats.failed > 0) return "MCP（异常）";
+  if (group.stats.running > 0) return "MCP（进行中）";
   return "MCP";
 }
 
 export function mcpToolGroupSummaryText(group: McpToolGroupNode) {
   if (group.stats.running > 0)
-    return translate("timelineFormat.mcp.summaryRunning", { running: group.stats.running, total: group.stats.total });
+    return `进行中 ${group.stats.running}/${group.stats.total}`;
   if (group.stats.failed > 0)
-    return translate("timelineFormat.mcp.summaryFailed", {
-      completed: group.stats.completed,
-      total: group.stats.total,
-      failed: group.stats.failed,
-    });
+    return `完成 ${group.stats.completed}/${group.stats.total} ｜ 异常 ${group.stats.failed}`;
   if (group.stats.completed > 0)
-    return translate("timelineFormat.mcp.summaryCompleted", {
-      completed: group.stats.completed,
-      total: group.stats.total,
-    });
-  return translate("timelineFormat.mcp.summaryPending", { total: group.stats.total });
+    return `已完成 ${group.stats.completed}/${group.stats.total}`;
+  return `待确认 ${group.stats.total}`;
 }
 
 export function mcpToolGroupStatsText(group: McpToolGroupNode) {
   const parts = [
-    translate("timelineFormat.mcp.statsTotal", { count: group.stats.total }),
-    translate("timelineFormat.mcp.statsCompleted", { count: group.stats.completed }),
-    translate("timelineFormat.mcp.statsRunning", { count: group.stats.running }),
+    `总计 ${group.stats.total}`,
+    `完成 ${group.stats.completed}`,
+    `进行中 ${group.stats.running}`,
   ];
-  if (group.stats.failed > 0) parts.push(translate("timelineFormat.mcp.statsFailed", { count: group.stats.failed }));
-  if (group.stats.unknown > 0) parts.push(translate("timelineFormat.mcp.statsUnknown", { count: group.stats.unknown }));
-  return parts.join(translate("timelineFormat.separator"));
+  if (group.stats.failed > 0) parts.push(`异常 ${group.stats.failed}`);
+  if (group.stats.unknown > 0) parts.push(`未知 ${group.stats.unknown}`);
+  return parts.join(" ｜ ");
 }
 
 export function mcpToolItemClass(item: McpToolCallItem) {
@@ -851,14 +831,14 @@ export function mcpToolItemClass(item: McpToolCallItem) {
 export function mcpToolItemStatusText(item: McpToolCallItem) {
   const status = ensureMcpToolCallStatus(item);
   if (status === "running") {
-    if (item.startedAt == null) return translate("timelineFormat.status.running");
+    if (item.startedAt == null) return "进行中";
     const elapsedMs = Math.max(0, Date.now() - item.startedAt);
     const elapsedSec = Math.max(1, Math.round(elapsedMs / 1000));
-    return translate("timelineFormat.status.runningElapsed", { seconds: elapsedSec });
+    return `进行中（${elapsedSec}s）`;
   }
-  if (status === "completed") return translate("timelineFormat.status.completed");
-  if (status === "failed") return translate("timelineFormat.status.failed");
-  return translate("timelineFormat.status.unknown");
+  if (status === "completed") return "已完成";
+  if (status === "failed") return "失败";
+  return "未知";
 }
 
 export function mcpToolItemMetricsText(item: McpToolCallItem) {
@@ -877,7 +857,7 @@ export function mcpToolItemMetaText(item: McpToolCallItem) {
 }
 
 export function mcpToolItemTitle(item: McpToolCallItem) {
-  const toolText = String(item.tool ?? "").trim() || translate("timelineFormat.mcp.toolFallback");
+  const toolText = String(item.tool ?? "").trim() || "MCP 工具";
   const eventsText = String(item.eventsSummary ?? "").trim();
   if (!eventsText) return toolText;
   return `${toolText}\n${eventsText}`;

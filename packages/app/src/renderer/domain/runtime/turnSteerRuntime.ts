@@ -3,14 +3,12 @@ import type { UserTurnInput } from "../types";
 import type { TurnSteerParams } from "@codenexus/generated/codex-app-server/v2/TurnSteerParams";
 
 type RuntimeEventLevel = "info" | "warn" | "error";
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 
 export type TurnSteerRuntimeDeps = {
   getServerIdForThread: (threadId: string) => string;
   toCodexUserInputs: (input: UserTurnInput[]) => TurnSteerParams["input"];
   pushEvent: PushEvent;
-  translate: TranslateFn;
 };
 
 export type TurnSteerRuntime = {
@@ -26,13 +24,13 @@ function readErrorMessage(error: unknown): string {
 }
 
 export function createTurnSteerRuntime(deps: TurnSteerRuntimeDeps): TurnSteerRuntime {
-  const { getServerIdForThread, toCodexUserInputs, pushEvent, translate } = deps;
+  const { getServerIdForThread, toCodexUserInputs, pushEvent } = deps;
 
   const requestTurnSteer = async (threadId: string, input: UserTurnInput[], turnIdValue: string) => {
     const serverId = getServerIdForThread(threadId);
     if (!serverId) return false;
     if (!turnIdValue) {
-      pushEvent("steer:error", translate("runtime.missingActiveTurnForSteer"), { threadId, level: "error" });
+      pushEvent("steer:error", "缺少 active turnId，无法执行 turn/steer", { threadId, level: "error" });
       return false;
     }
     const params = {

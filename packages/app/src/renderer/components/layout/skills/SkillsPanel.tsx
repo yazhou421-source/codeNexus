@@ -2,7 +2,6 @@ import { Blocks } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getRuntimeOrchestrator } from "../../../domain/runtimeOrchestrator";
 import type { SkillState } from "../../../domain/types";
-import { translate } from "../../../i18n/translate";
 import { useRuntimeStore } from "../../../stores/runtime.store";
 import { useSkillsStore } from "../../../stores/skills.store";
 import { useSkillsUiStore } from "../../../stores/skillsUi.store";
@@ -14,19 +13,19 @@ type SkillsPanelProps = {
 };
 
 function stateText(runtimeStore: ReturnType<typeof useRuntimeStore>, skillsStore: ReturnType<typeof useSkillsStore>) {
-  if (!runtimeStore.serverId) return translate("skills.disconnected");
-  if (!runtimeStore.workspacePath) return translate("skills.noWorkspace");
-  if (skillsStore.loadState === "loading") return translate("skills.loading");
+  if (!runtimeStore.serverId) return "未连接服务";
+  if (!runtimeStore.workspacePath) return "未选择工作区";
+  if (skillsStore.loadState === "loading") return "加载中…";
   if (skillsStore.loadState === "error") {
     return skillsStore.errorText
-      ? translate("skills.loadFailedWithMessage", { message: skillsStore.errorText })
-      : translate("skills.loadFailed");
+      ? `加载失败：${skillsStore.errorText}`
+      : "加载失败";
   }
   if (skillsStore.items.length === 0) {
     if (skillsStore.parseErrors.length > 0) {
-      return translate("skills.emptyWithErrors", { count: skillsStore.parseErrors.length });
+      return `暂无可用技能（错误 ${skillsStore.parseErrors.length} 项）`;
     }
-    return translate("skills.empty");
+    return "暂无可用技能";
   }
   return "";
 }
@@ -63,8 +62,8 @@ export default function SkillsPanel({ className, onOpenManager }: SkillsPanelPro
         <div className="skills-panel-title">
           <Blocks className="skills-panel-icon" aria-hidden="true" />
           <div className="skills-panel-title-copy">
-            <span className="skills-panel-title-text">{translate("skills.panelTitle")}</span>
-            <span className="skills-panel-title-subtext mono dim">{translate("skills.panelSubtitle")}</span>
+            <span className="skills-panel-title-text">技能（Skills）</span>
+            <span className="skills-panel-title-subtext mono dim">内置能力开关</span>
           </div>
         </div>
         <div className="skills-panel-actions">
@@ -75,18 +74,18 @@ export default function SkillsPanel({ className, onOpenManager }: SkillsPanelPro
             disabled={!canOpenManager}
             onClick={() => (onOpenManager ? onOpenManager() : skillsUiStore.openManager())}
           >
-            {translate("skills.manager")}
+            管理器
           </button>
           <button id="btn-refresh-skills" className="btn-mini" type="button" disabled={!canRefresh} onClick={() => void runtime.refreshSkills(true)}>
-            {translate("skills.refresh")}
+            刷新
           </button>
         </div>
       </header>
 
       {skillsStore.items.length > 0 && !currentStateText ? (
         <div className="skills-panel-meta mono dim">
-          <span>{translate("skills.totalCount", { count: skillsStore.items.length })}</span>
-          <span>{translate("skills.enabledCount", { count: enabledCount })}</span>
+          <span>{`共 ${skillsStore.items.length} 项`}</span>
+          <span>{`已启用 ${enabledCount} 项`}</span>
         </div>
       ) : null}
 
@@ -94,7 +93,7 @@ export default function SkillsPanel({ className, onOpenManager }: SkillsPanelPro
         items={skillsStore.items}
         pendingPath={pendingPath}
         stateText={currentStateText}
-        emptyText={translate("skills.empty")}
+        emptyText="暂无可用技能"
         mode="compact"
         onToggleSkill={toggleSkill}
       />

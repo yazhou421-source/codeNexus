@@ -2,7 +2,6 @@ import { getRuntimeOrchestrator } from "../../domain/runtimeOrchestrator";
 import type { ApprovalPrompt } from "../../stores/approval.store";
 import { useApprovalStore } from "../../stores/approval.store";
 import { useRuntimeStore } from "../../stores/runtime.store";
-import { translate } from "../../i18n/translate";
 import { safeJsonStringify } from "../../utils/safeJson";
 import GuardianReviewDiagnostics from "../guardian/GuardianReviewDiagnostics";
 
@@ -42,7 +41,7 @@ function promptKey(prompt: ApprovalPrompt) {
 
 function promptAge(prompt: ApprovalPrompt) {
   const createdAt = Number(prompt.createdAt ?? 0);
-  if (!Number.isFinite(createdAt) || createdAt <= 0) return translate("topbarApproval.justNow");
+  if (!Number.isFinite(createdAt) || createdAt <= 0) return "刚刚";
   const seconds = Math.max(0, Math.floor((Date.now() - createdAt) / 1000));
   if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
@@ -51,10 +50,10 @@ function promptAge(prompt: ApprovalPrompt) {
 }
 
 function headerText(prompt: ApprovalPrompt) {
-  if (prompt.kind === "fileChange") return translate("topbarApproval.fileChangeRequest");
-  if (prompt.kind === "commandExecution") return translate("topbarApproval.commandExecutionRequest");
-  if (prompt.kind === "permissions") return translate("topbarApproval.permissionsRequest");
-  return translate("topbarApproval.approvalRequest");
+  if (prompt.kind === "fileChange") return "文件变更请求";
+  if (prompt.kind === "commandExecution") return "命令执行请求";
+  if (prompt.kind === "permissions") return "权限请求";
+  return "审批请求";
 }
 
 function metaText(prompt: ApprovalPrompt) {
@@ -75,10 +74,10 @@ function detailRows(prompt: ApprovalPrompt): ApprovalInfoRow[] {
     ? params.command.map((part) => toText(part)).filter(Boolean).join(" ")
     : toText(params.command);
   const rows: ApprovalInfoRow[] = [];
-  if (reason) rows.push({ label: translate("topbarApproval.reason"), value: reason });
-  if (grantRoot) rows.push({ label: translate("topbarApproval.grantRoot"), value: grantRoot });
-  if (cwd) rows.push({ label: translate("topbarApproval.cwd"), value: cwd });
-  if (command) rows.push({ label: translate("topbarApproval.command"), value: command });
+  if (reason) rows.push({ label: "申请原因", value: reason });
+  if (grantRoot) rows.push({ label: "授权根", value: grantRoot });
+  if (cwd) rows.push({ label: "工作目录", value: cwd });
+  if (command) rows.push({ label: "命令", value: command });
   return rows;
 }
 
@@ -96,31 +95,31 @@ function commandDecisionButtons(prompt: ApprovalPrompt): CommandExecutionDecisio
   const buttons: CommandExecutionDecisionButton[] = [];
   for (const decision of decisions) {
     if (decision === "accept") {
-      buttons.push({ key: "accept", label: translate("topbarApproval.accept"), decision, kind: "primary" });
+      buttons.push({ key: "accept", label: "允许", decision, kind: "primary" });
       continue;
     }
     if (decision === "acceptForSession") {
       buttons.push({
         key: "acceptForSession",
-        label: translate("topbarApproval.acceptForSession"),
+        label: "本会话允许",
         decision,
         kind: "primary",
       });
       continue;
     }
     if (decision === "decline") {
-      buttons.push({ key: "decline", label: translate("topbarApproval.decline"), decision, kind: "danger" });
+      buttons.push({ key: "decline", label: "拒绝", decision, kind: "danger" });
       continue;
     }
     if (decision === "cancel") {
-      buttons.push({ key: "cancel", label: translate("topbarApproval.declineAndStop"), decision, kind: "danger" });
+      buttons.push({ key: "cancel", label: "拒绝并停止", decision, kind: "danger" });
       continue;
     }
     if (!decision || typeof decision !== "object") continue;
     if ("acceptWithExecpolicyAmendment" in decision) {
       buttons.push({
         key: "acceptWithExecpolicyAmendment",
-        label: translate("topbarApproval.acceptWithPolicy"),
+        label: "允许并保存策略",
         decision,
         kind: "primary",
       });
@@ -135,8 +134,8 @@ function commandDecisionButtons(prompt: ApprovalPrompt): CommandExecutionDecisio
       buttons.push({
         key: `applyNetworkPolicyAmendment:${action}:${host}`,
         label: suffix
-          ? translate("topbarApproval.applyNetworkPolicyWithSuffix", { suffix })
-          : translate("topbarApproval.applyNetworkPolicy"),
+          ? `应用网络策略：${suffix}`
+          : "应用网络策略",
         decision,
         kind: "primary",
       });
@@ -161,11 +160,11 @@ export default function ApprovalDock({ className }: ApprovalDockProps) {
   const guardianTargetItemId = toText(activePrompt?.itemId);
 
   return (
-    <div className={["approval-dock", className].filter(Boolean).join(" ")} role="region" aria-label={translate("topbarApproval.approval")}>
+    <div className={["approval-dock", className].filter(Boolean).join(" ")} role="region" aria-label="审批">
       <div className="row" style={{ alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
         <div className="row" style={{ alignItems: "center", gap: 8 }}>
           <span className="attn-dot" aria-hidden="true" />
-          <div className="text-[12px] font-semibold tracking-[0.2px] text-[color:var(--text)]">{translate("topbarApproval.approval")}</div>
+          <div className="text-[12px] font-semibold tracking-[0.2px] text-[color:var(--text)]">审批</div>
         </div>
         <span className="mono dim text-[11px]">{approvalStore.queue.length || 0}</span>
       </div>
@@ -173,7 +172,7 @@ export default function ApprovalDock({ className }: ApprovalDockProps) {
       <div id="approval-box" className={activePrompt ? "" : "dim"}>
         {!activePrompt ? (
           <div className="grid gap-2">
-            <div>{translate("topbarApproval.noPending")}</div>
+            <div>当前无待审批请求</div>
             <GuardianReviewDiagnostics threadId={guardianThreadId} focusTargetItemId={guardianTargetItemId} maxItems={4} />
           </div>
         ) : (
@@ -197,7 +196,7 @@ export default function ApprovalDock({ className }: ApprovalDockProps) {
                 })}
                 {approvalStore.queue.length > 8 ? (
                   <div className="mono dim text-[11px]">
-                    {translate("topbarApproval.hiddenCount", { count: approvalStore.queue.length - 8 })}
+                    还有 {approvalStore.queue.length - 8} 条未显示
                   </div>
                 ) : null}
               </div>
@@ -227,16 +226,16 @@ export default function ApprovalDock({ className }: ApprovalDockProps) {
               {activePrompt.kind === "fileChange" ? (
                 <>
                   <button type="button" onClick={() => void runtime.submitActiveApprovalPrompt("decline")}>
-                    {translate("topbarApproval.decline")}
+                    拒绝
                   </button>
                   <button className="danger" type="button" onClick={() => void runtime.submitActiveApprovalPrompt("cancel")}>
-                    {translate("topbarApproval.declineAndInterrupt")}
+                    拒绝并中断
                   </button>
                   <button type="button" onClick={() => void runtime.submitActiveApprovalPrompt("acceptForSession")}>
-                    {translate("topbarApproval.acceptForSession")}
+                    本会话允许
                   </button>
                   <button type="button" onClick={() => void runtime.submitActiveApprovalPrompt("accept")}>
-                    {translate("topbarApproval.accept")}
+                    允许
                   </button>
                 </>
               ) : null}
@@ -255,16 +254,16 @@ export default function ApprovalDock({ className }: ApprovalDockProps) {
               {activePrompt.kind === "permissions" ? (
                 <>
                   <button type="button" onClick={() => void runtime.submitActiveApprovalPrompt("decline")}>
-                    {translate("topbarApproval.decline")}
+                    拒绝
                   </button>
                   <button className="danger" type="button" onClick={() => void runtime.submitActiveApprovalPrompt("cancel")}>
-                    {translate("topbarApproval.declineAndClose")}
+                    拒绝并关闭
                   </button>
                   <button type="button" onClick={() => void runtime.submitActiveApprovalPrompt("session")}>
-                    {translate("topbarApproval.acceptForSession")}
+                    本会话允许
                   </button>
                   <button type="button" onClick={() => void runtime.submitActiveApprovalPrompt("turn")}>
-                    {translate("topbarApproval.acceptForTurn")}
+                    仅本轮允许
                   </button>
                 </>
               ) : null}

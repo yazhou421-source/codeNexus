@@ -1,5 +1,4 @@
 import { codexDesktop } from "../../api/codexDesktopClient";
-import { translate } from "../../i18n/translate";
 
 type CacheEntry = {
   dataUrl: string;
@@ -37,7 +36,7 @@ export async function readLocalImageDataUrl(path: string): Promise<string> {
   const promise = (async () => {
     const res = await codexDesktop.app.readImageFileDataUrl({ path: key });
     const dataUrl = String(res?.dataUrl ?? "").trim();
-    if (!dataUrl) throw new Error(translate("imageWorkbench.emptyImageReadResult"));
+    if (!dataUrl) throw new Error("图片读取结果为空");
     localImageCache.set(key, { dataUrl, lastAccessAt: Date.now() });
     pruneLocalImageCache();
     return dataUrl;

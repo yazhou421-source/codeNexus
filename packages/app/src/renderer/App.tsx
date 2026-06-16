@@ -1,5 +1,4 @@
 import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import TopBar from "./components/layout/TopBar";
 import CenterPane from "./components/layout/CenterPane";
 import BottomBar from "./components/layout/BottomBar";
@@ -54,7 +53,6 @@ function applyWindowStateToDocument(state: AppWindowState) {
 }
 
 export default function App() {
-  const { t } = useTranslation();
   const appShellStore = useAppShellStore();
   const appClosingStore = useAppClosingStore();
   const goalShutdownStore = useGoalShutdownStore();
@@ -298,7 +296,7 @@ export default function App() {
             className="center-workbench-sash"
             role="separator"
             aria-orientation="vertical"
-            aria-label={t("appShell.resizeEditor")}
+            aria-label={"调整文件编辑器宽度"}
             aria-valuenow={Math.round(effectiveEditorWidthPx)}
             tabIndex={0}
             onPointerDown={onEditorSashPointerDown}

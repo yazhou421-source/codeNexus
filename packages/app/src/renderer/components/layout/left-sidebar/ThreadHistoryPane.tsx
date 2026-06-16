@@ -1,6 +1,5 @@
 import { ChevronDown, Folder, RefreshCw, SquarePen } from "lucide-react";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { useTranslation } from "react-i18next";
 import { codexDesktop } from "../../../api/codexDesktopClient";
 import { getRuntimeOrchestrator } from "../../../domain/runtimeOrchestrator";
 import type { LocalThreadItem, ThreadHistoryItem } from "../../../domain/types";
@@ -108,7 +107,6 @@ function threadRowDepthStyle(depth: number) {
 }
 
 export default function ThreadHistoryPane({ className }: ThreadHistoryPaneProps) {
-  const { t } = useTranslation();
   const runtime = getRuntimeOrchestrator();
   const appShellStore = useAppShellStore();
   const runtimeStore = useRuntimeStore();
@@ -173,7 +171,7 @@ export default function ThreadHistoryPane({ className }: ThreadHistoryPaneProps)
       };
       const cwd = String(item.cwd ?? "").trim();
       const key = cwd ? normalizeFsPath(cwd) : "__no_workspace__";
-      const title = cwd ? toBasename(cwd) : t("threadHistory.noWorkspace");
+      const title = cwd ? toBasename(cwd) : "无工作区";
       const existing = groups.get(key);
       if (existing) {
         existing.updatedAt = Math.max(existing.updatedAt, item.updatedAt);
@@ -201,7 +199,7 @@ export default function ThreadHistoryPane({ className }: ThreadHistoryPaneProps)
       return byTitle !== 0 ? byTitle : compareWorkspaceTitle(a.cwdFull || a.key, b.cwdFull || b.key);
     });
     return out;
-  }, [t, threadStore, visibleThreadItems]);
+  }, [threadStore, visibleThreadItems]);
 
   const visibleThreadGroupKeys = useMemo(() => new Set(threadGroups.map((group) => group.key).filter(Boolean)), [threadGroups]);
   const currentThreadGroupKey = useMemo(() => {
@@ -232,7 +230,7 @@ export default function ThreadHistoryPane({ className }: ThreadHistoryPaneProps)
 
   const totalThreadListCount = visibleThreadItems.length;
   const runningThreadsCount = threadStore.runningThreadIds.size;
-  const threadsCountText = t("threadHistory.totalCount", { count: totalThreadListCount });
+  const threadsCountText = `总计 ${totalThreadListCount}`;
   const invalidWorkspacePath =
     appShellStore.serverConnState === "failed" ? extractInvalidWorkspacePathFromError(appShellStore.serverError) : "";
   const isInvalidWorkspaceItem = (item: { cwd?: string }) => {
@@ -249,7 +247,7 @@ export default function ThreadHistoryPane({ className }: ThreadHistoryPaneProps)
   const threadAriaLabel = (row: ThreadRowModel) => {
     const title = threadStore.displayThreadTitle(row.item.id, row.item.title);
     const git = String(row.item.gitInfoSummary ?? "").trim();
-    return git ? `${t("threadHistory.openThreadAria", { title })} · ${git}` : t("threadHistory.openThreadAria", { title });
+    return git ? `打开线程：${title} · ${git}` : `打开线程：${title}`;
   };
   const formatRelativeTime = (updatedAt: number) => {
     const ts = Number(updatedAt);
@@ -297,7 +295,7 @@ export default function ThreadHistoryPane({ className }: ThreadHistoryPaneProps)
       else threadStore.clearThreadTitleOverride(threadId);
       showToast({
         kind: "error",
-        title: t("threadHistory.renameFailed"),
+        title: "重命名失败",
         message: error instanceof Error ? error.message : String(error),
       });
     }
@@ -307,11 +305,11 @@ export default function ThreadHistoryPane({ className }: ThreadHistoryPaneProps)
     <div className={["lsb-pane-content", className].filter(Boolean).join(" ")}>
       <div className="lsb-pane-head">
         <div className="lsb-pane-head-row">
-          <div className="lsb-pane-title">{t("threadHistory.title")}</div>
+          <div className="lsb-pane-title">线程</div>
           <div className="lsb-head-badges">
             <span className="lsb-head-badge is-accent mono">{threadsCountText}</span>
             {runningThreadsCount > 0 ? (
-              <span className="lsb-head-badge is-success mono">{t("threadHistory.runningCount", { count: runningThreadsCount })}</span>
+              <span className="lsb-head-badge is-success mono">{`运行 ${runningThreadsCount}`}</span>
             ) : null}
           </div>
         </div>
@@ -319,13 +317,13 @@ export default function ThreadHistoryPane({ className }: ThreadHistoryPaneProps)
         <div className="lsb-pane-toolbar lsb-thread-toolbar">
           <button id="btn-add-thread" className="lsb-nav-row lsb-thread-create-btn" type="button" onClick={() => void runtime.createThread()}>
             <SquarePen className="lsb-nav-icon" aria-hidden="true" />
-            <span className="lsb-nav-text">{t("threadHistory.newThread")}</span>
+            <span className="lsb-nav-text">新建线程</span>
           </button>
           <button
             id="btn-refresh-history"
             className="lsb-icon-btn lsb-thread-refresh-btn"
             type="button"
-            aria-label={t("common.refresh")}
+            aria-label="刷新"
             disabled={isRefreshingHistory}
             onClick={() => void onRefreshHistoryClick()}
           >
@@ -340,9 +338,9 @@ export default function ThreadHistoryPane({ className }: ThreadHistoryPaneProps)
         <div className={["lsb-thread-groups", totalThreadListCount === 0 ? "dim" : ""].filter(Boolean).join(" ")}>
           {totalThreadListCount === 0 ? (
             <div className="lsb-empty lsb-thread-empty mono">
-              <div className="dim">{t("threadHistory.empty")}</div>
+              <div className="dim">暂无线程</div>
               <button className="lsb-nav-row lsb-nav-row--workspace" type="button" onClick={() => void runtime.createThread()}>
-                <span className="lsb-nav-text">{t("threadHistory.newThread")}</span>
+                <span className="lsb-nav-text">新建线程</span>
               </button>
             </div>
           ) : (

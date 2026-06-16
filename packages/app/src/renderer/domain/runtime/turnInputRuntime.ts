@@ -1,5 +1,4 @@
 import { codexDesktop } from "../../api/codexDesktopClient";
-import { translate } from "../../i18n/translate";
 import {
   buildComposeDraftFromUserTurnInputs,
   cloneComposeTextElements,
@@ -185,7 +184,7 @@ export function createTurnInputRuntime(): TurnInputRuntime {
 
     const imageCount = images.length + localImages.length;
     const baseText = String(textInput.text ?? "");
-    const imageSummary = imageCount > 0 ? translate("runtime.attachedImageSummary", { count: imageCount }) : "";
+    const imageSummary = imageCount > 0 ? `（附图 ${imageCount} 张）` : "";
     const displayText = baseText ? (imageSummary ? `${baseText}\n${imageSummary}` : baseText) : imageSummary;
 
     return {

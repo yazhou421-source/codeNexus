@@ -12,7 +12,6 @@ type SkillsStore = ReturnType<typeof useSkillsStore>;
 type McpStore = ReturnType<typeof useMcpStore>;
 type McpResourceStore = ReturnType<typeof useMcpResourceStore>;
 type UserInputStore = ReturnType<typeof useUserInputStore>;
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 
 export type SkillsSnapshot = {
   items: SkillState[];
@@ -35,7 +34,6 @@ export type RightPanelRuntimeDeps = {
   skillsSnapshotByWorkspace: Map<string, SkillsSnapshot>;
   mcpSnapshotByWorkspace: Map<string, McpSnapshot>;
   normalizeWorkspacePath: (value: string) => string;
-  translate: TranslateFn;
 };
 
 export type RightPanelRuntime = {
@@ -76,7 +74,6 @@ export function createRightPanelRuntime(deps: RightPanelRuntimeDeps): RightPanel
     skillsSnapshotByWorkspace,
     mcpSnapshotByWorkspace,
     normalizeWorkspacePath,
-    translate,
   } = deps;
 
   const applySkillsSnapshot = (workspacePathValue: string): boolean => {
@@ -152,7 +149,7 @@ export function createRightPanelRuntime(deps: RightPanelRuntimeDeps): RightPanel
     applyMcpSnapshot(workspace);
   };
 
-  const resetSidePanelStores = (statusText = translate("runtime.noService")) => {
+  const resetSidePanelStores = (statusText = "未连接服务") => {
     configStore.resetState(statusText);
     configRequirementsStore.resetState(statusText);
     skillsStore.resetState(statusText);

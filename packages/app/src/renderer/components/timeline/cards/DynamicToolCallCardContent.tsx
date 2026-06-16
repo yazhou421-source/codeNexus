@@ -1,5 +1,4 @@
 import type { HTMLAttributes } from "react";
-import { translate } from "../../../i18n/translate";
 import DetailDisclosure from "../../ui/DetailDisclosure";
 import ExecutionWaveText from "../../ui/ExecutionWaveText";
 
@@ -24,7 +23,7 @@ export default function DynamicToolCallCardContent({ item, className, ...props }
         )}
         {item?.approvalRequired ? (
           <span className="inline-flex h-[22px] items-center rounded-[4px] border border-[var(--border-warning)] bg-[var(--bg-warning-soft)] px-[9px] text-[11px] mono text-[var(--fg-warning)]">
-            {translate("dynamicTool.approvalRequired")}
+            需审批
           </span>
         ) : null}
         {durationText ? <span className="mono text-[11px] dim">{durationText}</span> : null}
@@ -49,14 +48,14 @@ export default function DynamicToolCallCardContent({ item, className, ...props }
         </div>
       ) : null}
       {item?.argsRaw ? (
-        <DetailDisclosure summary={translate("dynamicTool.viewFullArgs")} summaryClass="mono text-[11px] dim" motion="fade">
+        <DetailDisclosure summary="查看完整参数" summaryClass="mono text-[11px] dim" motion="fade">
           <pre className="mono mt-1.5 max-h-[240px] overflow-y-auto app-scrollbar rounded-[4px] border border-[var(--ui-code-border)] bg-[var(--ui-code-bg)] p-2 text-[var(--ui-code-text)] whitespace-pre-wrap [overflow-wrap:anywhere] break-words">
             {String(item.argsRaw)}
           </pre>
         </DetailDisclosure>
       ) : null}
       {resultRawText ? (
-        <DetailDisclosure summary={translate("dynamicTool.viewFullResult")} summaryClass="mono text-[11px] dim" motion="fade">
+        <DetailDisclosure summary="查看完整结果" summaryClass="mono text-[11px] dim" motion="fade">
           <pre className="mono mt-1.5 max-h-[240px] overflow-y-auto app-scrollbar rounded-[4px] border border-[var(--ui-code-border)] bg-[var(--ui-code-bg)] p-2 text-[var(--ui-code-text)] whitespace-pre-wrap [overflow-wrap:anywhere] break-words">
             {resultRawText}
           </pre>

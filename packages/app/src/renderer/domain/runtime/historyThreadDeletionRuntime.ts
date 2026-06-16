@@ -5,7 +5,6 @@ import { invalidateThreadContentCache, type ThreadContentCacheEntry } from "./re
 type ThreadStore = ReturnType<typeof useThreadStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
@@ -15,7 +14,6 @@ export type HistoryThreadDeletionRuntimeDeps = {
   threadContentCacheByKey: Map<string, ThreadContentCacheEntry>;
   clearThreadRuntimeState: (threadId: string) => void;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -40,7 +38,6 @@ export function createHistoryThreadDeletionRuntime(
     threadContentCacheByKey,
     clearThreadRuntimeState,
     pushEvent,
-    translate,
     showToast,
   } = deps;
 
@@ -51,17 +48,17 @@ export function createHistoryThreadDeletionRuntime(
     if (!hasHistoryThread && threadStore.hasLocalThread(id)) {
       invalidateThreadContentCache(threadContentCacheByKey, id);
       clearThreadRuntimeState(id);
-      pushEvent("history", translate("runtime.localSessionRemoved"), { threadId: appTimelineId });
+      pushEvent("history", "已移除本地会话", { threadId: appTimelineId });
       return;
     }
     try {
       await codexDesktop.history.deleteThread({ threadId: id });
       invalidateThreadContentCache(threadContentCacheByKey, id);
       clearThreadRuntimeState(id);
-      pushEvent("history", translate("runtime.sessionDeleted"), { threadId: appTimelineId });
+      pushEvent("history", "已删除会话", { threadId: appTimelineId });
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
-      showToast({ kind: "error", title: translate("runtime.deleteFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "删除失败", message: msg });
       pushEvent("history:error", msg, { threadId: appTimelineId, level: "error" });
     }
   };

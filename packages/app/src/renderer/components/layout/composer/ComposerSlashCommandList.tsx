@@ -1,5 +1,4 @@
 import type { HTMLAttributes } from "react";
-import { useTranslation } from "react-i18next";
 
 export type SlashCommandListItem = {
   id: string;
@@ -25,14 +24,13 @@ export default function ComposerSlashCommandList({
   onHover?: (index: number) => void;
   onSelect?: (commandId: string) => void;
 }) {
-  const { t } = useTranslation();
   const list = Array.isArray(commands) ? commands : Array.isArray(items) ? items : [];
   return (
     <div {...props} className={["composer-slash-switch", className].filter(Boolean).join(" ")}>
       {list.length === 0 ? (
         <div className="composer-slash-list composer-slash-list--empty" aria-live="polite">
           <div className="composer-slash-option composer-slash-option--empty" aria-disabled="true">
-            <span className="composer-slash-empty-text mono dim">{t("composer.slashNoCommands")}</span>
+            <span className="composer-slash-empty-text mono dim">未匹配到命令</span>
           </div>
         </div>
       ) : (

@@ -5,7 +5,6 @@ import {
   commandGroupItemActionDetailText,
   commandGroupItemActionText,
 } from "../../features/timeline/renderModel/formatters";
-import { translate } from "../../i18n/translate";
 import ExecutionWaveText from "../ui/ExecutionWaveText";
 
 export type ChatCommandActionRowProps = HTMLAttributes<HTMLDivElement> & {
@@ -81,7 +80,7 @@ export default function ChatCommandActionRow({ item, isFilesOpen, renderLimit = 
       {filesCount > 0 && isFilesOpen ? (
         <div className="chat-terminal-action-files mx-2.5 rounded-xl border border-[var(--ui-well-border)] bg-[var(--ui-well-bg-strong)] px-2.5 py-2">
           <div className="chat-terminal-action-files-title mb-1.5 text-xs mono dim">
-            {translate("chat.activity.filesTitle", { count: filesCount })}
+            {`文件（${filesCount}）`}
           </div>
           <div className="chat-terminal-action-files-list app-scrollbar grid max-h-[180px] gap-0.5 overflow-y-auto text-xs text-[var(--text)] mono">
             {visibleFiles.map((file: any, index: number) => (
@@ -91,7 +90,7 @@ export default function ChatCommandActionRow({ item, isFilesOpen, renderLimit = 
             ))}
             {filesCount > renderLimit ? (
               <div className="chat-terminal-action-files-more mt-1.5 dim">
-                {translate("chat.activity.moreItemsHidden", { count: filesCount - renderLimit })}
+                {`还有 ${filesCount - renderLimit} 项未展示`}
               </div>
             ) : null}
           </div>

@@ -5,16 +5,16 @@ export type PaperGenerationMode = "outline" | "draft" | "revise" | "citations";
 
 export type PaperSection = {
   id: string;
-  titleKey: string;
+  title: string;
   wordTarget: number;
   status: PaperSectionStatus;
-  noteKey: string;
+  note: string;
 };
 
 export type PaperTask = {
   id: string;
-  titleKey: string;
-  descriptionKey: string;
+  title: string;
+  description: string;
   status: PaperSectionStatus;
 };
 
@@ -22,29 +22,43 @@ export type PaperReference = {
   id: string;
   title: string;
   meta: string;
-  statusKey: string;
+  status: string;
+};
+
+export const PAPER_SECTION_STATUS_LABELS: Record<PaperSectionStatus, string> = {
+  todo: "待处理",
+  drafting: "生成中",
+  review: "待审阅",
+  done: "已完成",
+};
+
+export const PAPER_MODE_LABELS: Record<PaperGenerationMode, string> = {
+  outline: "提纲",
+  draft: "初稿",
+  revise: "修订",
+  citations: "引用",
 };
 
 const DEFAULT_SECTIONS: PaperSection[] = [
-  { id: "abstract", titleKey: "abstract", wordTarget: 320, status: "review", noteKey: "abstractNote" },
-  { id: "introduction", titleKey: "introduction", wordTarget: 1200, status: "drafting", noteKey: "introductionNote" },
-  { id: "related", titleKey: "related", wordTarget: 1800, status: "todo", noteKey: "relatedNote" },
-  { id: "method", titleKey: "method", wordTarget: 2200, status: "todo", noteKey: "methodNote" },
-  { id: "experiment", titleKey: "experiment", wordTarget: 1800, status: "todo", noteKey: "experimentNote" },
-  { id: "conclusion", titleKey: "conclusion", wordTarget: 650, status: "done", noteKey: "conclusionNote" },
+  { id: "abstract", title: "摘要", wordTarget: 320, status: "review", note: "问题、方法、贡献压缩表达" },
+  { id: "introduction", title: "引言", wordTarget: 1200, status: "drafting", note: "研究背景与问题定义" },
+  { id: "related", title: "相关工作", wordTarget: 1800, status: "todo", note: "按主题组织已有研究" },
+  { id: "method", title: "方法设计", wordTarget: 2200, status: "todo", note: "系统流程和关键设计" },
+  { id: "experiment", title: "实验与分析", wordTarget: 1800, status: "todo", note: "评价指标、数据和结果" },
+  { id: "conclusion", title: "结论", wordTarget: 650, status: "done", note: "贡献、限制与未来工作" },
 ];
 
 const DEFAULT_TASKS: PaperTask[] = [
-  { id: "scope", titleKey: "scopeTask", descriptionKey: "scopeTaskDesc", status: "done" },
-  { id: "outline", titleKey: "outlineTask", descriptionKey: "outlineTaskDesc", status: "review" },
-  { id: "draft", titleKey: "draftTask", descriptionKey: "draftTaskDesc", status: "drafting" },
-  { id: "citation", titleKey: "citationTask", descriptionKey: "citationTaskDesc", status: "todo" },
+  { id: "scope", title: "确定范围", description: "题目、研究问题和目标读者已锁定。", status: "done" },
+  { id: "outline", title: "生成提纲", description: "章节结构已生成，等待人工确认。", status: "review" },
+  { id: "draft", title: "逐章初稿", description: "当前按章节生成正文并保留证据缺口。", status: "drafting" },
+  { id: "citation", title: "引用核查", description: "等待补充真实文献和引用位置。", status: "todo" },
 ];
 
 const DEFAULT_REFERENCES: PaperReference[] = [
-  { id: "r1", title: "Transformer-based Academic Writing Assistance", meta: "ACL Anthology / 2024", statusKey: "toVerify" },
-  { id: "r2", title: "Human-in-the-loop Draft Revision for Long-form Writing", meta: "CHI / 2023", statusKey: "matched" },
-  { id: "r3", title: "Citation Grounding in LLM Generated Documents", meta: "arXiv / 2025", statusKey: "needsSource" },
+  { id: "r1", title: "Transformer-based Academic Writing Assistance", meta: "ACL Anthology / 2024", status: "待核查" },
+  { id: "r2", title: "Human-in-the-loop Draft Revision for Long-form Writing", meta: "CHI / 2023", status: "已匹配" },
+  { id: "r3", title: "Citation Grounding in LLM Generated Documents", meta: "arXiv / 2025", status: "缺来源" },
 ];
 
 export const usePaperStore = defineStore("paper", {
@@ -97,7 +111,7 @@ export const usePaperStore = defineStore("paper", {
         `任务：${modeLabel[state.mode]}`,
         `题目：${state.title}`,
         `领域：${state.field}`,
-        `选中章节：${section?.titleKey ?? "unknown"} / 目标字数 ${section?.wordTarget ?? 0}`,
+        `选中章节：${section?.title ?? "unknown"} / 目标字数 ${section?.wordTarget ?? 0}`,
         `研究问题：${state.researchQuestion}`,
         `约束：${state.constraints}`,
       ].join("\n");

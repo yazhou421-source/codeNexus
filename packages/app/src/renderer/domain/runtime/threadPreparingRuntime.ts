@@ -1,12 +1,10 @@
 import type { useTimelineStore } from "../../stores/timeline.store";
 
 type TimelineStore = ReturnType<typeof useTimelineStore>;
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 
 export type ThreadPreparingRuntimeDeps = {
   appTimelineId: string;
   timelineStore: TimelineStore;
-  translate: TranslateFn;
 };
 
 export type ThreadPreparingRuntime = {
@@ -17,7 +15,7 @@ export type ThreadPreparingRuntime = {
 const THREAD_PREPARING_EVENT_ID = "local:threadPreparing";
 
 export function createThreadPreparingRuntime(deps: ThreadPreparingRuntimeDeps): ThreadPreparingRuntime {
-  const { appTimelineId, timelineStore, translate } = deps;
+  const { appTimelineId, timelineStore } = deps;
 
   const upsertThreadPreparingEvent = (threadIdValue: string) => {
     const threadId = String(threadIdValue ?? "").trim();
@@ -26,7 +24,7 @@ export function createThreadPreparingRuntime(deps: ThreadPreparingRuntimeDeps): 
       threadId,
       id: THREAD_PREPARING_EVENT_ID,
       method: "local/thinking",
-      paramsText: translate("runtime.threadPreparingEnvironment"),
+      paramsText: "正在准备环境…",
       params: { phase: "preparingEnvironment" },
       level: "info",
       localKind: "thinking",

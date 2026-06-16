@@ -4,16 +4,12 @@ import type { ServerConnState } from "../domain/types";
 import { getCachedUserLocalSettings, patchUserLocalSettings } from "../domain/localSettings";
 import {
   DEFAULT_UI_WORKSPACE_FILE_ICON_THEME,
-  normalizeUiLanguage,
   normalizeUiWorkspaceFileIconTheme,
   normalizeRuntimeMode,
   type RuntimeMode,
-  type UiLanguage,
   type UiWorkspaceFileIconTheme,
   type MainView,
 } from "@codenexus/shared/localSettings";
-import { refreshDomI18nFallback } from "../i18n/domFallback";
-import { setUiI18nLanguage } from "../i18n";
 import { normalizeRegisteredMainView, shouldForceLeftSidebarVisible, type FeatureMainView } from "../features/registry";
 
 export type IntegrationsDrawerTab = "skills" | "mcp";
@@ -58,7 +54,6 @@ export const useAppShellStore = defineStore("appShell", {
   state: () => ({
     serverConnState: "disconnected" as ServerConnState,
     serverError: "" as string,
-    language: "zh-CN" as UiLanguage,
     mainView: DEFAULT_MAIN_VIEW as MainView,
     // 运行时模式：null=尚未选择（启动显示选择页）；codex=旧版；custom=新版自定义 provider。
     runtimeMode: null as RuntimeMode | null,
@@ -97,8 +92,6 @@ export const useAppShellStore = defineStore("appShell", {
     // 从本地缓存恢复布局偏好。
     initLocalSettings() {
       const cached = getCachedUserLocalSettings();
-      this.language = normalizeUiLanguage(cached.settings.ui.language);
-      setUiI18nLanguage(this.language);
       this.mainView = cached.settings.ui.mainView;
       this.runtimeMode = normalizeRuntimeMode(cached.settings.ui.runtimeMode);
       this.workspaceFileIconTheme = normalizeUiWorkspaceFileIconTheme(cached.settings.ui.workspaceFileIconTheme);
@@ -123,7 +116,6 @@ export const useAppShellStore = defineStore("appShell", {
         void patchUserLocalSettings({
           ui: {
             mainView: this.mainView,
-            language: this.language,
             leftSidebarVisible: this.leftSidebarVisible,
             leftSidebarWidthPx: this.leftSidebarWidthPx,
             filesSidebarVisible: this.filesSidebarVisible,
@@ -134,15 +126,6 @@ export const useAppShellStore = defineStore("appShell", {
           },
         });
       }
-    },
-    setLanguage(next: UiLanguage, opts?: { save?: boolean }) {
-      const shouldSave = opts?.save ?? true;
-      const normalized = normalizeUiLanguage(next);
-      this.language = normalized;
-      setUiI18nLanguage(normalized);
-      refreshDomI18nFallback(normalized);
-      if (!shouldSave) return;
-      void patchUserLocalSettings({ ui: { language: normalized } });
     },
     setMainView(next: MainView, opts?: { save?: boolean }) {
       const shouldSave = opts?.save ?? true;

@@ -1,7 +1,6 @@
 // 历史回放解析：把 sessions 分页数据归一化为时间线事件序列。
 import type { HistoryThreadEvent } from "@codenexus/shared/ipc";
 import { resolveComposeTextElements } from "../../domain/composeFileMentions";
-import { translate } from "../../i18n/translate";
 import { normalizeHistoryWebSearchCall } from "../timeline/webSearch";
 
 export type ReplayTimelineEvent = {
@@ -84,7 +83,7 @@ function toContextInjectionSummary(text: string): { source: string; file: string
     source,
     file,
     rules,
-    summary: translate("runtime.contextInjectedSummary", { source, file, rules }),
+    summary: `已注入上下文｜source=${source}｜file=${file}｜rules=${rules}`,
   };
 }
 
@@ -241,7 +240,7 @@ function extractTextFromMcpOutput(output: unknown): string {
 
 export function parseSessionReplayEvents(entries: HistoryThreadEvent[], threadId: string): ReplayTimelineEvent[] {
   if (!Array.isArray(entries) || entries.length === 0) {
-    throw new Error(translate("runtime.sessionsHistoryEmpty"));
+    throw new Error("sessions 历史为空");
   }
   const events: ReplayTimelineEvent[] = [];
   const seenMessage = new Set<string>();
@@ -312,7 +311,7 @@ export function parseSessionReplayEvents(entries: HistoryThreadEvent[], threadId
     const images = normalizedImages;
     const textElements = resolveComposeTextElements(text, payload.text_elements, { inferAbsolutePaths: true });
     const hasVisibleText = Boolean(normalizeText(text));
-    const imageSummary = imageCount > 0 ? translate("runtime.attachedImageSummary", { count: imageCount }) : "";
+    const imageSummary = imageCount > 0 ? `（附图 ${imageCount} 张）` : "";
     const displayText = imageSummary ? (hasVisibleText ? `${text}\n${imageSummary}` : imageSummary) : text;
     const canonicalBase = normalizeText(text).replace(/\s+/g, " ").trim();
     return {
@@ -463,7 +462,7 @@ export function parseSessionReplayEvents(entries: HistoryThreadEvent[], threadId
 
   for (const entry of entries) {
     if (!entry || typeof entry !== "object" || !normalizeText((entry as any).type)) {
-      throw new Error(translate("runtime.sessionsInvalidLogLine"));
+      throw new Error("sessions 存在不符合新协议结构的日志行");
     }
     const type = normalizeText(entry.type);
     const payload = entry.payload as any;
@@ -743,7 +742,7 @@ export function parseSessionReplayEvents(entries: HistoryThreadEvent[], threadId
   }
 
   if (events.length === 0) {
-    throw new Error(translate("runtime.sessionsNoReplayEvents"));
+    throw new Error("sessions 无可回放事件");
   }
   return sortReplayEvents(events);
 }

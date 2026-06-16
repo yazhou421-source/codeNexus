@@ -13,7 +13,6 @@ type RuntimeStore = ReturnType<typeof useRuntimeStore>;
 type ThreadStore = ReturnType<typeof useThreadStore>;
 type UserInputStore = ReturnType<typeof useUserInputStore>;
 type WorkspaceFilesStore = ReturnType<typeof useWorkspaceFilesStore>;
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type ThreadScopedState = {
   delete: (threadId: string) => unknown;
 };
@@ -42,7 +41,6 @@ export type CodexServerEventRuntimeDeps = {
   hydrateThreadHandoffDiagnostics: (threadId: string, opts?: { force?: boolean }) => Promise<void>;
   notifyCompletedTurnIfBackground: (threadId: string) => Promise<void>;
   flushQueueForThread: (threadId: string) => Promise<void>;
-  translate: TranslateFn;
 };
 
 export type CodexServerEventRuntime = {
@@ -148,7 +146,7 @@ export function createCodexServerEventRuntime(deps: CodexServerEventRuntimeDeps)
           deps.runtimeStore.clearServer();
           if (!expected) deps.appShellStore.setServerConnState("failed", "codex app-server exited");
           else deps.appShellStore.setServerConnState("disconnected");
-          deps.resetSidePanelStores(deps.translate("runtime.noService"));
+          deps.resetSidePanelStores("未连接服务");
         }
         return;
       }

@@ -16,7 +16,6 @@ type CodexConfigSwitcherStore = ReturnType<typeof useCodexConfigSwitcherStore>;
 type SkillsStore = ReturnType<typeof useSkillsStore>;
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 type ConfigReadResult = { config?: unknown };
 
@@ -31,7 +30,6 @@ export type CodexConfigSwitcherRuntimeDeps = {
   refreshMcp: () => Promise<void>;
   invalidateMcpSnapshot: (workspacePath?: string) => void;
   getWorkspacePath: () => string;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -73,7 +71,6 @@ export function createCodexConfigSwitcherRuntime(deps: CodexConfigSwitcherRuntim
     refreshMcp,
     invalidateMcpSnapshot,
     getWorkspacePath,
-    translate,
     showToast,
   } = deps;
 
@@ -89,7 +86,7 @@ export function createCodexConfigSwitcherRuntime(deps: CodexConfigSwitcherRuntim
   const assertNoCcswitchManagedCodexConfig = () => {
     if (!codexConfigSwitcherStore.ccswitch.detected) return;
     const reason = codexConfigSwitcherStore.ccswitch.reasons.join(", ") || "detected";
-    throw new Error(translate("runtime.ccswitchDetected", { reason }));
+    throw new Error(`检测到 ccswitch（${reason}），已禁用 CodeNexus 全局配置切换器写入，避免覆盖 ~/.codex/config.toml。`);
   };
 
   const writeCodexConfigSwitcherState = async (state: CodexConfigSwitcherState) => {
@@ -127,7 +124,7 @@ export function createCodexConfigSwitcherRuntime(deps: CodexConfigSwitcherRuntim
       await requestReloadMcpConfig();
       invalidateMcpSnapshot(getWorkspacePath());
       await refreshMcp();
-      showToast({ kind: "success", title: translate("runtime.codexConfigSwitchedTitle"), message: profile.name });
+      showToast({ kind: "success", title: "Codex 配置已切换", message: profile.name });
     } catch (error: unknown) {
       await codexDesktop.app
         .restoreCodexConfigSwitcherBackup({ backupId: activation.backup.id })
@@ -138,7 +135,7 @@ export function createCodexConfigSwitcherRuntime(deps: CodexConfigSwitcherRuntim
 
   const getRequiredActiveSwitcherProfile = (): CodexConfigSwitcherProfile => {
     const profile = getActiveCodexConfigSwitcherProfile(codexConfigSwitcherStore.state);
-    if (!profile) throw new Error(translate("runtime.importCodexConfigFirst"));
+    if (!profile) throw new Error("请先导入当前 Codex 配置，创建受管配置集。");
     return profile;
   };
 
@@ -158,7 +155,7 @@ export function createCodexConfigSwitcherRuntime(deps: CodexConfigSwitcherRuntim
       await syncSwitcherProfileToCodex(profile);
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
-      showToast({ kind: "error", title: translate("runtime.codexConfigImportFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "Codex 配置导入失败", message: msg });
       throw error;
     }
   };
@@ -167,12 +164,12 @@ export function createCodexConfigSwitcherRuntime(deps: CodexConfigSwitcherRuntim
     assertNoCcswitchManagedCodexConfig();
     const profile =
       codexConfigSwitcherStore.state.profiles.find((item) => item.id === String(profileId ?? "").trim()) ?? null;
-    if (!profile) throw new Error(translate("runtime.configProfileNotFound"));
+    if (!profile) throw new Error("配置集不存在。");
     try {
       await syncSwitcherProfileToCodex(profile);
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
-      showToast({ kind: "error", title: translate("runtime.codexConfigSwitchFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "Codex 配置切换失败", message: msg });
       throw error;
     }
   };

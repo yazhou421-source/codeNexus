@@ -1,6 +1,5 @@
 import { Pencil, SendHorizontal, Trash2 } from "lucide-react";
 import type { HTMLAttributes } from "react";
-import { useTranslation } from "react-i18next";
 import type { QueuedMessage } from "../../../stores/messageQueue.store";
 
 export default function ComposerQueueList({
@@ -20,7 +19,6 @@ export default function ComposerQueueList({
   "onSend-now"?: (messageId: string) => void;
   onRemove?: (messageId: string) => void;
 }) {
-  const { t } = useTranslation();
   const list = Array.isArray(items) ? items : Array.isArray(queue) ? queue : [];
   if (list.length === 0) return null;
 
@@ -34,8 +32,8 @@ export default function ComposerQueueList({
     if (text) return text;
     const inputs = Array.isArray(message.inputs) ? message.inputs : [];
     const imageCount = inputs.filter((item) => item?.type === "image" || item?.type === "localImage").length;
-    if (imageCount > 0) return t("composer.imageCount", { count: imageCount });
-    return t("composer.emptyMessage");
+    if (imageCount > 0) return `图片 ${imageCount} 张`;
+    return "（空消息）";
   };
   const sendNow = onSendNow ?? onSendNowKebab;
   const preview = firstItem ? previewText(firstItem) : "";
@@ -86,7 +84,7 @@ export default function ComposerQueueList({
                 className="composer-queue-action"
                 type="button"
                 disabled={firstItem.status === "sending"}
-                aria-label={t("composer.editQueuedAria", { preview })}
+                aria-label={`编辑排队消息：${preview}`}
                 onClick={() => onEdit?.(firstItem.id)}
               >
                 <Pencil className="composer-queue-action-icon" aria-hidden="true" />
@@ -95,7 +93,7 @@ export default function ComposerQueueList({
                 className="composer-queue-action composer-queue-action--primary"
                 type="button"
                 disabled={firstItem.status === "sending"}
-                aria-label={t("composer.sendQueuedAria", { preview })}
+                aria-label={`发送排队消息：${preview}`}
                 onClick={() => sendNow?.(firstItem.id)}
               >
                 <SendHorizontal className="composer-queue-action-icon" aria-hidden="true" />
@@ -104,7 +102,7 @@ export default function ComposerQueueList({
                 className="composer-queue-action composer-queue-action--danger"
                 type="button"
                 disabled={firstItem.status === "sending"}
-                aria-label={t("composer.deleteQueuedAria", { preview })}
+                aria-label={`删除排队消息：${preview}`}
                 onClick={() => onRemove?.(firstItem.id)}
               >
                 <Trash2 className="composer-queue-action-icon" aria-hidden="true" />

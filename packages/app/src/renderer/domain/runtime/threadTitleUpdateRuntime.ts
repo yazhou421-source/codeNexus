@@ -7,12 +7,10 @@ import {
 import type { LocalThreadItem, ThreadHistoryItem } from "../types";
 
 type ThreadStore = ReturnType<typeof useThreadStore>;
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 
 export type ThreadTitleUpdateRuntimeDeps = {
   threadStore: ThreadStore;
   findThreadListItem: (threadId: string) => ThreadHistoryItem | LocalThreadItem | undefined;
-  translate: TranslateFn;
 };
 
 export type ThreadTitleUpdateRuntime = {
@@ -33,8 +31,8 @@ export function createThreadTitleUpdateRuntime(deps: ThreadTitleUpdateRuntimeDep
     const titleSeedText =
       args.visibleText ||
       (args.composeFileMentionCount > 0
-        ? deps.translate("runtime.fileCount", { count: args.composeFileMentionCount })
-        : deps.translate("runtime.imageCount", { count: args.composeAttachmentCount }));
+        ? `文件 ${args.composeFileMentionCount} 个`
+        : `图片 ${args.composeAttachmentCount} 张`);
 
     if (currentTitle && currentTitle !== placeholder) return;
     if (isBootstrapThreadTitleSource(titleSeedText)) return;
@@ -43,7 +41,7 @@ export function createThreadTitleUpdateRuntime(deps: ThreadTitleUpdateRuntimeDep
     const titlePatch = {
       id: args.threadId,
       title: nextTitle,
-      meta: String(existing?.meta ?? args.threadWorkspace ?? "").trim() || deps.translate("runtime.noWorkspace"),
+      meta: String(existing?.meta ?? args.threadWorkspace ?? "").trim() || "无工作区",
       cwd: String(existing?.cwd ?? args.threadWorkspace ?? "").trim() || undefined,
       modelProvider: String(existing?.modelProvider ?? "").trim() || undefined,
       updatedAt: Date.now(),

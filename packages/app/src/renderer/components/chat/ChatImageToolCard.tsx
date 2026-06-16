@@ -2,7 +2,6 @@ import type { HTMLAttributes } from "react";
 import { AlertTriangle, CheckCircle2, Eye, Image as ImageIcon, Loader2 } from "lucide-react";
 import type { ChatImageEntry, ChatImageToolItem, ImagePreviewPayload, ThumbLoadErrorPayload } from "../layout/types/chat.types";
 import LazyImageThumb from "../ui/LazyImageThumb";
-import { translate } from "../../i18n/translate";
 
 export type ChatImageToolCardProps = HTMLAttributes<HTMLDivElement> & {
   item?: ChatImageToolItem;
@@ -16,38 +15,38 @@ export type ChatImageToolCardProps = HTMLAttributes<HTMLDivElement> & {
 
 function statusText(item?: ChatImageToolItem) {
   if (item?.status === "running") {
-    return item.itemType === "imageView" ? translate("chat.imageTool.reading") : translate("chat.imageTool.generating");
+    return item.itemType === "imageView" ? "读取中" : "生成中";
   }
   if (item?.status === "completed") {
-    return item.itemType === "imageView" ? translate("chat.imageTool.read") : translate("chat.imageTool.generated");
+    return item.itemType === "imageView" ? "已读取" : "已生成";
   }
   if (item?.status === "failed") {
-    return item.itemType === "imageView" ? translate("chat.imageTool.readFailed") : translate("chat.imageTool.generationFailed");
+    return item.itemType === "imageView" ? "读取失败" : "生成失败";
   }
-  return translate("chat.imageTool.unknown");
+  return "状态未知";
 }
 
 function subtitleText(item: ChatImageToolItem | undefined, imageCount: number) {
   if (item?.itemType === "imageView") {
-    return imageCount > 0 ? translate("chat.imageTool.viewResult") : translate("chat.imageTool.viewRequest");
+    return imageCount > 0 ? "Codex view_image 结果" : "Codex view_image 请求";
   }
-  if (item?.status === "running") return translate("chat.imageTool.waitingGeneration");
-  if (item?.status === "failed") return translate("chat.imageTool.generationFailedSubtitle");
-  if (imageCount > 0) return translate("chat.imageTool.generationResults", { count: imageCount });
-  return translate("chat.imageTool.noPreview");
+  if (item?.status === "running") return "等待图片生成结果";
+  if (item?.status === "failed") return "图片生成返回失败";
+  if (imageCount > 0) return `图片生成 · ${imageCount} 张结果`;
+  return "图片生成未返回可预览图片";
 }
 
 function emptyText(item?: ChatImageToolItem) {
-  if (item?.status === "failed") return translate("chat.imageTool.noDisplayable");
-  if (item?.itemType === "imageView") return translate("chat.imageTool.waitingPath");
-  return translate("chat.imageTool.notArrived");
+  if (item?.status === "failed") return "没有可显示的图片结果。";
+  if (item?.itemType === "imageView") return "等待图片路径解析。";
+  return "图片结果尚未到达。";
 }
 
 function revisedPromptBody(item?: ChatImageToolItem) {
   const prompt = String(item?.revisedPrompt ?? "").trim();
   if (!prompt) return "";
   return prompt
-    .replace(new RegExp(`^${translate("chat.imageTool.revisedPromptPrefix")}\\s*`, "iu"), "")
+    .replace(/^修订提示词：\s*/iu, "")
     .replace(/^Revised prompt:\s*/iu, "")
     .trim();
 }
@@ -71,7 +70,7 @@ export default function ChatImageToolCard({
   ...props
 }: ChatImageToolCardProps) {
   const images = visibleImages ?? item?.images ?? [];
-  const titleText = item?.itemType === "imageView" ? translate("chat.imageTool.view") : translate("chat.imageTool.generate");
+  const titleText = item?.itemType === "imageView" ? "查看图片" : "生成图片";
   const promptBody = revisedPromptBody(item);
   const hasDetails = Boolean(promptBody || item?.detailText);
   const detailsHint = [promptBody ? "prompt" : "", item?.detailText ? "source" : ""].filter(Boolean).join(" / ");
@@ -90,7 +89,7 @@ export default function ChatImageToolCard({
         ]
           .filter(Boolean)
           .join(" ")}
-        aria-label={translate("chat.imageTool.aria")}
+        aria-label="Codex 图片生成结果"
       >
         <header className="official-image-card__header">
           <div className="official-image-card__mark" aria-hidden="true">
@@ -153,12 +152,12 @@ export default function ChatImageToolCard({
         {hasDetails ? (
           <details className="official-image-card__details">
             <summary>
-              <span>{translate("chat.imageTool.details")}</span>
+              <span>生成细节</span>
               <span className="official-image-card__details-hint">{detailsHint}</span>
             </summary>
             {promptBody ? (
               <div className="official-image-card__prompt">
-                <div className="official-image-card__detail-label">{translate("chat.imageTool.revisedPrompt")}</div>
+                <div className="official-image-card__detail-label">修订提示词</div>
                 <p>{promptBody}</p>
               </div>
             ) : null}

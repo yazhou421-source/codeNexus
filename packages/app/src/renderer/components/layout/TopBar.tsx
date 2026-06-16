@@ -10,7 +10,6 @@ import {
   Workflow,
 } from "lucide-react";
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import type { MainView } from "@codenexus/shared/localSettings";
 import { isFeatureMainView } from "../../features/registry";
 import { useAppShellStore } from "../../stores/appShell.store";
@@ -24,15 +23,14 @@ import TopBarWindowControls from "./topbar/TopBarWindowControls";
 import TopBarWorkspaceButton from "./topbar/TopBarWorkspaceButton";
 import "./topbar/topbar.css";
 
-const MAIN_VIEWS: Array<{ id: MainView; labelKey: string; icon: typeof MessageSquare }> = [
-  { id: "chat", labelKey: "topbar.chat", icon: MessageSquare },
-  { id: "image", labelKey: "topbar.image", icon: ImageIcon },
-  { id: "flowchart", labelKey: "topbar.flowchart", icon: Workflow },
-  { id: "paper", labelKey: "topbar.paper", icon: BookOpen },
+const MAIN_VIEWS: Array<{ id: MainView; label: string; icon: typeof MessageSquare }> = [
+  { id: "chat", label: "聊天", icon: MessageSquare },
+  { id: "image", label: "图片", icon: ImageIcon },
+  { id: "flowchart", label: "流程图", icon: Workflow },
+  { id: "paper", label: "论文", icon: BookOpen },
 ];
 
 export default function TopBar() {
-  const { t } = useTranslation();
   const appShellStore = useAppShellStore();
   const runtimeStore = useRuntimeStore();
   const workspaceFilesStore = useWorkspaceFilesStore();
@@ -63,25 +61,25 @@ export default function TopBar() {
   );
 
   const threadPaneTitle = useMemo(() => {
-    if (appShellStore.settingsOpen) return t("topbar.threadPanelHiddenInSettings");
+    if (appShellStore.settingsOpen) return "设置页中暂不显示线程面板";
     if (appShellStore.mainView === "image") {
-      return appShellStore.leftSidebarVisible ? t("topbar.closeImageWorkspacePanel") : t("topbar.openImageWorkspacePanel");
+      return appShellStore.leftSidebarVisible ? "关闭图片工作区" : "打开图片工作区";
     }
-    if (appShellStore.mainView === "flowchart") return t("topbar.threadPanelHiddenInFlowchart");
+    if (appShellStore.mainView === "flowchart") return "流程图工作台中暂不显示线程面板";
     if (appShellStore.mainView === "paper") {
-      return appShellStore.leftSidebarVisible ? t("topbar.closePaperWorkspacePanel") : t("topbar.openPaperWorkspacePanel");
+      return appShellStore.leftSidebarVisible ? "关闭论文工作区" : "打开论文工作区";
     }
-    return appShellStore.leftSidebarVisible ? t("topbar.closeThreadPanel") : t("topbar.openThreadPanel");
-  }, [appShellStore.leftSidebarVisible, appShellStore.mainView, appShellStore.settingsOpen, t]);
+    return appShellStore.leftSidebarVisible ? "关闭线程面板" : "打开线程面板";
+  }, [appShellStore.leftSidebarVisible, appShellStore.mainView, appShellStore.settingsOpen]);
 
   const filesPaneTitle = useMemo(() => {
-    if (!hasWorkspace) return t("topbar.chooseWorkspaceBeforeFiles");
-    if (appShellStore.settingsOpen) return t("topbar.filesPanelHiddenInSettings");
-    if (appShellStore.mainView === "image") return t("topbar.filesPanelHiddenInImage");
-    if (appShellStore.mainView === "flowchart") return t("topbar.filesPanelHiddenInFlowchart");
-    if (appShellStore.mainView === "paper") return t("topbar.filesPanelHiddenInPaper");
-    return filesPaneVisible ? t("topbar.closeFilesPanel") : t("topbar.openFilesPanel");
-  }, [appShellStore.mainView, appShellStore.settingsOpen, filesPaneVisible, hasWorkspace, t]);
+    if (!hasWorkspace) return "先选择工作区后再打开文件面板";
+    if (appShellStore.settingsOpen) return "设置页中暂不显示文件面板";
+    if (appShellStore.mainView === "image") return "图片视图中暂不显示文件面板";
+    if (appShellStore.mainView === "flowchart") return "流程图工作台中暂不显示文件面板";
+    if (appShellStore.mainView === "paper") return "论文工作台中暂不显示文件面板";
+    return filesPaneVisible ? "关闭文件面板" : "打开文件面板";
+  }, [appShellStore.mainView, appShellStore.settingsOpen, filesPaneVisible, hasWorkspace]);
 
   const clearRightStackLayoutAnimation = useCallback(() => {
     if (rightStackAnimationFrameRef.current) {
@@ -169,7 +167,7 @@ export default function TopBar() {
         <div className="topbar-left row">
           <TopBarWorkspaceButton />
 
-          <div className={mainViewClass} aria-label={t("topbar.mainView")}>
+          <div className={mainViewClass} aria-label="主视图">
             {MAIN_VIEWS.map((view) => {
               const Icon = view.icon;
               const active = appShellStore.mainView === view.id;
@@ -178,11 +176,11 @@ export default function TopBar() {
                   key={view.id}
                   className={`topbar-mainview-btn${active ? " is-active" : ""}`}
                   type="button"
-                  aria-label={t(view.labelKey)}
+                  aria-label={view.label}
                   onClick={() => setMainView(view.id)}
                 >
                   <Icon className="topbar-mainview-icon" aria-hidden="true" />
-                  <span>{t(view.labelKey)}</span>
+                  <span>{view.label}</span>
                 </button>
               );
             })}
@@ -196,7 +194,7 @@ export default function TopBar() {
 
         <div ref={rightStackRef} className="topbar-right-stack">
           <div className="row topbar-controls topbar-controls--sleek">
-            <div className="control-group control-group-panes" aria-label={t("topbar.panels")}>
+            <div className="control-group control-group-panes" aria-label="面板">
               <button
                 id="btn-toggle-thread-pane"
                 className={`btn-icon${appShellStore.leftSidebarVisible ? " is-active" : ""}`}
@@ -223,7 +221,7 @@ export default function TopBar() {
                 id="btn-open-settings"
                 className={`btn-icon${appShellStore.settingsOpen ? " is-active" : ""}`}
                 type="button"
-                aria-label={t("topbar.openSettings")}
+                aria-label="打开设置"
                 aria-pressed={appShellStore.settingsOpen}
                 onClick={() => appShellStore.openSettings("global")}
               >

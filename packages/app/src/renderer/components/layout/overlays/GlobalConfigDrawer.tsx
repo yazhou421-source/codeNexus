@@ -1,7 +1,6 @@
 import type { KeyboardEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { DEFAULT_MODEL_NAME, buildModelPickerOptions, normalizeModelId } from "@codenexus/shared/modelCatalog";
-import type { UiLanguage } from "@codenexus/shared/localSettings";
 import type { ApprovalsReviewer } from "@codenexus/generated/codex-app-server/v2/ApprovalsReviewer";
 import type { AskForApproval } from "@codenexus/generated/codex-app-server/v2/AskForApproval";
 import type { SandboxMode } from "@codenexus/generated/codex-app-server/v2/SandboxMode";
@@ -17,7 +16,6 @@ import {
   normalizeApprovalPolicy,
 } from "../../../domain/serverInterop";
 import type { GlobalConfigDraft } from "../../../domain/types";
-import { translate } from "../../../i18n/translate";
 import { useAppShellStore } from "../../../stores/appShell.store";
 import { useConfigRequirementsStore } from "../../../stores/configRequirements.store";
 import { useConfigStore } from "../../../stores/config.store";
@@ -46,10 +44,23 @@ type GranularApprovalPolicy = Extract<AskForApproval, { granular: unknown }>;
 type GranularApprovalFlag = keyof GranularApprovalPolicy["granular"];
 type PendingAction = "close" | "refresh" | "discard";
 
-const UI_LANGUAGE_OPTIONS: Array<{ value: UiLanguage; labelKey: string }> = [
-  { value: "zh-CN", labelKey: "common.chinese" },
-  { value: "en-US", labelKey: "common.english" },
-];
+const TYPOGRAPHY_LABELS: Record<string, string> = {
+  "globalConfig.fontFamilyAlibaba": "系统界面字体",
+  "globalConfig.fontFamilySourceHan": "系统中文字体",
+  "globalConfig.fontSizeSmall": "小",
+  "globalConfig.fontSizeMedium": "中",
+  "globalConfig.fontSizeLarge": "大",
+};
+const PENDING_TITLES: Record<PendingAction, string> = {
+  close: "关闭前保存修改？",
+  refresh: "刷新前保存修改？",
+  discard: "放弃未保存修改？",
+};
+const PENDING_MESSAGES: Record<PendingAction, string> = {
+  close: "当前主配置有未保存修改。",
+  refresh: "刷新会覆盖当前主配置草稿。",
+  discard: "主配置需要手动保存。",
+};
 const CONTEXT_WINDOW_PRESET_400K = 400000;
 const AUTO_COMPACT_TOKEN_LIMIT_PRESET_400K = 360000;
 const GLOBAL_CONFIG_DIRTY_KEYS: Array<keyof GlobalConfigDraft> = [
@@ -127,7 +138,7 @@ function buildRestrictedSelectOptions(
   if (currentValue && !effectiveValues.includes(currentValue)) {
     options.push({
       value: currentValue,
-      label: translate("globalConfig.currentValue", { label: labelFor(currentValue) }),
+      label: `${labelFor(currentValue)}（当前值）`,
       disabled: true,
     });
     seen.add(currentValue);
@@ -145,13 +156,13 @@ function buildRestrictedHintText(restriction: RestrictedSelectState, labels?: Re
   if (!restriction.hasRestrictions) return "";
   if (!restriction.values || restriction.values.length === 0) {
     return restriction.hasUnsupported
-      ? translate("globalConfig.requirements.unsupportedOnly")
-      : translate("globalConfig.requirements.noAllowedValues");
+      ? "当前服务端 requirements 仅返回桌面端暂未映射的限制项。"
+      : "当前服务端 requirements 未允许可选项。";
   }
   const allowedText = formatRestrictedValues(restriction.values, labels);
   return restriction.hasUnsupported
-    ? translate("globalConfig.requirements.allowedWithUnsupported", { values: allowedText })
-    : translate("globalConfig.requirements.allowed", { values: allowedText });
+    ? `当前服务端仅允许：${allowedText}；其余限制项桌面端暂未映射。`
+    : `当前服务端仅允许：${allowedText}`;
 }
 
 function ToggleRow({
@@ -216,16 +227,12 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
   const canRefresh = Boolean(runtimeStore.serverId) && !configStore.saving && !actionPending;
 
   const typographyFontOptions = useMemo(
-    () => UI_FONT_FAMILY_PRESET_OPTIONS.map((option) => ({ ...option, label: translate(option.label) })),
-    [appShellStore.language]
+    () => UI_FONT_FAMILY_PRESET_OPTIONS.map((option) => ({ ...option, label: TYPOGRAPHY_LABELS[option.label] ?? option.label })),
+    []
   );
   const typographySizeOptions = useMemo(
-    () => UI_FONT_SIZE_PRESET_OPTIONS.map((option) => ({ ...option, label: translate(option.label) })),
-    [appShellStore.language]
-  );
-  const languageOptions = useMemo(
-    () => UI_LANGUAGE_OPTIONS.map((option) => ({ value: option.value, label: translate(option.labelKey) })),
-    [appShellStore.language]
+    () => UI_FONT_SIZE_PRESET_OPTIONS.map((option) => ({ ...option, label: TYPOGRAPHY_LABELS[option.label] ?? option.label })),
+    []
   );
   const modelOptions = useMemo(
     () => buildModelPickerOptions({ customIds: modelCatalogStore.customIds, current: configStore.draft.model }),
@@ -238,25 +245,25 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
       "on-failure": "on-failure",
       "on-request": "on-request",
       never: "never",
-      granular: translate("globalConfig.approvalPolicyGranular"),
+      granular: "granular（细粒度）",
     }),
-    [appShellStore.language]
+    []
   );
   const approvalsReviewerLabels = useMemo<Record<string, string>>(
     () => ({
-      user: translate("globalConfig.reviewerUser"),
+      user: "user（用户）",
       auto_review: "auto_review",
       guardian_subagent: "guardian_subagent",
     }),
-    [appShellStore.language]
+    []
   );
   const sandboxModeLabels = useMemo<Record<string, string>>(
     () => ({
-      "read-only": translate("globalConfig.sandboxReadOnly"),
-      "workspace-write": translate("globalConfig.sandboxWorkspaceWrite"),
-      "danger-full-access": translate("globalConfig.sandboxDangerFullAccess"),
+      "read-only": "read-only（只读）",
+      "workspace-write": "workspace-write（工作区可写）",
+      "danger-full-access": "danger-full-access（完全权限）",
     }),
-    [appShellStore.language]
+    []
   );
 
   const approvalPolicySelectValue = isGranularApprovalPolicy(configStore.draft.approvalPolicy)
@@ -311,23 +318,20 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
     configRequirementsStore.loadState === "error" ? "" : buildRestrictedHintText(sandboxModeRestriction, sandboxModeLabels);
   const approvalsReviewerHintText = (() => {
     if (!runtimeStore.serverId) return "";
-    if (configRequirementsStore.loadState === "loading") return translate("globalConfig.requirements.loading");
+    if (configRequirementsStore.loadState === "loading") return "正在读取服务端 requirements...";
     if (configRequirementsStore.loadState === "error") {
-      return configRequirementsStore.statusText || translate("globalConfig.requirements.reviewerLoadFailed");
+      return configRequirementsStore.statusText || "requirements 读取失败，当前按无约束显示 reviewer。";
     }
-    if (!approvalsReviewerRestriction.hasRestrictions) return translate("globalConfig.requirements.reviewerDefault");
+    if (!approvalsReviewerRestriction.hasRestrictions) return "默认由 user 处理审批。";
     if (!approvalsReviewerRestriction.values || approvalsReviewerRestriction.values.length === 0) {
       return approvalsReviewerRestriction.hasUnsupported
-        ? translate("globalConfig.requirements.reviewerUnsupportedOnly")
-        : translate("globalConfig.requirements.reviewerNoAllowed");
+        ? "当前服务端 requirements 返回了桌面端暂未映射的 reviewer 限制。"
+        : "当前服务端 requirements 未允许可选 reviewer。";
     }
     const suffix = approvalsReviewerRestriction.hasUnsupported
-      ? translate("globalConfig.requirements.reviewerUnsupportedSuffix")
+      ? "；其余 reviewer 限制桌面端暂未映射。"
       : "";
-    return translate("globalConfig.requirements.reviewerAllowed", {
-      values: formatRestrictedValues(approvalsReviewerRestriction.values, approvalsReviewerLabels),
-      suffix,
-    });
+    return `当前服务端仅允许 reviewer：${formatRestrictedValues(approvalsReviewerRestriction.values, approvalsReviewerLabels)}${suffix}`;
   })();
 
   const modelContextWindow = normalizeOptionalPositiveIntegerInput(configStore.draft.modelContextWindow);
@@ -340,11 +344,11 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
   let modelAutoCompactTokenLimitError = "";
   if (contextChanged || compactChanged) {
     if (modelContextWindow == null && autoCompactLimit != null) {
-      modelContextWindowError = translate("globalConfig.validation.fillContextWindow");
+      modelContextWindowError = "请先填写上下文窗口。";
     } else if (modelContextWindow != null && autoCompactLimit == null) {
-      modelAutoCompactTokenLimitError = translate("globalConfig.validation.fillAutoCompactLimit");
+      modelAutoCompactTokenLimitError = "请填写自动压缩阈值。";
     } else if (modelContextWindow != null && autoCompactLimit != null && autoCompactLimit >= modelContextWindow) {
-      modelAutoCompactTokenLimitError = translate("globalConfig.validation.autoCompactLessThanContext");
+      modelAutoCompactTokenLimitError = "必须小于上下文窗口。";
     }
   }
   const validationError = modelContextWindowError || modelAutoCompactTokenLimitError;
@@ -367,47 +371,47 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
           ? "warning"
           : "success";
   const statusText = !runtimeStore.serverId
-    ? translate("globalConfig.status.disconnected")
+    ? "未连接服务"
     : configStore.saving
-      ? translate("globalConfig.status.saving")
+      ? "保存中..."
       : configStore.loadState === "loading"
-        ? translate("globalConfig.status.loading")
+        ? "读取配置中..."
         : configStore.loadState === "error"
-          ? configStore.statusText || translate("globalConfig.status.loadFailed")
+          ? configStore.statusText || "读取失败"
           : validationError
             ? validationError
             : configStore.isDirty
-              ? translate("globalConfig.status.dirty")
-              : translate("globalConfig.status.synced");
+              ? "有未保存改动"
+              : "已同步生效配置";
   const actionsSummary = !runtimeStore.serverId
-    ? translate("globalConfig.actionsSummary.disconnected")
+    ? "主配置未连接服务"
     : configStore.saving
-      ? translate("globalConfig.actionsSummary.saving")
+      ? "正在保存主配置..."
       : configStore.isDirty
-        ? translate("globalConfig.actionsSummary.dirty", { count: dirtyCount })
-        : translate("globalConfig.actionsSummary.synced");
+        ? `主配置待保存 ${dirtyCount} 项`
+        : "主配置已同步";
   const actionsHint = !runtimeStore.serverId
-    ? translate("globalConfig.actionsHint.disconnected")
+    ? "连接服务后才能保存主配置。"
     : validationError
-      ? translate("globalConfig.actionsHint.validation")
-      : translate("globalConfig.actionsHint.saveManually");
+      ? "修正当前校验错误后，才能保存主配置。"
+      : "主配置改动需要点击保存。";
   const configRequirementsSummaryText = (() => {
     if (!runtimeStore.serverId) return "";
-    if (configRequirementsStore.loadState === "loading") return translate("globalConfig.requirements.loading");
+    if (configRequirementsStore.loadState === "loading") return "正在读取服务端 requirements...";
     if (configRequirementsStore.loadState === "error") {
-      return configRequirementsStore.statusText || translate("globalConfig.requirements.loadFailed");
+      return configRequirementsStore.statusText || "requirements 读取失败，当前按无约束展示配置选项。";
     }
     if (!configRequirementsStore.requirements) {
-      return configRequirementsStore.statusText || translate("globalConfig.requirements.none");
+      return configRequirementsStore.statusText || "当前服务端未配置 requirements，使用完整配置选项。";
     }
     if (
       approvalPolicyRestriction.hasRestrictions ||
       approvalsReviewerRestriction.hasRestrictions ||
       sandboxModeRestriction.hasRestrictions
     ) {
-      return translate("globalConfig.requirements.restricted");
+      return "已按服务端 requirements 限制审批策略、审批复核方与沙箱模式。";
     }
-    return configRequirementsStore.statusText || translate("globalConfig.requirements.unrestricted");
+    return configRequirementsStore.statusText || "当前服务端未限制审批策略、审批复核方与沙箱模式。";
   })();
   const configRequirementsSummaryClass =
     configRequirementsStore.loadState === "error"
@@ -419,23 +423,23 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
   const remoteModelPickExists = (id: string) => Boolean(normalizeModelId(id)) && modelCatalogStore.availableModelIds.includes(id);
   const canRefreshRemoteModels = Boolean(runtimeStore.serverId) && modelCatalogStore.remoteLoadState !== "loading";
   const remoteModelStatusText = (() => {
-    if (!runtimeStore.serverId) return translate("globalConfig.remoteModels.connectFirst");
-    if (modelCatalogStore.remoteLoadState === "loading") return translate("globalConfig.remoteModels.loading");
-    if (modelCatalogStore.remoteLoadState === "error") return translate("globalConfig.remoteModels.error");
+    if (!runtimeStore.serverId) return "连接服务后可从 Codex 读取可用模型（model/list），无需手动查找。";
+    if (modelCatalogStore.remoteLoadState === "loading") return "正在读取可用模型...";
+    if (modelCatalogStore.remoteLoadState === "error") return "读取可用模型失败，可点击刷新重试。";
     if (modelCatalogStore.remoteIds.length > 0) {
-      return translate("globalConfig.remoteModels.loaded", { count: modelCatalogStore.remoteIds.length });
+      return `已读取 ${modelCatalogStore.remoteIds.length} 个可用模型。`;
     }
-    return translate("globalConfig.remoteModels.refreshHint");
+    return "点击刷新读取可用模型列表。";
   })();
   const remoteModelOptions = (() => {
     const hasServer = Boolean(runtimeStore.serverId);
     const loading = modelCatalogStore.remoteLoadState === "loading";
     const errored = modelCatalogStore.remoteLoadState === "error";
-    let placeholder = translate("globalConfig.remoteModels.notLoaded");
-    if (!hasServer) placeholder = translate("globalConfig.remoteModels.disconnected");
-    else if (loading) placeholder = translate("globalConfig.remoteModels.loadingShort");
-    else if (errored) placeholder = translate("globalConfig.remoteModels.errorShort");
-    else if (modelCatalogStore.remoteIds.length > 0) placeholder = translate("globalConfig.remoteModels.choose");
+    let placeholder = "未加载，点击刷新";
+    if (!hasServer) placeholder = "未连接服务";
+    else if (loading) placeholder = "加载中...";
+    else if (errored) placeholder = "加载失败，点击刷新";
+    else if (modelCatalogStore.remoteIds.length > 0) placeholder = "选择可用模型";
     return [
       { value: "", label: placeholder, disabled: true },
       ...modelCatalogStore.remoteIds.map((id) => ({ value: id, label: id })),
@@ -452,10 +456,10 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
   const canAddRemoteModel =
     Boolean(normalizeModelId(remoteModelPick)) && !remoteModelPickExists(normalizeModelId(remoteModelPick)) && !modelCatalogControlsDisabled;
   const customModelHintText = !normalizedCustomModelInput
-    ? translate("globalConfig.customModel.addHint")
+    ? "添加后会同步到全局配置、主输入区和执行计划工具条。"
     : customModelExists
-      ? translate("globalConfig.customModel.exists")
-      : translate("globalConfig.customModel.addSuccessHint");
+      ? "该模型已在可选列表中。"
+      : "点击添加后，会立即出现在所有模型下拉里。";
 
   const saveGlobalConfigManually = async (options?: { silentSuccessToast?: boolean }): Promise<boolean> => {
     if (!canSave) return false;
@@ -472,9 +476,9 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
     setActionPending(true);
     try {
       if (!canSave) {
-        const reason = validationError || translate("globalConfig.pending.saveRequired");
+        const reason = validationError || "主配置需要手动保存。";
         const proceed = window.confirm(
-          `${translate(`globalConfig.pending.${actionKey}Title`)}\n${translate("globalConfig.pending.unsavableWithReason", { reason })}`
+          `${PENDING_TITLES[actionKey]}\n${`当前内容无法保存：${reason}`}`
         );
         if (!proceed) return;
         runtime.resetGlobalConfig();
@@ -482,7 +486,7 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
         return;
       }
       const proceed = window.confirm(
-        `${translate(`globalConfig.pending.${actionKey}Title`)}\n${translate(`globalConfig.pending.${actionKey}Message`)}`
+        `${PENDING_TITLES[actionKey]}\n${PENDING_MESSAGES[actionKey]}`
       );
       if (!proceed) return;
       const saved = await saveGlobalConfigManually({ silentSuccessToast: true });
@@ -554,26 +558,22 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
     if (normalizeModelId(runtimeStore.model) === removedId) {
       runtimeStore.model = DEFAULT_MODEL_NAME;
       await runtimeStore.saveThreadComposeStateNow();
-      reverted.push(translate("globalConfig.customModel.currentReverted"));
+      reverted.push("当前线程已回退");
     }
     if (normalizeModelId(configStore.draft.model) === removedId) {
       configStore.setDraft({ model: DEFAULT_MODEL_NAME });
-      reverted.push(translate("globalConfig.customModel.globalReverted"));
+      reverted.push("全局配置已回退");
       if (!globalWasDirty && runtimeStore.serverId && configStore.loadState === "ready" && !configStore.saving) {
         await runtime.saveGlobalConfig({ source: "auto", silentSuccessToast: true });
       } else if (globalWasDirty) {
-        reverted.push(translate("globalConfig.customModel.globalSaveSkippedDirty"));
+        reverted.push("全局配置存在其它未保存改动，请手动保存");
       }
     }
     if (reverted.length > 0) {
       showToast({
         kind: globalWasDirty ? "warn" : "info",
-        title: translate("globalConfig.customModel.removeFallbackTitle"),
-        message: translate("globalConfig.customModel.removeFallbackMessage", {
-          model: removedId,
-          fallback: DEFAULT_MODEL_NAME,
-          details: reverted.join("；"),
-        }),
+        title: "模型已删除",
+        message: `${removedId} 已删除，相关引用已回退到 ${DEFAULT_MODEL_NAME}。${reverted.join("；")}`,
       });
     }
   };
@@ -583,20 +583,20 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
   const panel = (
     <section className={["global-config-drawer-panel", className].filter(Boolean).join(" ")} onClick={(event) => event.stopPropagation()}>
       <header className="global-config-drawer-head">
-        <div className="panel-title">{translate("globalConfig.title")}</div>
+        <div className="panel-title">全局配置</div>
         <div className="row global-config-head-actions">
           <div className={`global-config-status global-config-status--inline is-${statusKind}`}>
             <span className="global-config-status-text">{statusText}</span>
           </div>
           <button className="btn-mini" type="button" disabled={!canReset} onClick={onResetGlobalConfig}>
-            {translate("common.reset")}
+            重置
           </button>
           <button className="btn-mini" type="button" disabled={!canRefresh} onClick={onRefreshGlobalConfig}>
-            {translate("common.refresh")}
+            刷新
           </button>
           {!isSettings ? (
             <button className="btn-mini" type="button" disabled={actionPending || configStore.saving} onClick={onRequestClose}>
-              {translate("common.close")}
+              关闭
             </button>
           ) : null}
         </div>
@@ -606,19 +606,19 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
         {configStore.isDirty ? (
           <div className="global-config-topbar">
             <div className="global-config-dirty-badge mono">
-              {translate("globalConfig.dirtyCount", { count: dirtyCount })}
+              {`已修改 ${dirtyCount} 项`}
             </div>
           </div>
         ) : null}
 
         <section className="global-config-guide-entry global-config-local-entry">
           <div className="guide-entry-text">
-            <div className="guide-entry-title">{translate("globalConfig.typographyTitle")}</div>
-            <div className="guide-entry-desc">{translate("globalConfig.typographyDesc")}</div>
+            <div className="guide-entry-title">字体与字号</div>
+            <div className="guide-entry-desc">切换全局字体样式与整体字号缩放，立即生效。</div>
           </div>
           <div className="typography-controls">
             <label className="typography-row">
-              <span className="typography-label dim">{translate("globalConfig.font")}</span>
+              <span className="typography-label dim">字体</span>
               <SelectDropdown
                 id="sel-ui-font-family"
                 className="context-input mono"
@@ -628,7 +628,7 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
               />
             </label>
             <label className="typography-row">
-              <span className="typography-label dim">{translate("globalConfig.fontSize")}</span>
+              <span className="typography-label dim">字号</span>
               <SelectDropdown
                 id="sel-ui-font-size"
                 className="context-input mono"
@@ -640,29 +640,10 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
           </div>
         </section>
 
-        <section className="global-config-guide-entry global-config-local-entry">
-          <div className="guide-entry-text">
-            <div className="guide-entry-title">{translate("globalConfig.languageTitle")}</div>
-            <div className="guide-entry-desc">{translate("globalConfig.languageDesc")}</div>
-          </div>
-          <div className="typography-controls">
-            <label className="typography-row">
-              <span className="typography-label dim">{translate("common.language")}</span>
-              <SelectDropdown
-                id="sel-ui-language"
-                className="context-input mono"
-                modelValue={appShellStore.language}
-                options={languageOptions}
-                onUpdate:modelValue={(value) => appShellStore.setLanguage(value as UiLanguage)}
-              />
-            </label>
-          </div>
-        </section>
-
         <div className="global-config-grid">
           <section className="global-config-section">
             <label className={`global-row${isFieldDirty("model") ? " is-dirty" : ""}`}>
-              <span className="context-label dim">{translate("globalConfig.model")}</span>
+              <span className="context-label dim">模型</span>
               <div className="global-field-stack">
                 <SelectDropdown
                   id="sel-global-model"
@@ -672,17 +653,17 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
                   options={modelOptions}
                   onUpdate:modelValue={(value) => configStore.setDraft({ model: normalizeModelId(value) || DEFAULT_MODEL_NAME })}
                 />
-                <div className="global-model-manage-hint">{translate("globalConfig.builtinModelHint")}</div>
+                <div className="global-model-manage-hint">内置预设保留，可在下方追加自定义模型。</div>
               </div>
             </label>
             <div className={`global-row global-row-service-tier${isFieldDirty("fastModeEnabled") ? " is-dirty" : ""}`}>
-              <span className="context-label dim">{translate("globalConfig.serviceTier")}</span>
+              <span className="context-label dim">服务层级</span>
               <div className="global-field-stack service-tier-field">
                 <div
                   id="service-tier-toggle"
                   className={`service-tier-segment${configStore.draft.fastModeEnabled ? " is-fast" : ""}${controlsDisabled ? " is-disabled" : ""}`}
                   role="radiogroup"
-                  aria-label={translate("globalConfig.serviceTier")}
+                  aria-label="服务层级"
                   aria-disabled={controlsDisabled ? "true" : "false"}
                   onKeyDown={onServiceTierKeyDown}
                 >
@@ -697,7 +678,7 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
                     disabled={controlsDisabled}
                     onClick={() => setServiceTier(false)}
                   >
-                    {translate("globalConfig.standard")}
+                    标准
                   </button>
                   <button
                     id="btn-service-tier-fast"
@@ -709,13 +690,13 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
                     disabled={controlsDisabled}
                     onClick={() => setServiceTier(true)}
                   >
-                    {translate("globalConfig.fast")}
+                    快速
                   </button>
                 </div>
               </div>
             </div>
             <div className="global-row">
-              <span className="context-label dim">{translate("globalConfig.customModels")}</span>
+              <span className="context-label dim">自定义模型</span>
               <div className="global-field-stack global-model-manager">
                 <div className="global-model-add-row">
                   <SelectDropdown
@@ -725,20 +706,20 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
                     disabled={!runtimeStore.serverId || modelCatalogStore.remoteLoadState === "loading" || modelCatalogStore.remoteIds.length === 0}
                     options={remoteModelOptions}
                     minPopoverWidth={0}
-                    aria-label={translate("globalConfig.availableModels")}
+                    aria-label="可用模型"
                     onUpdate:modelValue={setRemoteModelPick}
                   />
                   <button className="btn-mini" type="button" disabled={!canRefreshRemoteModels} onClick={() => void modelCatalogStore.refreshRemoteModels()}>
-                    {translate("common.refresh")}
+                    刷新
                   </button>
                   <button className="btn-mini" type="button" disabled={!canAddRemoteModel} onClick={() => void onAddRemoteModel()}>
-                    {translate("common.add")}
+                    添加
                   </button>
                 </div>
                 {remoteModelStatusText ? <div className="global-model-manage-hint">{remoteModelStatusText}</div> : null}
                 {modelCatalogStore.remoteErrorText ? (
                   <div className="global-field-error">
-                    {translate("globalConfig.loadFailed", { message: modelCatalogStore.remoteErrorText })}
+                    {`加载失败：${modelCatalogStore.remoteErrorText}`}
                   </div>
                 ) : null}
                 <div className="global-model-add-row">
@@ -746,7 +727,7 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
                     id="inp-global-custom-model"
                     className="context-input mono"
                     value={customModelInput}
-                    placeholder={translate("globalConfig.customModelPlaceholder")}
+                    placeholder="例如 deepseek-chat"
                     disabled={modelCatalogControlsDisabled}
                     onChange={(event) => setCustomModelInput(event.currentTarget.value)}
                     onKeyDown={(event) => {
@@ -757,13 +738,13 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
                     }}
                   />
                   <button className="btn-mini" type="button" disabled={!canAddCustomModel} onClick={() => void onAddCustomModel()}>
-                    {translate("common.add")}
+                    添加
                   </button>
                 </div>
                 {customModelHintText ? <div className="global-model-manage-hint">{customModelHintText}</div> : null}
                 {modelCatalogStore.errorText ? (
                   <div className="global-field-error">
-                    {translate("globalConfig.saveFailed", { message: modelCatalogStore.errorText })}
+                    {`保存失败：${modelCatalogStore.errorText}`}
                   </div>
                 ) : null}
                 {modelCatalogStore.customIds.length > 0 ? (
@@ -777,13 +758,13 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
                           disabled={modelCatalogControlsDisabled}
                           onClick={() => void onRemoveCustomModel(id)}
                         >
-                          {translate("common.delete")}
+                          删除
                         </button>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="global-model-empty">{translate("globalConfig.noCustomModels")}</div>
+                  <div className="global-model-empty">尚未添加自定义模型，当前下拉仅显示内置预设。</div>
                 )}
               </div>
             </div>
@@ -791,7 +772,7 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
 
           <section className="global-config-section">
             <div className="global-row">
-              <span className="context-label dim">{translate("globalConfig.contextPreset")}</span>
+              <span className="context-label dim">上下文预设</span>
               <div className="global-field-stack">
                 <div className="row" style={{ alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <button
@@ -812,13 +793,13 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
               </div>
             </div>
             <label className={`global-row${isFieldDirty("modelContextWindow") ? " is-dirty" : ""}`}>
-              <span className="context-label dim">{translate("globalConfig.contextWindow")}</span>
+              <span className="context-label dim">窗口上限</span>
               <div className="global-field-stack">
                 <input
                   className={`context-input mono${modelContextWindowError ? " is-invalid" : ""}`}
                   inputMode="numeric"
                   value={formatOptionalPositiveIntegerInput(configStore.draft.modelContextWindow)}
-                  placeholder={translate("globalConfig.contextWindowPlaceholder")}
+                  placeholder="例如 400000"
                   disabled={controlsDisabled}
                   aria-invalid={modelContextWindowError ? "true" : "false"}
                   onChange={(event) => configStore.setDraft({ modelContextWindow: normalizeOptionalPositiveIntegerInput(event.currentTarget.value) })}
@@ -827,13 +808,13 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
               </div>
             </label>
             <label className={`global-row${isFieldDirty("modelAutoCompactTokenLimit") ? " is-dirty" : ""}`}>
-              <span className="context-label dim">{translate("globalConfig.autoCompactLimit")}</span>
+              <span className="context-label dim">压缩阈值</span>
               <div className="global-field-stack">
                 <input
                   className={`context-input mono${modelAutoCompactTokenLimitError ? " is-invalid" : ""}`}
                   inputMode="numeric"
                   value={formatOptionalPositiveIntegerInput(configStore.draft.modelAutoCompactTokenLimit)}
-                  placeholder={translate("globalConfig.autoCompactLimitPlaceholder")}
+                  placeholder="例如 360000"
                   disabled={controlsDisabled}
                   aria-invalid={modelAutoCompactTokenLimitError ? "true" : "false"}
                   onChange={(event) =>
@@ -856,7 +837,7 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
               </div>
             ) : null}
             <label className={`global-row${isFieldDirty("modelReasoningEffort") ? " is-dirty" : ""}`}>
-              <span className="context-label dim">{translate("globalConfig.reasoningEffort")}</span>
+              <span className="context-label dim">推理强度</span>
               <div className="global-field-stack">
                 <SelectDropdown
                   id="sel-global-reasoning-effort"
@@ -869,7 +850,7 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
               </div>
             </label>
             <label className={`global-row${isFieldDirty("modelReasoningSummary") ? " is-dirty" : ""}`}>
-              <span className="context-label dim">{translate("globalConfig.reasoningSummary")}</span>
+              <span className="context-label dim">思考摘要</span>
               <div className="global-field-stack">
                 <SelectDropdown
                   id="sel-global-reasoning-summary"
@@ -882,7 +863,7 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
               </div>
             </label>
             <label className={`global-row${isFieldDirty("approvalPolicy") ? " is-dirty" : ""}`}>
-              <span className="context-label dim">{translate("globalConfig.approvalPolicy")}</span>
+              <span className="context-label dim">审批策略</span>
               <div className="global-field-stack">
                 <SelectDropdown
                   id="sel-global-approval-policy"
@@ -896,15 +877,15 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
                 {approvalPolicySelectValue === "granular" ? (
                   <div className="global-toggle-list">
                     {[
-                      ["sandbox_approval", "globalConfig.granularSandboxApproval"],
-                      ["rules", "globalConfig.granularRules"],
-                      ["skill_approval", "globalConfig.granularSkillApproval"],
-                      ["request_permissions", "globalConfig.granularRequestPermissions"],
-                      ["mcp_elicitations", "globalConfig.granularMcpElicitations"],
-                    ].map(([key, titleKey]) => (
+                      ["sandbox_approval", "沙箱审批"],
+                      ["rules", "规则审批"],
+                      ["skill_approval", "技能审批"],
+                      ["request_permissions", "权限请求"],
+                      ["mcp_elicitations", "MCP 输入请求"],
+                    ].map(([key, title]) => (
                       <ToggleRow
                         key={key}
-                        title={translate(titleKey)}
+                        title={title}
                         note={key}
                         checked={Boolean(granularApprovalPolicy.granular[key as GranularApprovalFlag])}
                         disabled={controlsDisabled}
@@ -916,7 +897,7 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
               </div>
             </label>
             <label className={`global-row${isFieldDirty("approvalsReviewer") ? " is-dirty" : ""}`}>
-              <span className="context-label dim">{translate("globalConfig.approvalsReviewer")}</span>
+              <span className="context-label dim">审批复核方</span>
               <div className="global-field-stack">
                 <SelectDropdown
                   id="sel-global-approvals-reviewer"
@@ -930,7 +911,7 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
               </div>
             </label>
             <label className={`global-row${isFieldDirty("sandboxMode") ? " is-dirty" : ""}`}>
-              <span className="context-label dim">{translate("globalConfig.sandboxMode")}</span>
+              <span className="context-label dim">沙箱模式</span>
               <div className="global-field-stack">
                 <SelectDropdown
                   id="sel-global-sandbox-mode"
@@ -947,24 +928,24 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
 
           <section className="global-config-section">
             <ToggleRow
-              title={translate("globalConfig.elevatedSandbox")}
-              note={translate("globalConfig.elevatedSandboxNote")}
+              title="提权沙箱"
+              note="启用后使用提权沙箱"
               checked={Boolean(configStore.draft.windowsElevatedSandboxEnabled)}
               disabled={controlsDisabled}
               dirty={isFieldDirty("windowsElevatedSandboxEnabled")}
               onChange={(checked) => configStore.setDraft({ windowsElevatedSandboxEnabled: checked })}
             />
             <ToggleRow
-              title={translate("globalConfig.unifiedExec")}
-              note={translate("globalConfig.unifiedExecNote")}
+              title="统一执行"
+              note="启用统一执行流程"
               checked={Boolean(configStore.draft.unifiedExecEnabled)}
               disabled={controlsDisabled}
               dirty={isFieldDirty("unifiedExecEnabled")}
               onChange={(checked) => configStore.setDraft({ unifiedExecEnabled: checked })}
             />
             <ToggleRow
-              title={translate("globalConfig.patchStream")}
-              note={translate("globalConfig.patchStreamNote")}
+              title="流式文件 Diff"
+              note="启用 patchUpdated 文件变更流"
               checked={Boolean(configStore.draft.applyPatchStreamingEventsEnabled)}
               disabled={controlsDisabled}
               dirty={isFieldDirty("applyPatchStreamingEventsEnabled")}
@@ -980,10 +961,10 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
           </div>
           <div className="global-config-actions-buttons">
             <button className="btn-mini" type="button" disabled={!canReset} onClick={onResetGlobalConfig}>
-              {translate("common.discard")}
+              放弃
             </button>
             <button className="btn-mini" type="button" disabled={!canSave} onClick={() => void saveGlobalConfigManually()}>
-              {translate("common.save")}
+              保存
             </button>
           </div>
         </footer>
@@ -998,7 +979,7 @@ export default function GlobalConfigDrawer({ mode = "drawer", className }: Globa
       className="global-config-drawer-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label={translate("globalConfig.title")}
+      aria-label="全局配置"
       onClick={(event) => {
         if (event.target === event.currentTarget) onRequestClose();
       }}

@@ -1,6 +1,5 @@
 import type { DynamicToolCallOutputContentItem } from "@codenexus/generated/codex-app-server/v2/DynamicToolCallOutputContentItem";
 import { IMAGE_GENERATION_DYNAMIC_TOOL_NAME } from "@codenexus/shared/dynamicTools";
-import { translate } from "../i18n/translate";
 import { safeJsonStringify } from "../utils/safeJson";
 
 export type DynamicToolTimelineStatus =
@@ -27,12 +26,12 @@ export type DynamicToolTimelineItem = {
 };
 
 export function dynamicToolStatusText(status: DynamicToolTimelineStatus): string {
-  if (status === "succeeded") return translate("dynamicTool.status.succeeded");
-  if (status === "failed") return translate("dynamicTool.status.failed");
-  if (status === "cancelled") return translate("dynamicTool.status.cancelled");
-  if (status === "awaitingApproval") return translate("dynamicTool.status.awaitingApproval");
-  if (status === "rejected") return translate("dynamicTool.status.rejected");
-  return translate("dynamicTool.status.running");
+  if (status === "succeeded") return "已完成";
+  if (status === "failed") return "失败";
+  if (status === "cancelled") return "已取消";
+  if (status === "awaitingApproval") return "等待审批";
+  if (status === "rejected") return "已拒绝";
+  return "运行中";
 }
 
 function toRecord(value: unknown): Record<string, unknown> {
@@ -67,8 +66,8 @@ function normalizeContentItems(value: unknown): DynamicToolCallOutputContentItem
 }
 
 function dynamicToolLabel(toolName: string): string {
-  if (toolName === IMAGE_GENERATION_DYNAMIC_TOOL_NAME) return translate("dynamicTool.imageGeneration");
-  return translate("dynamicTool.callTool", { tool: toolName || "unknown" });
+  if (toolName === IMAGE_GENERATION_DYNAMIC_TOOL_NAME) return "生成图片";
+  return `调用动态工具 · ${toolName || "unknown"}`;
 }
 
 function dynamicToolArgsSummary(toolName: string, args: Record<string, unknown>): string {
@@ -96,7 +95,7 @@ function dynamicToolResultSummary(contentItems: DynamicToolCallOutputContentItem
     .filter(Boolean);
   if (textItems.length > 0) return textItems.join("\n");
   const imageCount = contentItems.filter((item) => item.type === "inputImage").length;
-  if (imageCount > 0) return translate("dynamicTool.returnedImages", { count: imageCount });
+  if (imageCount > 0) return `返回 ${imageCount} 张图片`;
   return "";
 }
 
@@ -133,7 +132,7 @@ export function buildDynamicToolTimelineItemFromProtocolItem(item: unknown): Dyn
     argsRaw: toPrettyJson(args),
     argsSummary: dynamicToolArgsSummary(toolName, args),
     resultSummary: status === "failed" ? "" : outputSummary,
-    errorText: status === "failed" ? outputSummary || translate("dynamicTool.callFailed") : "",
+    errorText: status === "failed" ? outputSummary || "动态工具调用失败" : "",
     contentItems,
   };
 }

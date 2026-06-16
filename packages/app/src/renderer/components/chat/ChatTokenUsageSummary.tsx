@@ -2,7 +2,6 @@ import type { HTMLAttributes } from "react";
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { TokenUsageState } from "../../domain/types";
-import { translate } from "../../i18n/translate";
 
 export type ChatTokenUsageSummaryProps = HTMLAttributes<HTMLDivElement> & {
   usage?: TokenUsageState;
@@ -27,13 +26,13 @@ export default function ChatTokenUsageSummary({ usage, onLayoutChange, className
   }, [usage?.contextWindow, usage?.usedTokens]);
   const detailItems = useMemo(
     () => [
-      { label: translate("chat.tokenUsage.input"), value: formatCount(usage?.last?.inputTokens) },
-      { label: translate("chat.tokenUsage.cachedInput"), value: formatCount(usage?.last?.cachedInputTokens) },
-      { label: translate("chat.tokenUsage.output"), value: formatCount(usage?.last?.outputTokens) },
-      { label: translate("chat.tokenUsage.reasoningOutput"), value: formatCount(usage?.last?.reasoningOutputTokens) },
-      { label: translate("chat.tokenUsage.turnTotal"), value: formatCount(usage?.last?.totalTokens) },
-      { label: translate("chat.tokenUsage.cumulativeTotal"), value: formatCount(usage?.total?.totalTokens) },
-      { label: translate("chat.tokenUsage.contextWindow"), value: formatCount(usage?.contextWindow) },
+      { label: "输入", value: formatCount(usage?.last?.inputTokens) },
+      { label: "缓存输入", value: formatCount(usage?.last?.cachedInputTokens) },
+      { label: "输出", value: formatCount(usage?.last?.outputTokens) },
+      { label: "推理输出", value: formatCount(usage?.last?.reasoningOutputTokens) },
+      { label: "本轮总计", value: formatCount(usage?.last?.totalTokens) },
+      { label: "累计总计", value: formatCount(usage?.total?.totalTokens) },
+      { label: "上下文窗口", value: formatCount(usage?.contextWindow) },
     ],
     [usage]
   );
@@ -51,13 +50,13 @@ export default function ChatTokenUsageSummary({ usage, onLayoutChange, className
           }}
         >
           <span className="chat-activity-dot h-1.5 w-1.5 flex-none rounded-full" aria-hidden="true" />
-          <span className="chat-token-usage__label mono">{translate("chat.tokenUsage.title")}</span>
+          <span className="chat-token-usage__label mono">本轮用量</span>
           <span className="chat-token-usage__metric mono">{formatCount(usage?.last?.totalTokens)} token</span>
           <span className="chat-token-usage__metric mono">
-            {translate("chat.tokenUsage.cached", { count: formatCount(usage?.last?.cachedInputTokens) })}
+            {`缓存 ${formatCount(usage?.last?.cachedInputTokens)}`}
           </span>
           <span className="chat-token-usage__metric mono">
-            {translate("chat.tokenUsage.context", { percent: contextPercentText })}
+            {`上下文 ${contextPercentText}`}
           </span>
           <ChevronDown className={["chat-token-usage__chevron", open ? "is-open" : ""].filter(Boolean).join(" ")} aria-hidden="true" />
         </button>

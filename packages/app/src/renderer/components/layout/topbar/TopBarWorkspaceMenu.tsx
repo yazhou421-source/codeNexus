@@ -1,5 +1,4 @@
 import { ChevronDown } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { getRuntimeOrchestrator } from "../../../domain/runtimeOrchestrator";
 import { useRuntimeStore } from "../../../stores/runtime.store";
 
@@ -17,12 +16,11 @@ function basenameFromWorkspacePath(pathValue: string) {
 }
 
 export default function TopBarWorkspaceMenu({ className, open = false, onToggle, onClose }: TopBarWorkspaceMenuProps) {
-  const { t } = useTranslation();
   const runtime = getRuntimeOrchestrator();
   const runtimeStore = useRuntimeStore();
   const workspacePath = String(runtimeStore.workspacePath ?? "").trim();
-  const workspaceName = workspacePath ? basenameFromWorkspacePath(workspacePath) : t("topbarExtra.noWorkspace");
-  const workspaceMenuActionLabel = workspacePath ? t("topbarExtra.changeWorkspace") : t("topbarExtra.selectWorkspace");
+  const workspaceName = workspacePath ? basenameFromWorkspacePath(workspacePath) : "未选择";
+  const workspaceMenuActionLabel = workspacePath ? "更换工作区" : "选择工作区";
 
   async function onSelectWorkspace() {
     onClose?.();
@@ -42,24 +40,24 @@ export default function TopBarWorkspaceMenu({ className, open = false, onToggle,
           onToggle?.();
         }}
       >
-        <span className="topbar-pill-caption">{t("topbarExtra.workspace")}</span>
+        <span className="topbar-pill-caption">工作区</span>
         <span className={`topbar-pill-value topbar-pill-value--workspace${workspacePath ? "" : " dim"}`}>{workspaceName}</span>
         <ChevronDown className="topbar-pill-caret" aria-hidden="true" />
       </button>
 
       {open ? (
         <div className="topbar-menu-shell topbar-menu-shell--workspace" onClick={(event) => event.stopPropagation()}>
-          <div className="topbar-dropdown app-scrollbar topbar-menu topbar-menu--workspace" role="menu" aria-label={t("topbarExtra.workspaceMenu")}>
+          <div className="topbar-dropdown app-scrollbar topbar-menu topbar-menu--workspace" role="menu" aria-label="工作区菜单">
             <div className="workspace-menu-head">
-              <div className="topbar-menu-heading">{t("topbarExtra.currentWorkspace")}</div>
+              <div className="topbar-menu-heading">当前工作区</div>
               <button id="btn-workspace-menu-select" className="btn-mini workspace-menu-select" type="button" role="menuitem" onClick={() => void onSelectWorkspace()}>
                 {workspaceMenuActionLabel}
               </button>
             </div>
             <div className={`workspace-path-inline mono${workspacePath ? "" : " dim"}`}>
-              {workspacePath || t("topbarExtra.noWorkspaceFull")}
+              {workspacePath || "未选择工作区"}
             </div>
-            <div className="topbar-menu-note">{t("topbarExtra.workspaceNote")}</div>
+            <div className="topbar-menu-note">绑定当前任务目录，并驱动文件面板与动态工具</div>
           </div>
         </div>
       ) : null}

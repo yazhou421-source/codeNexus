@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import type { SandboxMode } from "../../stores/runtime.store";
 import type { ChatInlineRewriteDraft } from "../layout/types/chat.types";
 import ComposerPanel from "../layout/composer/ComposerPanel";
@@ -29,7 +28,6 @@ export default function ChatInlineRewriteOverlay({
   onSend,
   className,
 }: ChatInlineRewriteOverlayProps) {
-  const { t } = useTranslation();
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLDivElement | null>(null);
@@ -80,11 +78,11 @@ export default function ChatInlineRewriteOverlay({
         contextUsageTokensText=""
         isTurnRunning={draft.sending}
         sendDisabled={sendDisabled || draft.sending}
-        sendTitle={draft.sending ? t("chat.planActions.sending") : t("chat.planActions.sendEdit")}
+        sendTitle={draft.sending ? "发送中" : "发送编辑内容"}
         interruptDisabled
-        interruptTitle={t("chat.planActions.sendingEdit")}
+        interruptTitle="正在发送编辑内容"
         inputId="inline-history-rewrite-input"
-        inputPlaceholder={t("chat.planActions.editPlaceholder")}
+        inputPlaceholder="修改这条消息..."
         variant="inline"
         interactionOwnerId={INLINE_REWRITE_OWNER_ID}
         onUpdateComposeInput={(value) => onUpdate?.({ composeInput: value })}

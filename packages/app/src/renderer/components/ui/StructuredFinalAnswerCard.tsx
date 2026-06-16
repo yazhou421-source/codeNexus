@@ -5,7 +5,6 @@ import {
   type StructuredFinalAnswerV1,
 } from "../../domain/structuredFinalAnswer";
 import { renderMarkdownToSafeHtml } from "../../features/timeline/markdownRenderer";
-import { translate } from "../../i18n/translate";
 import { showToast } from "../../ui/toast";
 import AgentMarkdownContent from "./AgentMarkdownContent";
 
@@ -32,7 +31,7 @@ function fallbackAnswer(): StructuredFinalAnswerV1 {
 
 function toMarkdownList(items: string[]): string {
   const normalized = (Array.isArray(items) ? items : []).map((item) => String(item ?? "").trim()).filter(Boolean);
-  if (normalized.length === 0) return `- ${translate("common.none")}`;
+  if (normalized.length === 0) return `- （无）`;
   return normalized.map((item) => `- ${item}`).join("\n");
 }
 
@@ -51,15 +50,15 @@ async function copyTextToClipboard(text: string) {
   try {
     textarea.focus();
     textarea.select();
-    if (!document.execCommand("copy")) throw new Error(translate("clipboard.copyFailed"));
+    if (!document.execCommand("copy")) throw new Error("复制失败");
   } finally {
     textarea.remove();
   }
 }
 
 function copyButtonLabel(state: CopyState, idle: string): string {
-  if (state === "success") return translate("clipboard.copied");
-  if (state === "error") return translate("clipboard.copyFailed");
+  if (state === "success") return "已复制";
+  if (state === "error") return "复制失败";
   return idle;
 }
 
@@ -71,7 +70,7 @@ export default function StructuredFinalAnswerCard({ rawText, text, content, clas
     [answer.commands]
   );
   const summaryHtml = useMemo(
-    () => renderMarkdownToSafeHtml(String(answer.summary ?? "").trim() || translate("common.none"), { cache: true }),
+    () => renderMarkdownToSafeHtml(String(answer.summary ?? "").trim() || "（无）", { cache: true }),
     [answer.summary]
   );
   const changesHtml = useMemo(() => renderMarkdownToSafeHtml(toMarkdownList(answer.changes), { cache: true }), [answer.changes]);
@@ -100,10 +99,10 @@ export default function StructuredFinalAnswerCard({ rawText, text, content, clas
     try {
       await copyTextToClipboard(value);
       setState("success");
-      if (okToast) showToast({ kind: "success", title: translate("clipboard.copied"), message: okToast });
+      if (okToast) showToast({ kind: "success", title: "已复制", message: okToast });
     } catch (error: any) {
       setState("error");
-      showToast({ kind: "error", title: translate("clipboard.copyFailed"), message: String(error?.message ?? error ?? "") });
+      showToast({ kind: "error", title: "复制失败", message: String(error?.message ?? error ?? "") });
     } finally {
       setCopyBusy(false);
     }
@@ -117,43 +116,43 @@ export default function StructuredFinalAnswerCard({ rawText, text, content, clas
       ]
         .filter(Boolean)
         .join(" ")}
-      aria-label={translate("structuredAnswer.aria")}
+      aria-label="结构化最终答复"
     >
       <header className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[12px] font-semibold tracking-[0.2px] text-[color:var(--text)]">
-            {translate("structuredAnswer.title")}
+            结构化答复
           </div>
-          <div className="dim text-[11px] leading-[1.35]">{translate("structuredAnswer.subtitle")}</div>
+          <div className="dim text-[11px] leading-[1.35]">总结 / 变更 / 命令 / 下一步</div>
         </div>
         <div className="flex flex-none items-center gap-2">
           <button className="btn-mini" type="button" disabled={copyBusy} onClick={() => withCopyFeedback(setCopyMarkdownState, structuredFinalAnswerToMarkdownV1(answer))}>
-            {copyButtonLabel(copyMarkdownState, translate("structuredAnswer.copyMarkdown"))}
+            {copyButtonLabel(copyMarkdownState, "复制 Markdown")}
           </button>
-          <button className="btn-mini" type="button" disabled={copyBusy} onClick={() => withCopyFeedback(setCopyCommandsState, commands.join("\n"), translate("structuredAnswer.commandsCopied"))}>
-            {copyButtonLabel(copyCommandsState, translate("structuredAnswer.copyCommands"))}
+          <button className="btn-mini" type="button" disabled={copyBusy} onClick={() => withCopyFeedback(setCopyCommandsState, commands.join("\n"), "命令已复制到剪贴板")}>
+            {copyButtonLabel(copyCommandsState, "复制命令")}
           </button>
           <button className="btn-mini" type="button" disabled={copyBusy} onClick={() => withCopyFeedback(setCopyJsonState, JSON.stringify(answer, null, 2))}>
-            {copyButtonLabel(copyJsonState, translate("structuredAnswer.copyJson"))}
+            {copyButtonLabel(copyJsonState, "复制 JSON")}
           </button>
         </div>
       </header>
 
       <div className="grid min-w-0 gap-3">
         <div className="grid min-w-0 gap-1.5">
-          <div className="mono dim text-[11px]">{translate("structuredAnswer.summary")}</div>
+          <div className="mono dim text-[11px]">总结</div>
           <AgentMarkdownContent className="agent-markdown-body min-w-0" html={summaryHtml} />
         </div>
 
         <div className="grid min-w-0 gap-1.5">
-          <div className="mono dim text-[11px]">{translate("structuredAnswer.changes")}</div>
+          <div className="mono dim text-[11px]">变更</div>
           <AgentMarkdownContent className="agent-markdown-body min-w-0" html={changesHtml} />
         </div>
 
         <div className="grid min-w-0 gap-1.5">
-          <div className="mono dim text-[11px]">{translate("structuredAnswer.commands")}</div>
+          <div className="mono dim text-[11px]">命令</div>
           {commands.length === 0 ? (
-            <div className="dim text-[12px]">{translate("common.none")}</div>
+            <div className="dim text-[12px]">（无）</div>
           ) : (
             <div className="grid min-w-0 gap-2">
               {commands.map((cmd, idx) => (
@@ -168,9 +167,9 @@ export default function StructuredFinalAnswerCard({ rawText, text, content, clas
                     className="btn-mini flex-none"
                     type="button"
                     disabled={copyBusy}
-                    onClick={() => withCopyFeedback(() => undefined, cmd, translate("structuredAnswer.commandsCopied"))}
+                    onClick={() => withCopyFeedback(() => undefined, cmd, "命令已复制到剪贴板")}
                   >
-                    {translate("common.copy")}
+                    {"复制"}
                   </button>
                 </div>
               ))}
@@ -179,7 +178,7 @@ export default function StructuredFinalAnswerCard({ rawText, text, content, clas
         </div>
 
         <div className="grid min-w-0 gap-1.5">
-          <div className="mono dim text-[11px]">{translate("structuredAnswer.nextSteps")}</div>
+          <div className="mono dim text-[11px]">下一步</div>
           <AgentMarkdownContent className="agent-markdown-body min-w-0" html={nextStepsHtml} />
         </div>
       </div>

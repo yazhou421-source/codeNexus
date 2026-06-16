@@ -1,6 +1,5 @@
 import { Activity, ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from "react";
-import { translate } from "../../i18n/translate";
 import type { ChatAuxActivityStatus, ChatAuxActivitySummaryItem, ChatAuxiliaryRow } from "../layout/types/chat.types";
 import { CHAT_ROW_BASE_CLASS } from "../layout/chat/chatPresentation";
 
@@ -113,16 +112,16 @@ export default function ChatAuxActivityGroup({
 
   const elapsed = elapsedText(startedAtMs, answerStartedAtMs, elapsedLive, nowMs);
   const statusText = elapsedLive && elapsed
-    ? translate("chat.activity.runningElapsed", { elapsed })
+    ? `运行 ${elapsed}`
     : elapsedLive
-      ? translate("chat.activity.running")
+      ? "进行中"
       : elapsed
         ? open
-          ? translate("chat.activity.expandedElapsed", { elapsed })
-          : translate("chat.activity.collapsedElapsed", { elapsed })
+          ? `已展开 · ${elapsed}`
+          : `已收起 · ${elapsed}`
         : open
-          ? translate("chat.activity.expanded")
-          : translate("chat.activity.collapsed");
+          ? "已展开"
+          : "已收起";
   const activityClass = [status === "running" ? "is-running" : "", open ? "is-open" : ""].filter(Boolean).join(" ");
 
   const toggleOpen = () => {
@@ -145,7 +144,7 @@ export default function ChatAuxActivityGroup({
             <Activity className="h-3.5 w-3.5 [stroke-width:2.25]" />
           </span>
           <span className="chat-aux-activity__main min-w-0">
-            <span className="chat-aux-activity__title">{translate("chat.activity.auxTitle")}</span>
+            <span className="chat-aux-activity__title">中间过程</span>
             <span className="chat-aux-activity__counts">
               {summaryItems.map((item) => (
                 <span key={item.key} className="chat-aux-activity__count">

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useAppShellStore } from "../../stores/appShell.store";
 import CodexProfileSwitch from "./controls/CodexProfileSwitch";
 
@@ -14,7 +13,6 @@ function formatMinute(value: number) {
 }
 
 export default function BottomBar() {
-  const { t } = useTranslation();
   const appShellStore = useAppShellStore();
   const [now, setNow] = useState(Date.now());
   const isCustomMode = appShellStore.runtimeMode === "custom";
@@ -32,14 +30,14 @@ export default function BottomBar() {
   }, []);
 
   const connectionLabel = useMemo(() => {
-    if (appShellStore.serverConnState === "connected") return t("bottomBar.connected");
-    if (appShellStore.serverConnState === "connecting") return t("bottomBar.connecting");
-    if (appShellStore.serverConnState === "failed") return t("bottomBar.failed");
-    return t("bottomBar.offline");
-  }, [appShellStore.serverConnState, t]);
+    if (appShellStore.serverConnState === "connected") return "已连接";
+    if (appShellStore.serverConnState === "connecting") return "连接中";
+    if (appShellStore.serverConnState === "failed") return "失败";
+    return "离线";
+  }, [appShellStore.serverConnState]);
 
   return (
-    <footer className="bottom-bar" role="navigation" aria-label={t("bottomBar.aria")}>
+    <footer className="bottom-bar" role="navigation" aria-label="底部栏">
       <div className="bottom-bar__left">
         <button className="bottom-bar__mode-switch mono" type="button" title="切换运行模式" onClick={() => appShellStore.openModeChooser()}>
           {isCustomMode ? "自定义模式" : "Codex 模式"}
@@ -55,7 +53,7 @@ export default function BottomBar() {
             <span className="bottom-bar__conn-text">{connectionLabel}</span>
           </div>
         ) : null}
-        <div className="bottom-bar__clock mono dim" aria-label={t("bottomBar.currentTime", { time: formatMinute(now) })}>
+        <div className="bottom-bar__clock mono dim" aria-label={`当前时间 ${formatMinute(now)}`}>
           {formatMinute(now)}
         </div>
       </div>

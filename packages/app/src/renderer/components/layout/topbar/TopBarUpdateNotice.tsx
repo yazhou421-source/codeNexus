@@ -1,6 +1,5 @@
 import { Download, LoaderCircle, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { AppUpdateSnapshot } from "@codenexus/shared/ipc/contracts";
 import { codexDesktop } from "../../../api/codexDesktopClient";
 
@@ -29,7 +28,6 @@ function clampProgressPercent(value: unknown) {
 }
 
 export default function TopBarUpdateNotice({ className }: TopBarUpdateNoticeProps) {
-  const { t } = useTranslation();
   const [state, setState] = useState<AppUpdateSnapshot>(DEFAULT_STATE);
   const [actionRunning, setActionRunning] = useState(false);
   const visible = state.status === "available" || state.status === "downloading" || state.status === "downloaded";
@@ -52,17 +50,17 @@ export default function TopBarUpdateNotice({ className }: TopBarUpdateNoticeProp
   }, []);
 
   const label = useMemo(() => {
-    if (state.status === "downloading") return t("topbarUpdate.downloading", { percent: progressPercent });
-    if (state.status === "downloaded") return t("topbarUpdate.install");
-    return t("topbarUpdate.available");
-  }, [progressPercent, state.status, t]);
+    if (state.status === "downloading") return `下载中 ${progressPercent}%`;
+    if (state.status === "downloaded") return "重启安装";
+    return "检测到新版本";
+  }, [progressPercent, state.status]);
 
   const ariaLabel = useMemo(() => {
     const version = String(state.latestVersion ?? "").trim();
-    if (state.status === "downloaded") return t("topbarUpdate.installAria");
-    if (state.status === "downloading") return t("topbarUpdate.downloadingAria", { percent: progressPercent });
-    return version ? t("topbarUpdate.availableVersionAria", { version }) : t("topbarUpdate.availableAria");
-  }, [progressPercent, state.latestVersion, state.status, t]);
+    if (state.status === "downloaded") return "更新已下载，点击重启安装";
+    if (state.status === "downloading") return `更新下载中，进度 ${progressPercent}%`;
+    return version ? `检测到新版本 ${version}，点击下载更新` : "检测到新版本，点击下载更新";
+  }, [progressPercent, state.latestVersion, state.status]);
 
   async function onClick() {
     if (actionRunning || state.status === "downloading") return;

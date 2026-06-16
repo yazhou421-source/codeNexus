@@ -2,7 +2,6 @@ import type { SandboxMode } from "../../stores/runtime.store";
 import type { PlanDeltaExecUiState } from "../layout/types/chat.types";
 import ComposerModelReasoningPicker from "../layout/composer/ComposerModelReasoningPicker";
 import ComposerSandboxPicker from "../layout/composer/ComposerSandboxPicker";
-import { translate } from "../../i18n/translate";
 
 type Option = string | { value: string; label: string; disabled?: boolean };
 
@@ -68,7 +67,7 @@ export default function ChatPlanDeltaActions({
         disabled={disabled}
         onClick={onExecutePlan}
       >
-        <span>{execState.executing ? translate("chat.planActions.executing") : translate("chat.planActions.executePlan")}</span>
+        <span>{execState.executing ? "执行中..." : "执行计划"}</span>
       </button>
     </div>
   );

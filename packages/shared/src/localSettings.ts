@@ -73,7 +73,6 @@ export type LocalGoalAutomationSettings = {
 export type MainView = "chat" | "image" | "flowchart" | "paper";
 /** 应用运行时模式：codex=旧版 codex-app-server；custom=新版自定义 provider；null=尚未选择（显示选择页）。 */
 export type RuntimeMode = "codex" | "custom";
-export type UiLanguage = "zh-CN" | "en-US";
 export type UiFontFamilyPreset = "alibaba-puhuiti" | "source-han-sans-sc";
 export type UiFontSizePreset = "small" | "medium" | "large";
 export type UiWorkspaceFileIconTheme = "vscode-icons";
@@ -83,7 +82,6 @@ export type UserLocalSettings = {
   version: 1;
   ui: {
     theme: string | null;
-    language: UiLanguage;
     mainView: MainView;
     runtimeMode: RuntimeMode | null;
     leftSidebarVisible: boolean;
@@ -122,7 +120,6 @@ export type UserLocalSettings = {
 export type UserLocalSettingsPatch = {
   ui?: Partial<{
     theme: string | null;
-    language: UiLanguage | null;
     mainView: MainView;
     runtimeMode: RuntimeMode | null;
     leftSidebarVisible: boolean;
@@ -206,7 +203,6 @@ export const MAX_FLOWCHART_AI_TIMEOUT_MS = 300_000;
 export const DEFAULT_GOAL_SHUTDOWN_DELAY_SECONDS = 60;
 export const MIN_GOAL_SHUTDOWN_DELAY_SECONDS = 10;
 export const MAX_GOAL_SHUTDOWN_DELAY_SECONDS = 600;
-export const DEFAULT_UI_LANGUAGE: UiLanguage = "zh-CN";
 export const DEFAULT_UI_FONT_FAMILY_PRESET: UiFontFamilyPreset =
   "alibaba-puhuiti";
 export const DEFAULT_UI_FONT_SIZE_PRESET: UiFontSizePreset = "medium";
@@ -229,22 +225,6 @@ function normalizeUiFontFamilyPreset(value: unknown): UiFontFamilyPreset {
   if (raw === "source-han-sans-sc") return "source-han-sans-sc";
   if (raw === "alibaba-puhuiti") return "alibaba-puhuiti";
   return DEFAULT_UI_FONT_FAMILY_PRESET;
-}
-
-export function normalizeUiLanguage(value: unknown): UiLanguage {
-  const raw = String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace("_", "-");
-  if (raw === "en" || raw === "en-us") return "en-US";
-  if (
-    raw === "zh" ||
-    raw === "zh-cn" ||
-    raw === "zh-hans" ||
-    raw === "zh-hans-cn"
-  )
-    return "zh-CN";
-  return DEFAULT_UI_LANGUAGE;
 }
 
 function normalizeUiFontSizePreset(value: unknown): UiFontSizePreset {
@@ -278,7 +258,6 @@ export const DEFAULT_USER_LOCAL_SETTINGS: UserLocalSettings = {
   version: 1,
   ui: {
     theme: null,
-    language: DEFAULT_UI_LANGUAGE,
     mainView: "chat",
     runtimeMode: null,
     leftSidebarVisible: true,
@@ -694,7 +673,6 @@ export function normalizeUserLocalSettings(value: unknown): UserLocalSettings {
     version: 1,
     ui: {
       theme: toNullableString(ui?.theme, DEFAULT_USER_LOCAL_SETTINGS.ui.theme),
-      language: normalizeUiLanguage(ui?.language),
       mainView: normalizeMainView(ui?.mainView, inferredMainViewFallback),
       runtimeMode: normalizeRuntimeMode(ui?.runtimeMode),
       leftSidebarVisible: toBoolean(
@@ -784,10 +762,6 @@ export function mergeUserLocalSettings(
     version: 1,
     ui: {
       theme: patchUi && "theme" in patchUi ? patchUi.theme : current.ui.theme,
-      language:
-        patchUi && "language" in patchUi
-          ? patchUi.language
-          : current.ui.language,
       mainView:
         patchUi && "mainView" in patchUi
           ? patchUi.mainView

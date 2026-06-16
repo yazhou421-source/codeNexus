@@ -9,7 +9,6 @@ type TimelineStore = ReturnType<typeof useTimelineStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
@@ -22,7 +21,6 @@ export type ThreadRollbackRuntimeDeps = {
   getServerIdForThread: (threadId: string) => string;
   ensureThreadResumed: (threadId: string) => Promise<boolean>;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -51,7 +49,6 @@ export function createThreadRollbackRuntime(deps: ThreadRollbackRuntimeDeps): Th
     getServerIdForThread,
     ensureThreadResumed,
     pushEvent,
-    translate,
     showToast,
   } = deps;
 
@@ -71,7 +68,7 @@ export function createThreadRollbackRuntime(deps: ThreadRollbackRuntimeDeps): Th
     } catch (e: unknown) {
       const msg = readErrorMessage(e);
       pushEvent("rollback:error", msg || "thread/rollback failed", { threadId: tid, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.rollbackFailedTitle"), message: "thread/rollback failed" });
+      showToast({ kind: "error", title: "撤回失败", message: "thread/rollback failed" });
       return false;
     }
   };
@@ -80,8 +77,8 @@ export function createThreadRollbackRuntime(deps: ThreadRollbackRuntimeDeps): Th
     if (!runtimeStore.currentThreadId) {
       showToast({
         kind: "info",
-        title: translate("runtime.rollbackUnavailableTitle"),
-        message: translate("runtime.noThreadSelected"),
+        title: "无法撤回",
+        message: "未选择会话。",
       });
       return;
     }
@@ -89,8 +86,8 @@ export function createThreadRollbackRuntime(deps: ThreadRollbackRuntimeDeps): Th
     if (!tid) {
       showToast({
         kind: "info",
-        title: translate("runtime.rollbackUnavailableTitle"),
-        message: translate("runtime.noThreadSelected"),
+        title: "无法撤回",
+        message: "未选择会话。",
       });
       return;
     }
@@ -99,24 +96,24 @@ export function createThreadRollbackRuntime(deps: ThreadRollbackRuntimeDeps): Th
     if (!workspace) {
       showToast({
         kind: "error",
-        title: translate("runtime.rollbackUnavailableTitle"),
-        message: translate("runtime.workspaceUnavailable"),
+        title: "无法撤回",
+        message: "未选择工作区或工作区不可用。",
       });
       return;
     }
     if (!serverId) {
       showToast({
         kind: "error",
-        title: translate("runtime.rollbackUnavailableTitle"),
-        message: translate("runtime.serviceUnavailable"),
+        title: "无法撤回",
+        message: "未连接服务或服务不可用。",
       });
       return;
     }
     if (threadStore.runningThreadIds.has(tid)) {
       showToast({
         kind: "warn",
-        title: translate("runtime.threadRunningTitle"),
-        message: translate("runtime.waitBeforeRollback"),
+        title: "线程运行中",
+        message: "请等待当前回合完成后再撤回。",
       });
       return;
     }
@@ -124,19 +121,19 @@ export function createThreadRollbackRuntime(deps: ThreadRollbackRuntimeDeps): Th
     if (stack.length === 0) {
       showToast({
         kind: "info",
-        title: translate("runtime.noRollbackTurnsTitle"),
-        message: translate("runtime.noCompletedTurns"),
+        title: "暂无可撤回回合",
+        message: "当前会话还没有已完成回合。",
       });
       return;
     }
     let n: number | null = null;
     try {
       n = await promptNumberModalLazy({
-        title: translate("topbarExtra.rollbackRecent"),
-        message: translate("runtime.rollbackDetail"),
-        detail: translate("runtime.rollbackRange", { count: stack.length }),
-        confirmText: translate("runtime.rollback"),
-        cancelText: translate("common.cancel"),
+        title: "撤回最近 N 轮",
+        message: "撤回会回退线程上下文，并尝试回退这些回合产生的文件内容改动（不回退命令副作用）。",
+        detail: `可撤回：1..${stack.length}`,
+        confirmText: "撤回",
+        cancelText: "取消",
         danger: true,
         defaultValue: 1,
         min: 1,
@@ -147,8 +144,8 @@ export function createThreadRollbackRuntime(deps: ThreadRollbackRuntimeDeps): Th
       const isBusy = msg.includes("another modal is already open");
       showToast({
         kind: isBusy ? "warn" : "error",
-        title: translate("runtime.rollbackModalOpenFailedTitle"),
-        message: isBusy ? translate("runtime.modalAlreadyOpen") : translate("runtime.modalOpenFailed"),
+        title: "无法打开撤回弹窗",
+        message: isBusy ? "当前已有弹窗打开，请先关闭后再重试。" : "打开弹窗失败",
       });
       return;
     }
@@ -165,14 +162,14 @@ export function createThreadRollbackRuntime(deps: ThreadRollbackRuntimeDeps): Th
     if (combinedDiff.trim()) {
       const dry = await codexDesktop.workspace.dryRunApplyReverseDiff({ cwd: workspace, diffText: combinedDiff });
       if (!dry.ok) {
-        pushEvent("rollback:error", translate("runtime.rollbackFilesFailed", { error: dry.error }), {
+        pushEvent("rollback:error", `无法回退文件内容：${dry.error}`, {
           threadId: tid,
           level: "error",
         });
         showToast({
           kind: "error",
-          title: translate("runtime.rollbackFailedTitle"),
-          message: translate("runtime.fileRollbackPrecheckFailed"),
+          title: "撤回失败",
+          message: "文件回退预检失败（工作区可能已手动修改）",
         });
         return;
       }
@@ -188,14 +185,14 @@ export function createThreadRollbackRuntime(deps: ThreadRollbackRuntimeDeps): Th
       if (!applied.ok) {
         timelineStore.removeTurnEvents(tid, selectedTurnIds);
         threadStore.removeTurnsFromState(tid, selectedTurnIds);
-        pushEvent("rollback:error", translate("runtime.contextRolledBackFilesFailed", { error: applied.error }), {
+        pushEvent("rollback:error", `上下文已撤回，但文件回退失败：${applied.error}`, {
           threadId: tid,
           level: "error",
         });
         showToast({
           kind: "error",
-          title: translate("runtime.partialFailureTitle"),
-          message: translate("runtime.contextRolledBackFilesFailedCheckWorkspace"),
+          title: "部分失败",
+          message: "上下文已撤回，但文件回退失败；请手动检查工作区。",
         });
         return;
       }
@@ -208,8 +205,8 @@ export function createThreadRollbackRuntime(deps: ThreadRollbackRuntimeDeps): Th
     threadStore.removeTurnsFromState(tid, selectedTurnIds);
     showToast({
       kind: "success",
-      title: translate("runtime.rollbackCompletedTitle"),
-      message: translate("runtime.rollbackCompletedMessage", { count: n }),
+      title: "撤回完成",
+      message: `已撤回最近 ${n} 轮`,
     });
   };
 

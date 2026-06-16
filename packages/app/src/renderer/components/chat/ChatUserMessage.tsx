@@ -2,7 +2,6 @@ import type { HTMLAttributes } from "react";
 import { Icon } from "@iconify/react";
 import type { EnvironmentContextBlock } from "../../domain/taggedMessageBlocks";
 import type { TimelineEventItem } from "../../domain/types";
-import { translate } from "../../i18n/translate";
 import type {
   ChatImageEntry,
   ChatInlineRewriteDraft,
@@ -91,7 +90,7 @@ export default function ChatUserMessage({
     const rows = environmentContextRows(part.context);
     return (
       <div key={part.key} className="chat-environment-context">
-        <div className="chat-environment-context__title mono">{translate("chat.environmentContext.title")}</div>
+        <div className="chat-environment-context__title mono">环境上下文</div>
         {rows.length > 0 ? (
           <dl className="chat-environment-context__grid">
             {rows.map((row) => (
@@ -117,7 +116,7 @@ export default function ChatUserMessage({
           </div>
           {imageCount > 0 ? (
             <div className="chat-user-images mt-2.5 flex flex-col gap-2">
-              <div className="mono dim text-[11px]">{translate("chat.activity.attachedImages", { count: imageCount })}</div>
+              <div className="mono dim text-[11px]">{`附图 ${imageCount} 张`}</div>
               {visibleImages.length > 0 ? (
                 <div className="chat-user-image-list flex flex-wrap gap-2 max-[1500px]:gap-1.5">
                   {visibleImages.map((image) => (

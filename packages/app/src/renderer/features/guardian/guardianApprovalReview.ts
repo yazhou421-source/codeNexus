@@ -3,7 +3,8 @@ import type { AutoReviewDecisionSource } from "@codenexus/generated/codex-app-se
 import type { GuardianApprovalReviewStatus } from "@codenexus/generated/codex-app-server/v2/GuardianApprovalReviewStatus";
 import type { GuardianRiskLevel } from "@codenexus/generated/codex-app-server/v2/GuardianRiskLevel";
 import type { GuardianUserAuthorization } from "@codenexus/generated/codex-app-server/v2/GuardianUserAuthorization";
-import { translate } from "../../i18n/translate";
+
+const SUMMARY_SEPARATOR = " ｜ ";
 
 export type GuardianApprovalReviewMethod = "item/autoApprovalReview/started" | "item/autoApprovalReview/completed";
 
@@ -100,32 +101,30 @@ function joinSummaryParts(parts: Array<string | null | undefined>): string {
   return parts
     .map((part) => String(part ?? "").trim())
     .filter(Boolean)
-    .join(translate("timelineFormat.separator"));
+    .join(SUMMARY_SEPARATOR);
 }
 
 function statusText(status: GuardianApprovalReviewDisplayStatus, lifecycle: GuardianApprovalReviewLifecycle): string {
-  if (status === "inProgress") return translate("guardianReview.status.inProgress");
-  if (status === "approved") return translate("guardianReview.status.approved");
-  if (status === "denied") return translate("guardianReview.status.denied");
-  if (status === "aborted") return translate("guardianReview.status.aborted");
-  return lifecycle === "started"
-    ? translate("guardianReview.status.inProgress")
-    : translate("guardianReview.status.completed");
+  if (status === "inProgress") return "复核中";
+  if (status === "approved") return "已通过";
+  if (status === "denied") return "已拒绝";
+  if (status === "aborted") return "已中止";
+  return lifecycle === "started" ? "复核中" : "已完成";
 }
 
 function riskText(value: GuardianRiskLevel | null): string {
-  if (value === "low") return translate("guardianReview.risk.low");
-  if (value === "medium") return translate("guardianReview.risk.medium");
-  if (value === "high") return translate("guardianReview.risk.high");
-  if (value === "critical") return translate("guardianReview.risk.critical");
+  if (value === "low") return "低";
+  if (value === "medium") return "中";
+  if (value === "high") return "高";
+  if (value === "critical") return "严重";
   return "";
 }
 
 function userAuthorizationText(value: GuardianUserAuthorization | null): string {
-  if (value === "low") return translate("guardianReview.risk.low");
-  if (value === "medium") return translate("guardianReview.risk.medium");
-  if (value === "high") return translate("guardianReview.risk.high");
-  if (value === "unknown") return translate("guardianReview.risk.unknown");
+  if (value === "low") return "低";
+  if (value === "medium") return "中";
+  if (value === "high") return "高";
+  if (value === "unknown") return "未知";
   return "";
 }
 
@@ -143,8 +142,8 @@ function actionSummary(actionValue: unknown): { actionType: string; actionSummar
     return {
       actionType,
       actionSummary: command
-        ? translate("guardianReview.action.commandWithText", { command: shorten(command, 96) })
-        : translate("guardianReview.action.commandApproval"),
+        ? `命令 ${shorten(command, 96)}`
+        : "命令审批",
     };
   }
 
@@ -153,7 +152,7 @@ function actionSummary(actionValue: unknown): { actionType: string; actionSummar
     const argv = Array.isArray(action?.argv)
       ? action.argv.map((value) => normalizeOptionalText(value)).filter((value): value is string => Boolean(value))
       : [];
-    const programLabel = basenameFromPath(program ?? "") || program || translate("guardianReview.action.program");
+    const programLabel = basenameFromPath(program ?? "") || program || "程序";
     const argvPreview = argv
       .slice(0, 2)
       .map((value) => shorten(value, 24))
@@ -161,7 +160,7 @@ function actionSummary(actionValue: unknown): { actionType: string; actionSummar
     return {
       actionType,
       actionSummary: shorten(
-        translate("guardianReview.action.exec", { command: `${programLabel}${argvPreview ? ` ${argvPreview}` : ""}` }),
+        `执行 ${programLabel}${argvPreview ? ` ${argvPreview}` : ""}`,
         96
       ),
     };
@@ -172,16 +171,13 @@ function actionSummary(actionValue: unknown): { actionType: string; actionSummar
       ? action.files.map((value) => normalizeOptionalText(value)).filter((value): value is string => Boolean(value))
       : [];
     if (files.length === 0) {
-      return { actionType, actionSummary: translate("guardianReview.action.patchChange") };
+      return { actionType, actionSummary: "补丁变更" };
     }
     const head = shortPath(files[0]);
     const more = files.length > 1 ? ` +${files.length - 1}` : "";
     return {
       actionType,
-      actionSummary: translate("guardianReview.action.patchWithFile", {
-        file: head || translate("guardianReview.action.file"),
-        more,
-      }),
+      actionSummary: `补丁 ${head || "文件"}${more}`,
     };
   }
 
@@ -191,12 +187,12 @@ function actionSummary(actionValue: unknown): { actionType: string; actionSummar
     const port = normalizeOptionalText(action?.port);
     const target = normalizeOptionalText(action?.target);
     const primary = target || [host, port ? `${host ? ":" : ""}${port}` : ""].filter(Boolean).join("");
-    const detail = primary || translate("guardianReview.action.networkAccess");
+    const detail = primary || "网络访问";
     return {
       actionType,
       actionSummary: protocol
-        ? translate("guardianReview.action.networkWithProtocol", { detail, protocol })
-        : translate("guardianReview.action.network", { detail }),
+        ? `网络 ${detail} (${protocol})`
+        : `网络 ${detail}`,
     };
   }
 
@@ -205,7 +201,7 @@ function actionSummary(actionValue: unknown): { actionType: string; actionSummar
     const toolTitle = normalizeOptionalText(action?.toolTitle);
     const toolName = normalizeOptionalText(action?.toolName);
     const connectorName = normalizeOptionalText(action?.connectorName);
-    const label = toolTitle || toolName || connectorName || translate("guardianReview.action.tool");
+    const label = toolTitle || toolName || connectorName || "工具";
     return {
       actionType,
       actionSummary: `MCP ${shorten(`${server}/${label}`, 96)}`,
@@ -214,7 +210,7 @@ function actionSummary(actionValue: unknown): { actionType: string; actionSummar
 
   return {
     actionType,
-    actionSummary: translate("guardianReview.action.approvalAction"),
+    actionSummary: "审批动作",
   };
 }
 
@@ -283,28 +279,22 @@ export function buildGuardianApprovalReviewActivity(
   const action = actionSummary(payload.action);
 
   const title = action.actionSummary
-    ? translate("guardianReview.titleWithAction", {
-        status: statusText(status, lifecycle),
-        action: action.actionSummary,
-      })
+    ? `Guardian ${statusText(status, lifecycle)}：${action.actionSummary}`
     : targetItemId
-      ? translate("guardianReview.titleWithTarget", {
-          status: statusText(status, lifecycle),
-          target: shortId(targetItemId),
-        })
-      : translate("guardianReview.title", { status: statusText(status, lifecycle) });
+      ? `Guardian ${statusText(status, lifecycle)}：目标 ${shortId(targetItemId)}`
+      : `Guardian ${statusText(status, lifecycle)}`;
 
   const summaryText = joinSummaryParts([
     title,
-    riskLevel ? translate("guardianReview.riskLabel", { risk: riskText(riskLevel) }) : "",
+    riskLevel ? `风险：${riskText(riskLevel)}` : "",
     lifecycle === "completed" && userAuthorization
-      ? translate("guardianReview.authorizationLabel", { authorization: userAuthorizationText(userAuthorization) })
+      ? `授权：${userAuthorizationText(userAuthorization)}`
       : "",
     lifecycle === "completed" && decisionSource
-      ? translate("guardianReview.sourceLabel", { source: decisionSourceText(decisionSource) })
+      ? `来源：${decisionSourceText(decisionSource)}`
       : "",
     lifecycle === "completed" && rationale
-      ? translate("guardianReview.reasonLabel", { reason: shorten(rationale, 96) })
+      ? `原因：${shorten(rationale, 96)}`
       : "",
   ]);
 
@@ -349,7 +339,7 @@ export function extractGuardianApprovalReviewDiagnosticItem(
     userAuthorizationLabel ? `authorization=${userAuthorizationLabel}` : "",
     decisionSourceLabel ? `source=${decisionSourceLabel}` : "",
     activity.rationale ? `rationale=${activity.rationale}` : "",
-  ]).replace(new RegExp(translate("timelineFormat.separator").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "\n");
+  ]).replace(new RegExp(SUMMARY_SEPARATOR.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "\n");
 
   return {
     ...activity,

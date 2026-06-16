@@ -10,7 +10,6 @@ type ThreadStore = ReturnType<typeof useThreadStore>;
 type GoalShutdownStore = ReturnType<typeof useGoalShutdownStore>;
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
 export type ThreadGoalRuntimeDeps = {
@@ -19,7 +18,6 @@ export type ThreadGoalRuntimeDeps = {
   threadStore: ThreadStore;
   goalShutdownStore: GoalShutdownStore;
   ensureServerForThread: (threadId: string) => Promise<string>;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -53,7 +51,7 @@ function normalizeGoalBudget(value: unknown): number | null {
 }
 
 export function createThreadGoalRuntime(deps: ThreadGoalRuntimeDeps): ThreadGoalRuntime {
-  const { appTimelineId, runtimeStore, threadStore, goalShutdownStore, ensureServerForThread, translate, showToast } =
+  const { appTimelineId, runtimeStore, threadStore, goalShutdownStore, ensureServerForThread, showToast } =
     deps;
 
   const getCurrentThreadIdOrToast = () => {
@@ -61,8 +59,8 @@ export function createThreadGoalRuntime(deps: ThreadGoalRuntimeDeps): ThreadGoal
     if (threadId) return threadId;
     showToast({
       kind: "warn",
-      title: translate("runtime.goalNoThreadTitle"),
-      message: translate("runtime.goalNoThreadMessage"),
+      title: "无法处理目标",
+      message: "请先进入一个线程。",
     });
     return "";
   };
@@ -100,14 +98,14 @@ export function createThreadGoalRuntime(deps: ThreadGoalRuntimeDeps): ThreadGoal
     if (!objective) {
       showToast({
         kind: "warn",
-        title: translate("runtime.goalObjectiveRequiredTitle"),
-        message: translate("runtime.goalObjectiveRequiredMessage"),
+        title: "目标为空",
+        message: "请输入目标内容。",
       });
       return null;
     }
     try {
       const serverId = await ensureServerForThread(threadId);
-      if (!serverId) throw new Error(translate("runtime.currentThreadNoService"));
+      if (!serverId) throw new Error("当前线程未连接 Codex 服务。");
       const params: ThreadGoalSetParams = {
         threadId,
         objective,
@@ -128,13 +126,13 @@ export function createThreadGoalRuntime(deps: ThreadGoalRuntimeDeps): ThreadGoal
       }
       showToast({
         kind: "success",
-        title: translate("runtime.goalSavedTitle"),
-        message: translate("runtime.goalSavedMessage"),
+        title: "目标已保存",
+        message: "当前线程目标已更新。",
       });
       return threadStore.goalByThread.get(threadId) ?? null;
     } catch (e: unknown) {
       const msg = readErrorMessage(e);
-      showToast({ kind: "error", title: translate("runtime.goalSaveFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "保存目标失败", message: msg });
       return null;
     }
   };
@@ -146,22 +144,22 @@ export function createThreadGoalRuntime(deps: ThreadGoalRuntimeDeps): ThreadGoal
     let draft: { objective: string; tokenBudget: number | null } | null = null;
     try {
       draft = await promptGoalModalLazy({
-        title: translate(existing ? "runtime.goalUpdateTitle" : "runtime.goalCreateTitle"),
-        message: translate("runtime.goalModalMessage"),
-        objectiveLabel: translate("runtime.goalObjectiveLabel"),
-        budgetLabel: translate("runtime.goalBudgetLabel"),
-        budgetHint: translate("runtime.goalBudgetHint"),
-        confirmText: translate(existing ? "runtime.goalUpdateConfirm" : "runtime.goalCreateConfirm"),
+        title: existing ? "更新线程目标" : "设置线程目标",
+        message: "目标会同步到 Codex app-server，并跟随当前线程状态更新。",
+        objectiveLabel: "目标",
+        budgetLabel: "Token 预算",
+        budgetHint: "可留空；仅填写正整数。",
+        confirmText: existing ? "更新目标" : "设置目标",
         defaultObjective: existing?.objective ?? "",
         defaultTokenBudget: existing?.tokenBudget ?? null,
-        shutdownOnCompleteLabel: translate("runtime.goalShutdownOnCompleteLabel"),
-        shutdownOnCompleteHint: translate("runtime.goalShutdownOnCompleteHint"),
+        shutdownOnCompleteLabel: "完成后自动关机",
+        shutdownOnCompleteHint: "目标完成后会显示 60 秒倒计时，可在倒计时内取消。",
         defaultShutdownOnComplete: goalShutdownStore.isEnabledForGoal(existing),
       });
     } catch (e: unknown) {
       showToast({
         kind: "error",
-        title: translate("runtime.goalModalOpenFailedTitle"),
+        title: "打开目标表单失败",
         message: readErrorMessage(e),
       });
       return null;
@@ -177,14 +175,14 @@ export function createThreadGoalRuntime(deps: ThreadGoalRuntimeDeps): ThreadGoal
     if (!existing) {
       showToast({
         kind: "warn",
-        title: translate("runtime.goalMissingTitle"),
-        message: translate("runtime.goalMissingMessage"),
+        title: "没有目标",
+        message: "当前线程还没有可完成的目标。",
       });
       return null;
     }
     try {
       const serverId = await ensureServerForThread(threadId);
-      if (!serverId) throw new Error(translate("runtime.currentThreadNoService"));
+      if (!serverId) throw new Error("当前线程未连接 Codex 服务。");
       const { result } = await codexDesktop.codexServer.rpc({
         serverId,
         method: "thread/goal/set",
@@ -195,13 +193,13 @@ export function createThreadGoalRuntime(deps: ThreadGoalRuntimeDeps): ThreadGoal
       goalShutdownStore.observeGoalTransition(previous, threadStore.goalByThread.get(threadId) ?? null);
       showToast({
         kind: "success",
-        title: translate("runtime.goalCompletedTitle"),
-        message: translate("runtime.goalCompletedMessage"),
+        title: "目标已完成",
+        message: "当前线程目标已标记完成。",
       });
       return threadStore.goalByThread.get(threadId) ?? null;
     } catch (e: unknown) {
       const msg = readErrorMessage(e);
-      showToast({ kind: "error", title: translate("runtime.goalCompleteFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "完成目标失败", message: msg });
       return null;
     }
   };
@@ -211,7 +209,7 @@ export function createThreadGoalRuntime(deps: ThreadGoalRuntimeDeps): ThreadGoal
     if (!threadId) return false;
     try {
       const serverId = await ensureServerForThread(threadId);
-      if (!serverId) throw new Error(translate("runtime.currentThreadNoService"));
+      if (!serverId) throw new Error("当前线程未连接 Codex 服务。");
       const { result } = await codexDesktop.codexServer.rpc({
         serverId,
         method: "thread/goal/clear",
@@ -220,15 +218,15 @@ export function createThreadGoalRuntime(deps: ThreadGoalRuntimeDeps): ThreadGoal
       threadStore.clearThreadGoal(threadId);
       showToast({
         kind: "success",
-        title: translate("runtime.goalClearedTitle"),
+        title: "目标已清除",
         message: result.cleared
-          ? translate("runtime.goalClearedMessage")
-          : translate("runtime.goalAlreadyClearMessage"),
+          ? "当前线程目标已清除。"
+          : "当前线程没有可清除的目标。",
       });
       return Boolean(result.cleared);
     } catch (e: unknown) {
       const msg = readErrorMessage(e);
-      showToast({ kind: "error", title: translate("runtime.goalClearFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "清除目标失败", message: msg });
       return false;
     }
   };

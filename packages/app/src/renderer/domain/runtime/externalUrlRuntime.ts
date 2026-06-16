@@ -1,11 +1,5 @@
 import { codexDesktop } from "../../api/codexDesktopClient";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
-
-export type ExternalUrlRuntimeDeps = {
-  translate: TranslateFn;
-};
-
 export type ExternalUrlRuntime = {
   openExternalUrl: (url: string) => Promise<void>;
 };
@@ -26,12 +20,10 @@ function normalizeExternalUrlForOpen(url: string): string {
   }
 }
 
-export function createExternalUrlRuntime(deps: ExternalUrlRuntimeDeps): ExternalUrlRuntime {
-  const { translate } = deps;
-
+export function createExternalUrlRuntime(): ExternalUrlRuntime {
   const openExternalUrl = async (url: string) => {
     const value = normalizeExternalUrlForOpen(url);
-    if (!value) throw new Error(translate("runtime.externalUrlUnsupported"));
+    if (!value) throw new Error("仅支持 http/https/mailto 外链。");
     await codexDesktop.app.openExternal({ url: value });
   };
 

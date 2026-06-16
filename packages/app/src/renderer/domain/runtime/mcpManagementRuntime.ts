@@ -12,7 +12,6 @@ type CodexConfigSwitcherStore = ReturnType<typeof useCodexConfigSwitcherStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
@@ -40,7 +39,6 @@ export type McpManagementRuntimeDeps = {
   saveMcpSnapshot: (workspacePath: string, snapshot: McpSnapshot) => void;
   invalidateMcpSnapshot: (workspacePath?: string) => void;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -85,7 +83,6 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
     saveMcpSnapshot,
     invalidateMcpSnapshot,
     pushEvent,
-    translate,
     showToast,
   } = deps;
 
@@ -95,13 +92,13 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
   const refreshMcp = async () => {
     const workspace = normalizeWorkspacePath(getWorkspacePath());
     if (!getServerIdForWorkspace(workspace)) {
-      mcpStore.resetState(translate("runtime.noService"));
+      mcpStore.resetState("未连接服务");
       return;
     }
     const hasVisibleData = mcpStore.loadState === "ready" && mcpStore.servers.length > 0;
     if (!hasVisibleData) {
       mcpStore.setLoadState("loading");
-      mcpStore.setStatusText(translate("runtime.loading"));
+      mcpStore.setStatusText("加载中…");
     }
     try {
       const configResult = await requestConfigRead();
@@ -149,8 +146,8 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
       mcpStore.setLoadState("ready");
       const statusText =
         merged.length === 0
-          ? translate("integrations.noMcpConfig")
-          : translate("runtime.mcpServerCount", { count: merged.length });
+          ? "暂无 MCP 配置"
+          : `共 ${merged.length} 个 MCP 服务器`;
       mcpStore.setStatusText(statusText);
       saveMcpSnapshot(workspace, {
         servers: merged,
@@ -162,7 +159,7 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
         mcpStore.setLoadState("ready");
       } else {
         mcpStore.setLoadState("error", msg);
-        mcpStore.setStatusText(translate("runtime.loadFailed"));
+        mcpStore.setStatusText("加载失败");
       }
     }
   };
@@ -197,7 +194,7 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
     const next = current.map((server) => {
       if (server.id !== name) return server;
       if (status === "starting")
-        return { ...server, state: "connecting" as const, message: translate("runtime.starting") };
+        return { ...server, state: "connecting" as const, message: "启动中…" };
       if (status === "ready") return { ...server, state: "connected" as const, message: undefined };
       if (status === "failed") return { ...server, state: "error" as const, message: error || "failed" };
       if (status === "cancelled") return { ...server, state: "error" as const, message: error || "cancelled" };
@@ -218,7 +215,7 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
                 : "unknown",
         message:
           status === "starting"
-            ? translate("runtime.starting")
+            ? "启动中…"
             : status === "failed"
               ? error || "failed"
               : status === "cancelled"
@@ -235,8 +232,8 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
     mcpStore.setLoadState("ready");
     mcpStore.setStatusText(
       next.length === 0
-        ? translate("integrations.noMcpConfig")
-        : translate("runtime.mcpServerCount", { count: next.length })
+        ? "暂无 MCP 配置"
+        : `共 ${next.length} 个 MCP 服务器`
     );
 
     if (status === "failed" || status === "cancelled") {
@@ -247,8 +244,8 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
           kind: "error",
           title:
             status === "failed"
-              ? translate("runtime.mcpStartupFailedTitle")
-              : translate("runtime.mcpStartupCanceledTitle"),
+              ? "MCP 启动失败"
+              : "MCP 启动已取消",
           message: error ? `${name}：${error}` : name,
         });
       }
@@ -261,12 +258,12 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
     try {
       await requestReloadMcpConfig();
       invalidateMcpSnapshot(workspace);
-      pushEvent("mcp", translate("runtime.configReloaded"), { threadId: appTimelineId });
+      pushEvent("mcp", "配置已重载", { threadId: appTimelineId });
       await refreshMcp();
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
       pushEvent("mcp:error", msg, { threadId: appTimelineId, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.mcpReloadFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "MCP 重载失败", message: msg });
       throw error;
     }
   };
@@ -278,7 +275,7 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
       const id = String(serverKey ?? "").trim();
       const profile = getRequiredActiveSwitcherProfile();
       const current = profile.mcpServers[id];
-      if (!current) throw new Error(translate("runtime.managedMcpNotFound", { id }));
+      if (!current) throw new Error(`受管配置集中没有 MCP：${id}`);
       const nextProfile: CodexConfigSwitcherProfile = {
         ...profile,
         mcpServers: {
@@ -300,16 +297,16 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
       pushEvent("mcp:error", msg, { threadId: appTimelineId, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.mcpConfigFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "MCP 配置失败", message: msg });
       throw error;
     }
   };
 
   const deleteMcpServer = async (serverId: string) => {
     const workspace = normalizeWorkspacePath(getWorkspacePath());
-    if (!getServerIdForWorkspace(workspace)) throw new Error(translate("runtime.noServiceCannotWriteMcpConfig"));
+    if (!getServerIdForWorkspace(workspace)) throw new Error("未连接服务，无法写入 MCP 配置。");
     const id = String(serverId ?? "").trim();
-    if (!id) throw new Error(translate("runtime.mcpIdRequired"));
+    if (!id) throw new Error("缺少 MCP ID。");
     try {
       const profile = getRequiredActiveSwitcherProfile();
       const nextMcpServers = { ...profile.mcpServers };
@@ -329,18 +326,18 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
       invalidateMcpSnapshot(workspace);
       pushEvent("mcp", `deleted\n${id}`, { threadId: appTimelineId });
       await refreshMcp();
-      showToast({ kind: "success", title: translate("runtime.mcpDeletedTitle"), message: id });
+      showToast({ kind: "success", title: "MCP 已删除", message: id });
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
       pushEvent("mcp:error", msg, { threadId: appTimelineId, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.mcpDeleteFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "MCP 删除失败", message: msg });
       throw error;
     }
   };
 
   const importMcpServersFromJson = async (text: string): Promise<{ imported: number; errors: string[] }> => {
     const workspace = normalizeWorkspacePath(getWorkspacePath());
-    if (!getServerIdForWorkspace(workspace)) throw new Error(translate("runtime.noServiceCannotWriteMcpConfig"));
+    if (!getServerIdForWorkspace(workspace)) throw new Error("未连接服务，无法写入 MCP 配置。");
     const parsed = parseCodexMcpJsonImport(text);
     if (parsed.servers.length === 0) return { imported: 0, errors: parsed.errors };
     try {
@@ -352,14 +349,14 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
       await refreshMcp();
       showToast({
         kind: "success",
-        title: translate("runtime.mcpJsonImportedTitle"),
-        message: translate("runtime.mcpServersImported", { count: parsed.servers.length }),
+        title: "MCP JSON 已导入",
+        message: `已导入 ${parsed.servers.length} 个服务器`,
       });
       return { imported: parsed.servers.length, errors: parsed.errors };
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
       pushEvent("mcp:error", msg, { threadId: appTimelineId, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.mcpJsonImportFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "MCP JSON 导入失败", message: msg });
       throw error;
     }
   };
@@ -372,13 +369,13 @@ export function createMcpManagementRuntime(deps: McpManagementRuntimeDeps): McpM
       pushEvent("mcp", `oauth login started\nid=${serverKey}\nurl=${url}`, { threadId: appTimelineId });
       showToast({
         kind: "success",
-        title: translate("runtime.browserOpenedTitle"),
-        message: translate("runtime.mcpOauthStarted", { server: serverKey }),
+        title: "已打开浏览器",
+        message: `MCP OAuth：${serverKey}`,
       });
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
       pushEvent("mcp:error", msg, { threadId: appTimelineId, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.mcpOauthFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "MCP OAuth 失败", message: msg });
       throw error;
     }
   };

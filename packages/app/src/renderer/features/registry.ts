@@ -17,7 +17,6 @@ export type AppSettingsTab = CoreSettingsTab | FeatureSettingsTab;
 type RuntimeBridgeDisposer = () => void;
 
 type FeatureRuntimeBridgeContext = {
-  translate?: (key: string, params?: Record<string, unknown>) => string;
   getWorkspacePath?: () => string | null | undefined;
   watchWorkspacePath?: (listener: (workspacePath: string) => void) => RuntimeBridgeDisposer;
 };
@@ -93,7 +92,6 @@ export const FEATURE_REGISTRY: FeatureRegistryEntry[] = [
     },
     installRuntimeBridge: (context) => {
       installImagegenRuntimeBridge({
-        translate: context.translate,
         workspacePath: context.getWorkspacePath?.(),
       });
       return context.watchWorkspacePath?.((workspacePath) => {

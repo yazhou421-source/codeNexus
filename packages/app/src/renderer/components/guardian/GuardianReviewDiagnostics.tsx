@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import DetailDisclosure from "../ui/DetailDisclosure";
 import {
   collectGuardianApprovalReviewDiagnosticItems,
@@ -30,10 +29,9 @@ export default function GuardianReviewDiagnostics({
   title = "",
   className,
 }: GuardianReviewDiagnosticsProps) {
-  const { t } = useTranslation();
   const timelineStore = useTimelineStore();
   const normalizedThreadId = String(threadId ?? "").trim() || "__app__";
-  const titleText = String(title ?? "").trim() || t("guardianDiagnostics.defaultTitle");
+  const titleText = String(title ?? "").trim() || "最近 Guardian 复核";
   const items = collectGuardianApprovalReviewDiagnosticItems(timelineStore.eventsForThread(normalizedThreadId), {
     focusTargetItemId,
     maxItems,
@@ -42,11 +40,11 @@ export default function GuardianReviewDiagnostics({
   const guardianMetaText = (item: GuardianApprovalReviewDiagnosticItem) => {
     const parts: string[] = [];
     parts.push(formatTime(item.createdAt));
-    if (item.riskText) parts.push(t("guardianDiagnostics.risk", { value: item.riskText }));
-    if (item.userAuthorizationText) parts.push(t("guardianDiagnostics.authorization", { value: item.userAuthorizationText }));
-    if (item.decisionSourceText) parts.push(t("guardianDiagnostics.source", { value: item.decisionSourceText }));
+    if (item.riskText) parts.push(`风险 ${item.riskText}`);
+    if (item.userAuthorizationText) parts.push(`授权 ${item.userAuthorizationText}`);
+    if (item.decisionSourceText) parts.push(`来源 ${item.decisionSourceText}`);
     if (item.targetItemId) parts.push(`target ${item.targetItemId.slice(0, 12)}`);
-    return parts.join(t("timelineFormat.separator"));
+    return parts.join(" ｜ ");
   };
 
   if (items.length === 0) return null;
@@ -55,7 +53,7 @@ export default function GuardianReviewDiagnostics({
     <section className={["guardian-review-diagnostics", "grid gap-2", className].filter(Boolean).join(" ")}>
       <div className="row" style={{ alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
         <div className="user-input-header">{titleText}</div>
-        <div className="mono dim text-[11px]">{t("guardianDiagnostics.itemCount", { count: items.length })}</div>
+        <div className="mono dim text-[11px]">{items.length} 条</div>
       </div>
 
       {items.map((item) => (
@@ -87,7 +85,7 @@ export default function GuardianReviewDiagnostics({
               </span>
               {item.matchesTarget ? (
                 <span className="inline-flex h-[22px] flex-none items-center rounded-[4px] border border-[var(--border-accent)] bg-[var(--bg-accent-soft)] px-[8px] text-[10px] mono text-[var(--fg-accent)]">
-                  {t("guardianDiagnostics.currentItem")}
+                  当前项
                 </span>
               ) : null}
             </>

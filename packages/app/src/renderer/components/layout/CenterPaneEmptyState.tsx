@@ -1,7 +1,6 @@
 import { History, MessageSquareText, Wand2 } from "lucide-react";
 import { getRuntimeOrchestrator } from "../../domain/runtimeOrchestrator";
 import type { ThreadHistoryItem } from "../../domain/types";
-import { translate } from "../../i18n/translate";
 import LoadingDots from "../ui/LoadingDots";
 
 type CenterPaneEmptyStateProps = {
@@ -31,7 +30,7 @@ export default function CenterPaneEmptyState({
       <div className={["center-empty-state", className].filter(Boolean).join(" ")}>
         <div className="mono dim flex w-full items-center justify-center gap-3 my-12">
           <span className="running-indicator is-muted" aria-hidden="true" />
-          <span className="text-sm">{translate("centerEmpty.loadingMemory")}</span>
+          <span className="text-sm">正在读取时空记忆...</span>
         </div>
       </div>
     );
@@ -45,13 +44,13 @@ export default function CenterPaneEmptyState({
           <div className="center-thread-create-state__copy">
             <LoadingDots
               className="center-thread-create-state__title"
-              baseText={translate("centerEmpty.creatingThread")}
+              baseText="正在创建线程"
               intervalMs={360}
               maxDots={3}
               as="div"
-              ariaLabel={translate("centerEmpty.creatingThread")}
+              ariaLabel="正在创建线程"
             />
-            <div className="center-thread-create-state__meta">{translate("centerEmpty.initializingContext")}</div>
+            <div className="center-thread-create-state__meta">初始化工作区和模型上下文</div>
           </div>
         </div>
       </div>
@@ -64,9 +63,9 @@ export default function CenterPaneEmptyState({
         <div className="center-empty-history w-full animate-enter-slide-up">
           <div className="center-empty-history__head">
             <h2 className="center-empty-history__title">
-              <History aria-hidden="true" /> {translate("centerEmpty.history")}
+              <History aria-hidden="true" /> 历史回溯
             </h2>
-            <span className="center-empty-history__count">{translate("centerEmpty.recentCount", { count: items.length })}</span>
+            <span className="center-empty-history__count">{`最近 ${items.length} 条`}</span>
           </div>
 
           <div className="center-empty-history__grid">
@@ -80,7 +79,7 @@ export default function CenterPaneEmptyState({
               >
                 <span className="center-empty-history__item-title title">{item.title}</span>
                 <span className="center-empty-history__item-meta mono">
-                  <MessageSquareText aria-hidden="true" /> {translate("centerEmpty.chatThread")}
+                  <MessageSquareText aria-hidden="true" /> 对话线程
                 </span>
               </button>
             ))}
@@ -94,10 +93,10 @@ export default function CenterPaneEmptyState({
     <div className={["timeline-empty-state-shell", className].filter(Boolean).join(" ")}>
       <div className="empty-state">
         <Wand2 aria-hidden="true" />
-        <h2>{title ?? translate("centerEmpty.defaultTitle")}</h2>
-        <p className="dim">{description ?? translate("centerEmpty.defaultDescription")}</p>
+        <h2>{title ?? "选择一个工作区开始"}</h2>
+        <p className="dim">{description ?? "Codex 会话需要绑定本地工作区。"}</p>
         <button className="btn-primary" type="button" onClick={() => void runtime.selectWorkspace()}>
-          {translate("centerEmpty.selectWorkspace")}
+          选择工作区
         </button>
       </div>
     </div>

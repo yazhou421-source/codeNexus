@@ -15,7 +15,6 @@ import {
   mcpToolItemMetricsText,
   mcpToolItemTitle,
 } from "../../../features/timeline/renderModel/formatters";
-import { translate } from "../../../i18n/translate";
 import DetailDisclosure from "../../ui/DetailDisclosure";
 import ExecutionWaveText from "../../ui/ExecutionWaveText";
 
@@ -194,35 +193,35 @@ export default function McpToolCardContent({
                 ) : null}
                 <RawDetail
                   detailKey={item.argumentsKey}
-                  label={translate("dynamicTool.viewFullArgs")}
+                  label="查看完整参数"
                   value={item.argumentsRaw}
                   isOpen={isDetailOpen}
                   onToggle={onDetailToggle}
                 />
                 <RawDetail
                   detailKey={item.resultKey}
-                  label={translate("dynamicTool.viewFullResult")}
+                  label="查看完整结果"
                   value={item.resultRaw}
                   isOpen={isDetailOpen}
                   onToggle={onDetailToggle}
                 />
                 <RawDetail
                   detailKey={item.structuredContentKey}
-                  label={translate("mcpTool.viewStructuredContent")}
+                  label="查看 structuredContent"
                   value={item.structuredContentRaw}
                   isOpen={isDetailOpen}
                   onToggle={onDetailToggle}
                 />
                 <RawDetail
                   detailKey={item.metaKey}
-                  label={translate("mcpTool.viewMeta")}
+                  label="查看 _meta"
                   value={item.metaRaw}
                   isOpen={isDetailOpen}
                   onToggle={onDetailToggle}
                 />
                 <RawDetail
                   detailKey={item.outputSchemaKey}
-                  label={translate("mcpTool.viewOutputSchema")}
+                  label="查看 outputSchema"
                   value={item.outputSchemaRaw}
                   isOpen={isDetailOpen}
                   onToggle={onDetailToggle}

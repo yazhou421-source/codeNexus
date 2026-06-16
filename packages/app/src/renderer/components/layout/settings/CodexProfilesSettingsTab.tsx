@@ -14,7 +14,6 @@ import {
 import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { codexDesktop } from "../../../api/codexDesktopClient";
 import { getRuntimeOrchestrator } from "../../../domain/runtimeOrchestrator";
-import { translate } from "../../../i18n/translate";
 import { useAppShellStore } from "../../../stores/appShell.store";
 import { useCodexProfilesStore } from "../../../stores/codexProfiles.store";
 import { useRuntimeStore } from "../../../stores/runtime.store";
@@ -159,8 +158,8 @@ export default function CodexProfilesSettingsTab() {
     Boolean(form.baseUrl.trim() && form.apiKey.trim()) && !providerModelsLoading && !mutationPending;
   const baseUrlLabel =
     form.providerKind === "deepseek-chat"
-      ? translate("codexProfiles.upstreamBaseUrl")
-      : translate("codexProfiles.baseUrl");
+      ? "上游 Base URL"
+      : "Base URL";
   const baseUrlPlaceholder =
     form.providerKind === "deepseek-chat" ? DEFAULT_DEEPSEEK_BASE_URL : "https://example.com/v1";
 
@@ -263,16 +262,16 @@ export default function CodexProfilesSettingsTab() {
     setLocalSaving(true);
     try {
       const input = buildInput();
-      if (!String(input.name ?? "").trim()) throw new Error(translate("codexProfiles.validation.providerNameRequired"));
-      if (!String(input.baseUrl ?? "").trim()) throw new Error(translate("codexProfiles.validation.baseUrlRequired"));
-      if (!String(input.model ?? "").trim()) throw new Error(translate("codexProfiles.validation.modelNameRequired"));
-      if (!String(input.apiKey ?? "").trim()) throw new Error(translate("codexProfiles.validation.apiKeyRequired"));
-      if (!String(input.configFileContent ?? "").trim()) throw new Error(translate("codexProfiles.validation.configRequired"));
-      if (!String(input.authFileContent ?? "").trim()) throw new Error(translate("codexProfiles.validation.authRequired"));
+      if (!String(input.name ?? "").trim()) throw new Error("供应商名称不能为空。");
+      if (!String(input.baseUrl ?? "").trim()) throw new Error("Base URL 不能为空。");
+      if (!String(input.model ?? "").trim()) throw new Error("模型名称不能为空。");
+      if (!String(input.apiKey ?? "").trim()) throw new Error("API Key 不能为空。");
+      if (!String(input.configFileContent ?? "").trim()) throw new Error("config.toml 不能为空。");
+      if (!String(input.authFileContent ?? "").trim()) throw new Error("auth.json 不能为空。");
       try {
         JSON.parse(String(input.authFileContent ?? ""));
       } catch {
-        throw new Error(translate("codexProfiles.validation.authInvalidJson"));
+        throw new Error("auth.json 不是有效 JSON。");
       }
       await profilesStore.upsert(input);
       const id = String(input.id ?? "").trim();
@@ -282,15 +281,15 @@ export default function CodexProfilesSettingsTab() {
       if (showSuccessToast) {
         showCenterToast({
           kind: "success",
-          title: translate("codexProfiles.saveSuccessTitle"),
-          message: translate("codexProfiles.saveSuccessMessage", { name: input.name }),
+          title: "保存成功",
+          message: `${input.name} 配置已更新。`,
         });
       }
       return id;
     } catch (error: any) {
-      const message = String(error?.message ?? error ?? translate("codexProfiles.saveFailedTitle"));
+      const message = String(error?.message ?? error ?? "保存失败");
       setErrorText(message);
-      showCenterToast({ kind: "error", title: translate("codexProfiles.saveFailedTitle"), message });
+      showCenterToast({ kind: "error", title: "保存失败", message });
       throw error;
     } finally {
       setLocalSaving(false);
@@ -360,7 +359,7 @@ export default function CodexProfilesSettingsTab() {
     });
     showToast({
       kind: "success",
-      title: translate("codexProfiles.importedCurrentConfigTitle"),
+      title: "已导入当前 Codex 配置",
       message: `${providerId} / ${model}`,
     });
   };
@@ -402,8 +401,8 @@ export default function CodexProfilesSettingsTab() {
     if (!runtimeStore.serverId) {
       showToast({
         kind: "warn",
-        title: translate("codexProfiles.codexDisconnectedTitle"),
-        message: translate("codexProfiles.codexDisconnectedMessage"),
+        title: "未连接 Codex 服务",
+        message: "连接服务后才能写入 config.toml。",
       });
       return;
     }
@@ -414,13 +413,13 @@ export default function CodexProfilesSettingsTab() {
       const id = await saveProfile({ showSuccessToast: false });
       if (id) await applyProfile(id);
     } catch (error: any) {
-      setErrorText(String(error?.message ?? error ?? translate("codexProfiles.applyFailed")));
+      setErrorText(String(error?.message ?? error ?? "应用失败"));
     }
   };
   const fetchProviderModels = async () => {
     if (!form.baseUrl.trim() || !form.apiKey.trim() || providerModelsLoading) return;
     setProviderModelsLoading(true);
-    setProviderModelsStatusText(translate("codexProfiles.fetchingModelsStatus"));
+    setProviderModelsStatusText("正在获取模型...");
     try {
       const result = await codexDesktop.app.testCodexProvider({
         providerKind: form.providerKind,
@@ -430,28 +429,28 @@ export default function CodexProfilesSettingsTab() {
       });
       if (!result.ok) {
         setProviderModelOptions([]);
-        setProviderModelsStatusText(result.message || translate("codexProfiles.fetchModelsFailedMessage"));
+        setProviderModelsStatusText(result.message || "获取模型失败。");
         showCenterToast({
           kind: "error",
-          title: translate("codexProfiles.fetchModelsFailedTitle"),
-          message: result.message || translate("codexProfiles.fetchModelsFailedMessage"),
+          title: "获取模型失败",
+          message: result.message || "获取模型失败。",
         });
         return;
       }
       setProviderModelOptions(result.models);
       const elapsed = formatProviderLatency(result.elapsedMs);
-      const suffix = elapsed ? translate("codexProfiles.latencySuffix", { elapsed }) : "";
+      const suffix = elapsed ? `，响应时间 ${elapsed}` : "";
       setProviderModelsStatusText(
         result.models.length > 0
-          ? translate("codexProfiles.modelsFetched", { count: result.models.length, suffix })
-          : translate("codexProfiles.connectedNoModels", { suffix })
+          ? `已获取 ${result.models.length} 个模型${suffix}。`
+          : `连接成功，但未读取到模型${suffix}。`
       );
       if (result.models.length > 0 && !form.model.trim()) updateForm({ model: result.models[0] });
     } catch (error: any) {
-      const message = String(error?.message ?? error ?? translate("codexProfiles.fetchModelsFailedTitle"));
+      const message = String(error?.message ?? error ?? "获取模型失败");
       setProviderModelOptions([]);
       setProviderModelsStatusText(message);
-      showCenterToast({ kind: "error", title: translate("codexProfiles.fetchModelsFailedTitle"), message });
+      showCenterToast({ kind: "error", title: "获取模型失败", message });
     } finally {
       setProviderModelsLoading(false);
     }
@@ -470,12 +469,12 @@ export default function CodexProfilesSettingsTab() {
     });
     showToast({
       kind: "success",
-      title: translate("codexProfiles.duplicatedTitle"),
-      message: translate("codexProfiles.duplicatedMessage", { name: profile.name }),
+      title: "已复制供应商",
+      message: `${profile.name} copy`,
     });
   };
   const deleteProfile = async (profile: CodexProviderProfile) => {
-    if (!window.confirm(translate("codexProfiles.confirmDelete", { name: profile.name }))) return;
+    if (!window.confirm(`删除供应商「${profile.name}」？`)) return;
     await profilesStore.deleteProfile(profile.id);
     if (selectedProfileId === profile.id) closeEditor();
   };
@@ -493,22 +492,19 @@ export default function CodexProfilesSettingsTab() {
         lastTestedAt: Date.now(),
         lastTestStatus: result.ok ? "ok" : "error",
         lastTestMessage: result.ok
-          ? translate("codexProfiles.testSuccessWithSuffix", {
-              suffix:
-                result.elapsedMs == null
-                  ? ""
-                  : translate("codexProfiles.latencySuffix", { elapsed: formatProviderLatency(result.elapsedMs) }),
-            })
+          ? `连接成功${
+              result.elapsedMs == null ? "" : `，响应时间 ${formatProviderLatency(result.elapsedMs)}`
+            }`
           : result.message,
       });
       const elapsed = formatProviderLatency(result.elapsedMs);
       showToast({
         kind: result.ok ? "success" : "error",
-        title: result.ok ? translate("codexProfiles.connectionSuccessTitle") : translate("codexProfiles.connectionFailedTitle"),
+        title: result.ok ? "连接成功" : "连接失败",
         message: result.ok
           ? elapsed
-            ? translate("codexProfiles.latencyOnly", { elapsed })
-            : translate("codexProfiles.connectionSuccessMessage")
+            ? `响应时间 ${elapsed}`
+            : "连接成功。"
           : result.message,
       });
     } finally {
@@ -518,17 +514,17 @@ export default function CodexProfilesSettingsTab() {
   const showProfileStats = (profile: CodexProviderProfile) => {
     const tested = profile.lastTestedAt
       ? new Date(profile.lastTestedAt).toLocaleString(appShellStore.language)
-      : translate("codexProfiles.notTested");
+      : "未测试";
     const statusLabel =
       profile.lastTestStatus === "ok"
-        ? translate("codexProfiles.statusOk")
+        ? "正常"
         : profile.lastTestStatus === "error"
-          ? translate("codexProfiles.statusError")
+          ? "异常"
           : profile.lastTestStatus;
     const status = statusLabel
-      ? translate("codexProfiles.statusWithMessage", { status: statusLabel, message: profile.lastTestMessage ?? "" })
-      : translate("codexProfiles.noTestResult");
-    window.alert(translate("codexProfiles.statsAlert", { name: profile.name, model: profile.model, tested, status }));
+      ? `${statusLabel}: ${profile.lastTestMessage ?? ""}`
+      : "无测试结果";
+    window.alert(`供应商：${profile.name}\n模型：${profile.model}\n最近测试：${tested}\n状态：${status}`);
   };
   const onDrop = async (targetId: string) => {
     const sourceId = draggingProfileId;
@@ -552,7 +548,7 @@ export default function CodexProfilesSettingsTab() {
   const onDragOver = (event: DragEvent<HTMLElement>) => event.preventDefault();
 
   return (
-    <section className="codex-providers-page" aria-label={translate("codexProfiles.aria")}>
+    <section className="codex-providers-page" aria-label="Codex 模型供应商配置">
       {profilesStore.errorText || errorText ? (
         <div className="global-field-error">{profilesStore.errorText || errorText}</div>
       ) : null}
@@ -560,7 +556,7 @@ export default function CodexProfilesSettingsTab() {
       {!editorOpen ? (
         <div className="codex-providers-list-page">
           <div className="codex-providers-shell">
-            <section className="codex-provider-list" aria-label={translate("codexProfiles.providerListAria")}>
+            <section className="codex-provider-list" aria-label="供应商列表">
               {orderedProfiles.map((profile) => {
                 const active = profilesStore.activeProfileId === profile.id;
                 const dragging = draggingProfileId === profile.id;
@@ -577,7 +573,7 @@ export default function CodexProfilesSettingsTab() {
                     }}
                     onDragEnd={() => setDraggingProfileId("")}
                   >
-                    <button className="codex-provider-grip" type="button" aria-label={translate("codexProfiles.dragSort")}>
+                    <button className="codex-provider-grip" type="button" aria-label="拖拽排序">
                       <GripVertical aria-hidden="true" />
                     </button>
                     <div className="codex-provider-avatar mono" aria-hidden="true">
@@ -597,15 +593,15 @@ export default function CodexProfilesSettingsTab() {
                         onClick={() => void applyProfile(profile.id)}
                       >
                         <Play aria-hidden="true" />
-                        {translate("codexProfiles.enable")}
+                        启用
                       </button>
-                      <button className="btn-icon" type="button" title={translate("codexProfiles.edit")} onClick={() => openEditor(profile)}>
+                      <button className="btn-icon" type="button" title="编辑" onClick={() => openEditor(profile)}>
                         <SquarePen aria-hidden="true" />
                       </button>
                       <button
                         className="btn-icon"
                         type="button"
-                        title={translate("codexProfiles.copy")}
+                        title="复制"
                         disabled={mutationPending}
                         onClick={() => void duplicateProfile(profile)}
                       >
@@ -614,19 +610,19 @@ export default function CodexProfilesSettingsTab() {
                       <button
                         className="btn-icon"
                         type="button"
-                        title={translate("codexProfiles.testConnection")}
+                        title="测试连接"
                         disabled={mutationPending}
                         onClick={() => void testProfile(profile)}
                       >
                         <FlaskConical aria-hidden="true" />
                       </button>
-                      <button className="btn-icon" type="button" title={translate("codexProfiles.status")} onClick={() => showProfileStats(profile)}>
+                      <button className="btn-icon" type="button" title="状态" onClick={() => showProfileStats(profile)}>
                         <BarChart3 aria-hidden="true" />
                       </button>
                       <button
                         className="btn-icon danger"
                         type="button"
-                        title={translate("common.delete")}
+                        title="删除"
                         disabled={mutationPending}
                         onClick={() => void deleteProfile(profile)}
                       >
@@ -640,23 +636,23 @@ export default function CodexProfilesSettingsTab() {
                 <div className="codex-provider-empty">
                   <Bot aria-hidden="true" />
                   <div>
-                    <strong>{translate("codexProfiles.emptyTitle")}</strong>
-                    <span>{translate("codexProfiles.emptyDesc")}</span>
+                    <strong>暂无供应商</strong>
+                    <span>新建一条配置，或连接 Codex 服务后从当前 CLI 配置自动导入。</span>
                   </div>
                 </div>
               ) : null}
             </section>
 
-            <div className="codex-providers-floating-actions" aria-label={translate("codexProfiles.actionsAria")}>
+            <div className="codex-providers-floating-actions" aria-label="供应商操作">
               <button className="codex-provider-float-btn" type="button" disabled={profilesStore.loadState === "loading"} onClick={() => void refresh()}>
                 <RefreshCw aria-hidden="true" />
-                <span>{translate("common.refresh")}</span>
+                <span>刷新</span>
               </button>
               <button
                 className="codex-provider-float-btn codex-provider-float-btn--primary"
                 type="button"
-                title={translate("codexProfiles.newProvider")}
-                aria-label={translate("codexProfiles.newProvider")}
+                title="新建供应商"
+                aria-label="新建供应商"
                 onClick={startNewProfile}
               >
                 <Plus aria-hidden="true" />
@@ -666,11 +662,11 @@ export default function CodexProfilesSettingsTab() {
         </div>
       ) : (
         <div className="codex-provider-editor-page">
-          <section className="codex-provider-editor" aria-label={translate("codexProfiles.editorAria")}>
+          <section className="codex-provider-editor" aria-label="编辑供应商">
             <div className="codex-editor-head">
               <div>
                 <div className="codex-editor-title">
-                  {selectedProfileId ? translate("codexProfiles.editProvider") : translate("codexProfiles.newProvider")}
+                  {selectedProfileId ? "编辑供应商" : "新建供应商"}
                 </div>
                 <div className="codex-editor-subtitle mono">{profilesStore.path || "codex-profiles.json"}</div>
               </div>
@@ -687,7 +683,7 @@ export default function CodexProfilesSettingsTab() {
               }}
             >
               <label className="global-row">
-                <span className="context-label">{translate("codexProfiles.providerName")}</span>
+                <span className="context-label">供应商名称</span>
                 <input
                   className="context-input"
                   type="text"
@@ -698,18 +694,18 @@ export default function CodexProfilesSettingsTab() {
                 />
               </label>
               <label className="global-row">
-                <span className="context-label">{translate("codexProfiles.providerType")}</span>
+                <span className="context-label">供应商类型</span>
                 <select
                   className="context-input"
                   value={form.providerKind}
                   onChange={(event) => updateForm({ providerKind: event.currentTarget.value as CodexProviderKind })}
                 >
-                  <option value="openai-responses">{translate("codexProfiles.openaiResponses")}</option>
-                  <option value="deepseek-chat">{translate("codexProfiles.deepseekChat")}</option>
+                  <option value="openai-responses">OpenAI Responses 兼容</option>
+                  <option value="deepseek-chat">DeepSeek Chat Completions</option>
                 </select>
               </label>
               <label className="global-row">
-                <span className="context-label">{translate("codexProfiles.modelName")}</span>
+                <span className="context-label">模型名称</span>
                 <div className="codex-model-picker">
                   <input
                     className="context-input mono"
@@ -721,7 +717,7 @@ export default function CodexProfilesSettingsTab() {
                     onChange={(event) => updateForm({ model: event.currentTarget.value })}
                   />
                   <button className="btn-mini codex-model-fetch-btn" type="button" disabled={!canFetchProviderModels} onClick={() => void fetchProviderModels()}>
-                    {providerModelsLoading ? translate("codexProfiles.fetchingModels") : translate("codexProfiles.fetchModels")}
+                    {providerModelsLoading ? "获取中" : "获取模型"}
                   </button>
                 </div>
               </label>
@@ -744,10 +740,10 @@ export default function CodexProfilesSettingsTab() {
                         }}
                       >
                         <option value="" disabled>
-                          {translate("codexProfiles.chooseFetchedModel")}
+                          选择获取到的模型
                         </option>
                         {form.model && !providerModelOptions.includes(form.model) ? (
-                          <option value={form.model}>{translate("codexProfiles.modelCurrent", { model: form.model })}</option>
+                          <option value={form.model}>{`${form.model}（当前）`}</option>
                         ) : null}
                         {providerModelOptions.map((modelId) => (
                           <option key={modelId} value={modelId}>
@@ -772,7 +768,7 @@ export default function CodexProfilesSettingsTab() {
                 />
               </label>
               {form.providerKind === "deepseek-chat" ? (
-                <div className="codex-provider-hint">{translate("codexProfiles.deepseekProxyHint")}</div>
+                <div className="codex-provider-hint">DeepSeek 会通过本机 127.0.0.1 代理接入 Codex；启用时会自动把 config.toml 写成代理地址。</div>
               ) : null}
               <label className="global-row">
                 <span className="context-label">API Key</span>
@@ -820,13 +816,13 @@ export default function CodexProfilesSettingsTab() {
               </section>
               <div className="codex-editor-actions">
                 <button className="btn-mini" type="button" disabled={mutationPending} onClick={closeEditor}>
-                  {translate("common.cancel")}
+                  取消
                 </button>
                 <button className="btn-mini" type="submit" disabled={mutationPending}>
-                  {translate("common.save")}
+                  保存
                 </button>
                 <button className="btn-mini" type="button" disabled={mutationPending || !canApplyForm} onClick={() => void saveAndApply()}>
-                  {translate("codexProfiles.saveAndEnable")}
+                  保存并启用
                 </button>
               </div>
             </form>

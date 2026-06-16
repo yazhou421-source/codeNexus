@@ -2,7 +2,6 @@ import { Blocks } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getRuntimeOrchestrator } from "../../../domain/runtimeOrchestrator";
 import type { SkillState } from "../../../domain/types";
-import { translate } from "../../../i18n/translate";
 import { useRuntimeStore } from "../../../stores/runtime.store";
 import { useSkillsStore } from "../../../stores/skills.store";
 import { useSkillsUiStore } from "../../../stores/skillsUi.store";
@@ -13,19 +12,19 @@ type SkillsManagerOverlayProps = {
 };
 
 function stateText(runtimeStore: ReturnType<typeof useRuntimeStore>, skillsStore: ReturnType<typeof useSkillsStore>) {
-  if (!runtimeStore.serverId) return translate("skills.disconnected");
-  if (!runtimeStore.workspacePath) return translate("skills.noWorkspace");
-  if (skillsStore.loadState === "loading") return translate("skills.loading");
+  if (!runtimeStore.serverId) return "未连接服务";
+  if (!runtimeStore.workspacePath) return "未选择工作区";
+  if (skillsStore.loadState === "loading") return "加载中…";
   if (skillsStore.loadState === "error") {
     return skillsStore.errorText
-      ? translate("skills.loadFailedWithMessage", { message: skillsStore.errorText })
-      : translate("skills.loadFailed");
+      ? `加载失败：${skillsStore.errorText}`
+      : "加载失败";
   }
   if (skillsStore.items.length === 0) {
     if (skillsStore.parseErrors.length > 0) {
-      return translate("skills.emptyWithErrorsRaw", { count: skillsStore.parseErrors.length });
+      return `暂无可用技能（errors=${skillsStore.parseErrors.length}）`;
     }
-    return translate("skills.empty");
+    return "暂无可用技能";
   }
   return "";
 }
@@ -69,20 +68,20 @@ export default function SkillsManagerOverlay({ className }: SkillsManagerOverlay
   };
 
   return (
-    <section className={["skills-manager-page", "app-scrollbar", className].filter(Boolean).join(" ")} aria-label={translate("skills.managerAria")}>
+    <section className={["skills-manager-page", "app-scrollbar", className].filter(Boolean).join(" ")} aria-label="技能管理器（Skills）">
       <div className="skills-manager-sticky">
         <header className="skills-manager-head">
           <div className="skills-manager-title-row">
             <Blocks className="skills-manager-title-icon" aria-hidden="true" />
-            <h2 className="skills-manager-title">{translate("skills.managerTitle")}</h2>
+            <h2 className="skills-manager-title">技能管理（Skills）</h2>
           </div>
 
           <div className="skills-manager-head-actions">
             <button className="btn-mini" type="button" disabled={!canRefresh} onClick={() => void runtime.refreshSkills(true)}>
-              {translate("skills.refresh")}
+              刷新
             </button>
             <button className="btn-mini" type="button" onClick={() => skillsUiStore.closeManager()}>
-              {translate("skills.back")}
+              返回
             </button>
           </div>
         </header>
@@ -93,7 +92,7 @@ export default function SkillsManagerOverlay({ className }: SkillsManagerOverlay
           items={skillsStore.items}
           pendingPath={pendingPath}
           stateText={currentStateText}
-          emptyText={translate("skills.noMatch")}
+          emptyText="未找到匹配技能"
           mode="manager"
           onToggleSkill={toggleSkill}
         />

@@ -5,9 +5,6 @@ import { createRoot } from "react-dom/client";
 import { Suspense } from "react";
 import App from "./App";
 import { initRuntimeOrchestrator } from "./domain/runtimeOrchestrator";
-import { installDomI18nFallback } from "./i18n/domFallback";
-import "./i18n";
-import { translate } from "./i18n/translate";
 import { installFeatureRuntimeBridges, FEATURE_SETTINGS_TAB_KEYS, type AppSettingsTab } from "./features/registry";
 import { loadUserLocalSettings } from "./domain/localSettings";
 import { loadLocalDraftState } from "./domain/localDraftState";
@@ -34,7 +31,6 @@ async function bootstrap() {
 
   const runtimeStore = useRuntimeStore.getState();
   const disposeFeatureRuntimeBridges = installFeatureRuntimeBridges({
-    translate,
     getWorkspacePath: () => useRuntimeStore.getState().workspacePath,
     watchWorkspacePath: (listener) => {
       listener(String(useRuntimeStore.getState().workspacePath ?? ""));
@@ -87,7 +83,6 @@ async function bootstrap() {
     appShellStore.openSettings(tab);
   };
   window.addEventListener("codenexus:open-settings", handleFeatureOpenSettings);
-  const disposeDomI18nFallback = installDomI18nFallback(() => appShellStore.language);
 
   const windowControlsOverlay = (navigator as any).windowControlsOverlay as
     | {
@@ -144,7 +139,6 @@ async function bootstrap() {
       window.removeEventListener("codenexus:open-settings", handleFeatureOpenSettings);
       disposeFeatureRuntimeBridges();
       runtime.dispose();
-      disposeDomI18nFallback();
       root.unmount();
     },
     { once: true }

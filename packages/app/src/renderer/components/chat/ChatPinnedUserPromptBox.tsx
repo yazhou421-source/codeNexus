@@ -1,5 +1,4 @@
 import type { KeyboardEvent } from "react";
-import { translate } from "../../i18n/translate";
 import type { ChatUserMessagePart } from "../layout/types/chat.types";
 
 type ChatPinnedUserPromptBoxProps = {
@@ -51,7 +50,7 @@ export default function ChatPinnedUserPromptBox({
   const normalizedFileCount = normalizeCount(fileCount);
   const normalizedImageCount = normalizeCount(imageCount);
   const hasMeta = normalizedFileCount > 0 || normalizedImageCount > 0;
-  const displayText = String(text ?? "").replace(/\s+/g, " ").trim() || translate("chat.activity.userMessage");
+  const displayText = String(text ?? "").replace(/\s+/g, " ").trim() || "用户消息";
   const parts = displayParts(messageParts, displayText);
   const tooltipText = String(title ?? "").trim() || displayText;
   const metaVisible = Boolean((showTimestamp && formattedTime) || hasMeta);
@@ -69,7 +68,7 @@ export default function ChatPinnedUserPromptBox({
       title={tooltipText}
       role="button"
       tabIndex={0}
-      aria-label={translate("chat.activity.locateCurrentPrompt")}
+      aria-label="定位到当前提问"
       onClick={onLocate}
       onKeyDown={handleKeydown}
     >
@@ -109,8 +108,8 @@ export default function ChatPinnedUserPromptBox({
                 {showTimestamp && formattedTime ? <span className="mono dim">{formattedTime}</span> : null}
                 {hasMeta ? (
                   <span className="chat-pinned-prompt__tags" aria-hidden="true">
-                    {normalizedFileCount > 0 ? <span className="chat-pinned-prompt__tag">{translate("chat.activity.fileTag", { count: normalizedFileCount })}</span> : null}
-                    {normalizedImageCount > 0 ? <span className="chat-pinned-prompt__tag">{translate("chat.activity.imageTag", { count: normalizedImageCount })}</span> : null}
+                    {normalizedFileCount > 0 ? <span className="chat-pinned-prompt__tag">{`+${normalizedFileCount} 文件`}</span> : null}
+                    {normalizedImageCount > 0 ? <span className="chat-pinned-prompt__tag">{`+${normalizedImageCount} 图片`}</span> : null}
                   </span>
                 ) : null}
               </span>

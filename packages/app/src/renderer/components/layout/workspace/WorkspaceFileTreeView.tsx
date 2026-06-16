@@ -5,7 +5,6 @@ import type { WorkspaceGitStatusEntry } from "@codenexus/shared/ipc/contracts";
 import { basenameFromPath } from "../../../domain/workspaceFiles";
 import { normalizeAbsoluteFsPath } from "../../../domain/workspacePath";
 import { writeWorkspaceFileDragData } from "../../../domain/workspaceFileDrag";
-import { translate } from "../../../i18n/translate";
 import { useWorkspaceFilesStore } from "../../../stores/workspaceFiles.store";
 import WorkspaceTreeEntryIcon from "./WorkspaceTreeEntryIcon";
 
@@ -79,7 +78,7 @@ export default function WorkspaceFileTreeView({
         }
         const entries = store.directoryEntriesByPath(normalizedPath);
         if (entries.length === 0 && !entryRow.isLoading && !errorText && !hasFilter) {
-          children.push({ kind: "message", key: `dirempty:${normalizedPath}`, path: normalizedPath, text: translate("workspaceFiles.emptyDirectory"), depth: depth + 1, tone: "dim" });
+          children.push({ kind: "message", key: `dirempty:${normalizedPath}`, path: normalizedPath, text: "空目录", depth: depth + 1, tone: "dim" });
         }
         for (const entry of entries) {
           if (entry.isDirectory) {
@@ -108,7 +107,7 @@ export default function WorkspaceFileTreeView({
     };
     const result = appendDirectory(workspace, basenameFromPath(workspace) || workspace, 0);
     if (hasFilter && result.length === 1) {
-      result.push({ kind: "message", key: `filter-empty:${workspace}`, path: workspace, text: translate("workspaceFiles.noFileMatches"), depth: 1, tone: "dim" });
+      result.push({ kind: "message", key: `filter-empty:${workspace}`, path: workspace, text: "未匹配到文件", depth: 1, tone: "dim" });
     }
     return result;
   }, [
@@ -131,8 +130,8 @@ export default function WorkspaceFileTreeView({
   } as CSSProperties;
 
   const treeRowMetaText = (row: Extract<TreeRow, { kind: "entry" }>) => {
-    if (store.isFileDeleting(row.path)) return translate("workspaceFiles.deleting");
-    if (row.isLoading) return translate("workspaceFiles.loading");
+    if (store.isFileDeleting(row.path)) return "删除中";
+    if (row.isLoading) return "加载中";
     return "";
   };
 
@@ -169,16 +168,16 @@ export default function WorkspaceFileTreeView({
       ref={treeSurfaceRef}
       className={["workspace-files-tree-surface app-scrollbar", className].filter(Boolean).join(" ")}
       role="tree"
-      aria-label={translate("workspaceFiles.treeAria")}
+      aria-label="工作区文件树"
       onWheel={(event) => {
         props.onWheel?.(event);
         if (!event.defaultPrevented) onTreeSurfaceWheel(event);
       }}
     >
       {!store.hasWorkspace ? (
-        <div className="workspace-files-placeholder">{translate("workspaceFiles.chooseWorkspaceFirst")}</div>
+        <div className="workspace-files-placeholder">先选择工作区后再浏览文件。</div>
       ) : rows.length === 0 ? (
-        <div className="workspace-files-placeholder">{translate("workspaceFiles.notLoaded")}</div>
+        <div className="workspace-files-placeholder">工作区尚未加载。</div>
       ) : (
       <div className="workspace-files-tree-content" style={treeContentStyle}>
         {rows.map((row) => {

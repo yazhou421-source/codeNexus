@@ -2,37 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   normalizeUserLocalSettings,
   mergeUserLocalSettings,
-  normalizeUiLanguage,
   resolveUiFontSizeZoomFactor,
   DEFAULT_USER_LOCAL_SETTINGS,
 } from "../localSettings";
 
 describe("localSettings", () => {
-  describe("normalizeUiLanguage", () => {
-    it("normalizes en variants to en-US", () => {
-      expect(normalizeUiLanguage("en")).toBe("en-US");
-      expect(normalizeUiLanguage("en-US")).toBe("en-US");
-      expect(normalizeUiLanguage("en-us")).toBe("en-US");
-      expect(normalizeUiLanguage("EN")).toBe("en-US");
-    });
-
-    it("normalizes zh variants to zh-CN", () => {
-      expect(normalizeUiLanguage("zh")).toBe("zh-CN");
-      expect(normalizeUiLanguage("zh-CN")).toBe("zh-CN");
-      expect(normalizeUiLanguage("zh-cn")).toBe("zh-CN");
-      expect(normalizeUiLanguage("zh-Hans")).toBe("zh-CN");
-      expect(normalizeUiLanguage("zh_cn")).toBe("zh-CN");
-      expect(normalizeUiLanguage("zh-Hans-CN")).toBe("zh-CN");
-    });
-
-    it("falls back to default for unknown locales", () => {
-      expect(normalizeUiLanguage("fr")).toBe("zh-CN");
-      expect(normalizeUiLanguage("")).toBe("zh-CN");
-      expect(normalizeUiLanguage(null)).toBe("zh-CN");
-      expect(normalizeUiLanguage(undefined)).toBe("zh-CN");
-    });
-  });
-
   describe("resolveUiFontSizeZoomFactor", () => {
     it("returns a positive number for valid presets", () => {
       expect(resolveUiFontSizeZoomFactor("small")).toBeGreaterThan(0);
@@ -67,9 +41,8 @@ describe("localSettings", () => {
 
     it("preserves valid settings", () => {
       const result = normalizeUserLocalSettings({
-        ui: { language: "en-US", mainView: "image", leftSidebarWidthPx: 400 },
+        ui: { mainView: "image", leftSidebarWidthPx: 400 },
       });
-      expect(result.ui.language).toBe("en-US");
       expect(result.ui.mainView).toBe("image");
       expect(result.ui.leftSidebarWidthPx).toBe(400);
     });
@@ -134,10 +107,10 @@ describe("localSettings", () => {
     });
 
     it("merges ui patch into base", () => {
-      const base = { ui: { language: "en-US" } };
+      const base = { ui: { theme: "dark" } };
       const patch = { ui: { mainView: "flowchart" as const } };
       const result = mergeUserLocalSettings(base, patch);
-      expect(result.ui.language).toBe("en-US");
+      expect(result.ui.theme).toBe("dark");
       expect(result.ui.mainView).toBe("flowchart");
     });
 
@@ -158,7 +131,7 @@ describe("localSettings", () => {
 
     it("does not modify unrelated fields", () => {
       const base = {
-        ui: { theme: "dark", language: "en-US" },
+        ui: { theme: "dark" },
         notification: { soundVolumePercent: 80 },
       };
       const patch = { ui: { theme: "pink" } };

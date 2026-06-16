@@ -1,5 +1,4 @@
 import { FolderOpen } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { getRuntimeOrchestrator } from "../../../domain/runtimeOrchestrator";
 import { basenameFromPath } from "../../../domain/workspaceFiles";
 import { useRuntimeStore } from "../../../stores/runtime.store";
@@ -9,11 +8,10 @@ type TopBarWorkspaceButtonProps = {
 };
 
 export default function TopBarWorkspaceButton({ className }: TopBarWorkspaceButtonProps) {
-  const { t } = useTranslation();
   const runtimeStore = useRuntimeStore();
   const workspacePath = String(runtimeStore.workspacePath ?? "").trim();
-  const workspaceButtonLabel = workspacePath ? basenameFromPath(workspacePath) || workspacePath : t("topbarExtra.selectWorkspace");
-  const workspaceButtonTitle = workspacePath || t("topbarExtra.selectWorkspace");
+  const workspaceButtonLabel = workspacePath ? basenameFromPath(workspacePath) || workspacePath : "选择工作区";
+  const workspaceButtonTitle = workspacePath || "选择工作区";
 
   return (
     <button

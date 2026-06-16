@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { getRuntimeOrchestrator } from "../../../domain/runtimeOrchestrator";
 import { useCodexProfilesStore } from "../../../stores/codexProfiles.store";
 import { useRuntimeStore } from "../../../stores/runtime.store";
@@ -10,7 +9,6 @@ type CodexProfileSwitchProps = {
 };
 
 export default function CodexProfileSwitch({ className }: CodexProfileSwitchProps) {
-  const { t } = useTranslation();
   const runtime = getRuntimeOrchestrator();
   const profilesStore = useCodexProfilesStore();
   const runtimeStore = useRuntimeStore();
@@ -45,8 +43,8 @@ export default function CodexProfileSwitch({ className }: CodexProfileSwitchProp
         modelValue={selectedValue}
         options={profileOptions}
         disabled={selectDisabled}
-        ariaLabel={t("codexProfileSwitch.aria")}
-        placeholder={t("codexProfileSwitch.unselected")}
+        ariaLabel="Codex 模型配置"
+        placeholder="未选择配置"
         minPopoverWidth={180}
         onValueChange={(value) => void onSelectProfile(value)}
       />

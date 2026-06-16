@@ -2,7 +2,6 @@ import "./imagegen-workbench.css";
 
 import { ChevronDown, Image as ImageIcon, Loader2, RefreshCw, RotateCcw, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import { readImagegenLocalImageDataUrl, useImagegenWorkspacePathRef } from "../runtimeBridge";
 import { useImageWorkbenchStore, type ImageWorkbenchHistoryItem } from "../store";
 
@@ -22,7 +21,6 @@ type ImageWorkspaceGroup = {
 const UNASSIGNED_WORKSPACE_KEY = "__unassigned__";
 
 export default function ImageWorkspaceSidebar({ className, children }: ImageWorkspaceSidebarProps) {
-  const { t, i18n } = useTranslation();
   const workbench = useImageWorkbenchStore();
   const currentWorkspacePath = useImagegenWorkspacePathRef();
   const [collapsedByKey, setCollapsedByKey] = useState<Record<string, boolean>>({});
@@ -32,7 +30,7 @@ export default function ImageWorkspaceSidebar({ className, children }: ImageWork
   const basename = (pathValue: string) => {
     const normalized = String(pathValue ?? "").replace(/[\\/]+$/, "");
     const parts = normalized.split(/[\\/]/).filter(Boolean);
-    return parts.at(-1) || normalized || t("imageWorkspace.unknownWorkspace");
+    return parts.at(-1) || normalized || "未知工作区";
   };
 
   const groups = useMemo<ImageWorkspaceGroup[]>(() => {
@@ -49,7 +47,7 @@ export default function ImageWorkspaceSidebar({ className, children }: ImageWork
       }
       byKey.set(key, {
         key,
-        label: workspacePath ? basename(workspacePath) : t("imageWorkspace.unassigned"),
+        label: workspacePath ? basename(workspacePath) : "未归属",
         path: workspacePath || null,
         latestAt: createdAt,
         items: [item],
@@ -65,7 +63,7 @@ export default function ImageWorkspaceSidebar({ className, children }: ImageWork
         if (b.key === UNASSIGNED_WORKSPACE_KEY && a.key !== UNASSIGNED_WORKSPACE_KEY) return -1;
         return b.latestAt - a.latestAt;
       });
-  }, [workbench.historyItems, currentWorkspacePath.value, t]);
+  }, [workbench.historyItems, currentWorkspacePath.value]);
 
   const statusKind = (item: ImageWorkbenchHistoryItem): "ready" | "pending" | "failed" | "canceled" => item.workbenchStatus ?? "ready";
   const isPending = (item: ImageWorkbenchHistoryItem) => statusKind(item) === "pending";
@@ -73,15 +71,15 @@ export default function ImageWorkspaceSidebar({ className, children }: ImageWork
   const isSelectable = (item: ImageWorkbenchHistoryItem) => statusKind(item) === "ready" && item.images.length > 0;
   const statusLabel = (item: ImageWorkbenchHistoryItem) => {
     const status = statusKind(item);
-    if (status === "pending") return item.errorText || t("imageWorkbench.generating");
-    if (status === "failed") return t("imageWorkbench.generationFailed");
-    if (status === "canceled") return t("imageWorkbench.canceled");
-    return t("imageWorkbench.succeeded");
+    if (status === "pending") return item.errorText || "生成中";
+    if (status === "failed") return "生成失败";
+    if (status === "canceled") return "已取消";
+    return "已完成";
   };
   const formatTime = (value: number) => {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return t("imageWorkbench.unknownTime");
-    return date.toLocaleString(i18n.language, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    if (Number.isNaN(date.getTime())) return "时间未知";
+    return date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
   };
   const firstImagePath = (item: ImageWorkbenchHistoryItem) => String(item.images[0]?.path ?? "").trim();
   const thumbSrc = (item: ImageWorkbenchHistoryItem) => {
@@ -123,7 +121,7 @@ export default function ImageWorkspaceSidebar({ className, children }: ImageWork
   }, [workbench.historyItems]);
 
   return (
-    <aside className={["sidebar", "sidebar-left", "image-workspace-sidebar", className].filter(Boolean).join(" ")} aria-label={t("imageWorkspace.aria")}>
+    <aside className={["sidebar", "sidebar-left", "image-workspace-sidebar", className].filter(Boolean).join(" ")} aria-label="图片工作区">
       <div className="lsb-shell image-workspace-shell">
         <section className="lsb-pane-frame">
           <div className="lsb-pane-content image-workspace-pane">
@@ -134,11 +132,11 @@ export default function ImageWorkspaceSidebar({ className, children }: ImageWork
                     <ImageIcon />
                   </span>
                   <div className="image-workspace-title-copy">
-                    <h2 className="lsb-pane-title">{t("imageWorkspace.title")}</h2>
-                    <div className="image-workspace-summary mono">{t("imageWorkspace.recordCount", { count: workbench.historyItems.length })}</div>
+                    <h2 className="lsb-pane-title">图片工作区</h2>
+                    <div className="image-workspace-summary mono">{`${workbench.historyItems.length} 条记录`}</div>
                   </div>
                 </div>
-                <button className="lsb-icon-btn image-workspace-refresh" type="button" aria-label={t("common.refresh")} disabled={workbench.historyLoading} onClick={() => void workbench.loadHistory()}>
+                <button className="lsb-icon-btn image-workspace-refresh" type="button" aria-label="刷新" disabled={workbench.historyLoading} onClick={() => void workbench.loadHistory()}>
                   <RefreshCw className={workbench.historyLoading ? "is-spinning" : ""} aria-hidden="true" />
                 </button>
               </div>
@@ -148,12 +146,12 @@ export default function ImageWorkspaceSidebar({ className, children }: ImageWork
               {workbench.historyLoading && workbench.historyItems.length === 0 ? (
                 <div className="image-workspace-empty">
                   <Loader2 className="is-spinning" aria-hidden="true" />
-                  <span>{t("imageWorkbench.loadingHistory")}</span>
+                  <span>正在加载图片历史。</span>
                 </div>
               ) : groups.length === 0 ? (
                 <div className="image-workspace-empty">
                   <ImageIcon aria-hidden="true" />
-                  <span>{t("imageWorkbench.emptyHistory")}</span>
+                  <span>生成图片后，这里会保存每一次记录。</span>
                 </div>
               ) : (
                 groups.map((group) => (
@@ -190,7 +188,7 @@ export default function ImageWorkspaceSidebar({ className, children }: ImageWork
                               ) : isPending(item) ? (
                                 <Loader2 className="is-spinning" aria-hidden="true" />
                               ) : item.taskId && isProblem(item) ? (
-                                <button className="image-workspace-item__thumb-retry" type="button" aria-label={t("imageWorkbench.retryTask")} onClick={(event) => { event.stopPropagation(); void workbench.retryTask(item.taskId!); }}>
+                                <button className="image-workspace-item__thumb-retry" type="button" aria-label="重试图片任务" onClick={(event) => { event.stopPropagation(); void workbench.retryTask(item.taskId!); }}>
                                   <RotateCcw aria-hidden="true" />
                                 </button>
                               ) : isProblem(item) ? (
@@ -210,11 +208,11 @@ export default function ImageWorkspaceSidebar({ className, children }: ImageWork
 
                             <div className="image-workspace-item__actions">
                               {item.taskId && isPending(item) ? (
-                                <button className="image-workspace-action" type="button" aria-label={t("imageWorkbench.cancelTask")} onClick={(event) => { event.stopPropagation(); void workbench.cancelTask(item.taskId!); }}>
+                                <button className="image-workspace-action" type="button" aria-label="取消图片任务" onClick={(event) => { event.stopPropagation(); void workbench.cancelTask(item.taskId!); }}>
                                   <X aria-hidden="true" />
                                 </button>
                               ) : null}
-                              <button className="image-workspace-action is-danger" type="button" aria-label={t("imageWorkbench.delete")} onClick={(event) => { event.stopPropagation(); void workbench.deleteHistoryItem(item.id); }}>
+                              <button className="image-workspace-action is-danger" type="button" aria-label="删除" onClick={(event) => { event.stopPropagation(); void workbench.deleteHistoryItem(item.id); }}>
                                 <Trash2 aria-hidden="true" />
                               </button>
                             </div>

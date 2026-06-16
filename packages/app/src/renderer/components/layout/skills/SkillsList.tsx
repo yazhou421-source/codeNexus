@@ -1,6 +1,5 @@
 import { ChevronDown } from "lucide-react";
 import type { SkillState } from "../../../domain/types";
-import { translate } from "../../../i18n/translate";
 import { useSkillsUiStore } from "../../../stores/skillsUi.store";
 
 type SkillsListProps = {
@@ -20,8 +19,8 @@ function skillKey(skill: SkillState) {
 function previewText(skill: SkillState) {
   const description = String(skill.description ?? "").trim();
   if (description) return description;
-  if (!skill.configurable) return translate("skills.fixedPreview");
-  return skill.enabled ? translate("skills.enabledPreview") : translate("skills.disabledPreview");
+  if (!skill.configurable) return "该技能为固定项，当前仅支持查看。";
+  return skill.enabled ? "当前已启用，可按需关闭。" : "当前已关闭，可按需启用。";
 }
 
 export default function SkillsList({
@@ -29,7 +28,7 @@ export default function SkillsList({
   mode = "compact",
   pendingPath = "",
   stateText = "",
-  emptyText = translate("skills.empty"),
+  emptyText = "暂无可用技能",
   onToggleSkill,
   className,
 }: SkillsListProps) {
@@ -80,9 +79,9 @@ export default function SkillsList({
                     {mode === "manager" ? (
                       <div className="skill-badge-row">
                         <span className={`skill-status-pill${skill.enabled ? " is-enabled" : " is-disabled"}`}>
-                          {skill.enabled ? translate("skills.enabled") : translate("skills.disabled")}
+                          {skill.enabled ? "已启用" : "已关闭"}
                         </span>
-                        <span className="skill-meta-pill">{skill.configurable ? translate("skills.configurable") : translate("skills.fixed")}</span>
+                        <span className="skill-meta-pill">{skill.configurable ? "可切换" : "固定"}</span>
                       </div>
                     ) : null}
                   </div>
@@ -91,7 +90,7 @@ export default function SkillsList({
                     <button
                       className="skill-summary-toggle"
                       type="button"
-                      aria-label={open ? translate("skills.collapseDetails") : translate("skills.expandDetails")}
+                      aria-label={open ? "收起技能详情" : "展开技能详情"}
                       onClick={() => skillsUiStore.toggleExpanded(key)}
                     >
                       <ChevronDown className={`skill-summary-toggle-icon${open ? " open" : ""}`} aria-hidden="true" />
@@ -108,13 +107,13 @@ export default function SkillsList({
               <div className={["skill-body", modeClass].join(" ")}>
                 {skill.description ? (
                   <section className="skill-info-block">
-                    <div className="skill-info-label mono">{translate("skills.description")}</div>
+                    <div className="skill-info-label mono">说明</div>
                     <div className="skill-desc">{skill.description}</div>
                   </section>
                 ) : null}
                 {skill.path ? (
                   <section className="skill-info-block">
-                    <div className="skill-info-label mono">{translate("skills.path")}</div>
+                    <div className="skill-info-label mono">路径</div>
                     <div className="skill-path skill-path--body">{skill.path}</div>
                   </section>
                 ) : null}

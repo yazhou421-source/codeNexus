@@ -1,12 +1,11 @@
 import { defineStore } from "./zustandCompat";
 import { codexDesktop } from "../api/codexDesktopClient";
-import { translate } from "../i18n/translate";
 import type { AppClosingStep, AppWindowClosingState } from "@codenexus/shared/ipc";
 
 const DEFAULT_STEPS = (): AppClosingStep[] => [
-  { id: "prepareUi", label: translate("appClosing.prepareUi"), status: "pending" },
-  { id: "stopTasks", label: translate("appClosing.stopTasks"), status: "pending" },
-  { id: "exitApp", label: translate("appClosing.exitApp"), status: "pending" },
+  { id: "prepareUi", label: "准备关闭界面", status: "pending" },
+  { id: "stopTasks", label: "停止后台任务", status: "pending" },
+  { id: "exitApp", label: "退出应用", status: "pending" },
 ];
 
 let stopClosingStateListener: (() => void) | null = null;

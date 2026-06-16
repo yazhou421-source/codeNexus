@@ -1,6 +1,5 @@
 import { GitCompare } from "lucide-react";
 import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
 import { useRuntimeStore } from "../../../stores/runtime.store";
 import { useThreadStore } from "../../../stores/thread.store";
 import TurnDiffSummaryCard from "../../timeline/cards/TurnDiffSummaryCard";
@@ -12,7 +11,6 @@ type TopBarTurnDiffMenuProps = {
 };
 
 export default function TopBarTurnDiffMenu({ className, open = false, onToggle }: TopBarTurnDiffMenuProps) {
-  const { t } = useTranslation();
   const runtimeStore = useRuntimeStore();
   const threadStore = useThreadStore();
 
@@ -66,23 +64,23 @@ export default function TopBarTurnDiffMenu({ className, open = false, onToggle }
           type="button"
           aria-haspopup="menu"
           aria-expanded={open}
-          aria-label={t("topbarExtra.turnDiff")}
+          aria-label="本回合差异"
           onClick={(event) => {
             event.stopPropagation();
             onToggle?.();
           }}
         >
           <GitCompare aria-hidden="true" />
-          <span className="topbar-right-switch-label">{t("topbarExtra.diff")}</span>
+          <span className="topbar-right-switch-label">差异</span>
         </button>
       </div>
 
       {open ? (
         <div className="topbar-menu-shell topbar-menu-shell--turn-diff" onClick={(event) => event.stopPropagation()}>
-          <div className="topbar-dropdown topbar-menu app-scrollbar" role="menu" aria-label={t("topbarExtra.turnDiff")}>
+          <div className="topbar-dropdown topbar-menu app-scrollbar" role="menu" aria-label="本回合差异">
             <div className="topbar-menu-section">
-              <div className="topbar-menu-heading">{t("topbarExtra.turnDiff")}</div>
-              {!currentTurnDiffText ? <div className="topbar-menu-note">{t("topbarExtra.noDiff")}</div> : <TurnDiffSummaryCard diffText={currentTurnDiffText} />}
+              <div className="topbar-menu-heading">本回合差异</div>
+              {!currentTurnDiffText ? <div className="topbar-menu-note">当前没有可展示的差异。</div> : <TurnDiffSummaryCard diffText={currentTurnDiffText} />}
             </div>
           </div>
         </div>

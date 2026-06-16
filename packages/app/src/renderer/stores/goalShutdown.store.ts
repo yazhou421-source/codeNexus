@@ -2,7 +2,6 @@ import { defineStore } from "./zustandCompat";
 import type { ThreadGoalState } from "../domain/types";
 import { codexDesktop } from "../api/codexDesktopClient";
 import { getCachedUserLocalSettings, patchUserLocalSettings } from "../domain/localSettings";
-import { translate } from "../i18n/translate";
 import { showToast } from "../ui/toast";
 import { DEFAULT_GOAL_SHUTDOWN_DELAY_SECONDS } from "@codenexus/shared/localSettings";
 
@@ -120,8 +119,8 @@ export const useGoalShutdownStore = defineStore("goalShutdown", {
       };
       showToast({
         kind: "warn",
-        title: translate("goalShutdown.scheduledTitle"),
-        message: translate("goalShutdown.scheduledMessage", { seconds }),
+        title: "已安排自动关机",
+        message: `将在 ${seconds} 秒后关机。`,
       });
       countdownTimer = setInterval(() => {
         if (!this.countdown) {
@@ -142,8 +141,8 @@ export const useGoalShutdownStore = defineStore("goalShutdown", {
       this.lastErrorText = "";
       showToast({
         kind: "success",
-        title: translate("goalShutdown.cancelledTitle"),
-        message: translate("goalShutdown.cancelledMessage"),
+        title: "已取消自动关机",
+        message: "本次 goal 完成不会继续关机。",
       });
     },
     async executeShutdown() {
@@ -155,18 +154,18 @@ export const useGoalShutdownStore = defineStore("goalShutdown", {
         if (result?.ok) return;
         this.lastErrorText =
           result?.reason === "unsupported"
-            ? translate("goalShutdown.unsupportedMessage")
-            : String(result?.message ?? translate("goalShutdown.failedMessage"));
+            ? "当前系统不支持自动关机。"
+            : String(result?.message ?? "系统关机命令执行失败。");
         showToast({
           kind: "error",
-          title: translate("goalShutdown.failedTitle"),
+          title: "自动关机失败",
           message: this.lastErrorText,
         });
       } catch (error: any) {
-        this.lastErrorText = String(error?.message ?? error ?? translate("goalShutdown.failedMessage"));
+        this.lastErrorText = String(error?.message ?? error ?? "系统关机命令执行失败。");
         showToast({
           kind: "error",
-          title: translate("goalShutdown.failedTitle"),
+          title: "自动关机失败",
           message: this.lastErrorText,
         });
       } finally {

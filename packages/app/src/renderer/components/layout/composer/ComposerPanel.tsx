@@ -1,6 +1,5 @@
 import { Bot, ImagePlus, ListTodo, SendHorizontal, Square } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type HTMLAttributes, type Ref } from "react";
-import { useTranslation } from "react-i18next";
 import type { CollaborationModeKind, ComposeImageAttachment, ComposeWorkspaceFileMention } from "../../../domain/types";
 import {
   COMPOSE_FILE_TOKEN_CHAR,
@@ -304,7 +303,6 @@ export default function ComposerPanel({
   className,
   ...props
 }: ComposerPanelProps) {
-  const { t } = useTranslation();
   const runtimeStore = useRuntimeStore();
   const userInputStore = useUserInputStore();
   const inputRef = useRef<HTMLDivElement | null>(null);
@@ -319,7 +317,7 @@ export default function ComposerPanel({
     const threadId = String(runtimeStore.currentThreadId ?? "").trim();
     return Boolean(threadId && userInputStore.queueSizeForThread(threadId) > 0);
   }, [runtimeStore.currentThreadId, userInputStore]);
-  const historyRewriteLabel = historyRewriteSource === "queue" ? t("composer.editQueuedMessage") : t("composer.rewriteHistoryMessage");
+  const historyRewriteLabel = historyRewriteSource === "queue" ? "编辑排队消息" : "重写历史消息";
 
   const bindComposerInputRef = (element: HTMLDivElement | null) => {
     inputRef.current = element;
@@ -639,7 +637,7 @@ export default function ComposerPanel({
         >
           {variant !== "inline" ? <ApprovalDock /> : null}
           {variant !== "inline" && hasPendingComposerUserInput ? <UserInputDock /> : null}
-          {isWorkspaceFileDragOver ? <div className="composer-file-drop-overlay" aria-hidden="true">{t("composer.dropFiles")}</div> : null}
+          {isWorkspaceFileDragOver ? <div className="composer-file-drop-overlay" aria-hidden="true">松开鼠标，将工作区文件添加到当前提问</div> : null}
           <div
             ref={bindComposerInputRef}
             id={inputId || "input"}
@@ -648,7 +646,7 @@ export default function ComposerPanel({
             role="textbox"
             aria-multiline="true"
             spellCheck={false}
-            data-placeholder={inputPlaceholder || t("composer.inputPlaceholder")}
+            data-placeholder={inputPlaceholder || "输入任务..."}
             onKeyDown={onComposerKeydownInternal}
             onPaste={onComposerPasteInternal}
             onInput={() => {
@@ -664,10 +662,10 @@ export default function ComposerPanel({
             <div className="composer-attachments">
               {composeAttachments.map((attachment) => (
                 <div key={attachment.id} className="composer-attachment">
-                  <button className="composer-attachment-preview" type="button" aria-label={t("composer.previewImage", { name: attachment.name })} onClick={() => onPreviewAttachment?.(attachment.id)}>
+                  <button className="composer-attachment-preview" type="button" aria-label={`预览图片：${attachment.name}`} onClick={() => onPreviewAttachment?.(attachment.id)}>
                     <img className="composer-attachment-image" src={attachment.previewUrl} alt={attachment.name} loading="lazy" />
                   </button>
-                  <button className="composer-attachment-remove" type="button" aria-label={t("composer.removeImage")} onClick={(event) => {
+                  <button className="composer-attachment-remove" type="button" aria-label="移除图片" onClick={(event) => {
                     event.stopPropagation();
                     event.preventDefault();
                     onRemoveAttachment?.(attachment.id);
@@ -685,19 +683,19 @@ export default function ComposerPanel({
                 <div className="composer-rewrite-chip mono">
                   <span>{historyRewriteLabel}</span>
                   <button className="btn-mini composer-rewrite-cancel" type="button" onClick={onCancelRewrite}>
-                    {t("common.cancel")}
+                    取消
                   </button>
                 </div>
               ) : null}
-              <div className="composer-mode-group" role="group" aria-label={t("composer.collaborationMode")}>
+              <div className="composer-mode-group" role="group" aria-label="协作模式">
                 <div className="composer-mode-thumb" />
                 <button className={["btn-mini composer-mode-button is-agent", composeMode === "default" ? "is-active" : ""].filter(Boolean).join(" ")} type="button" onClick={() => setComposeMode("default")}>
                   <Bot className="composer-mode-icon" aria-hidden="true" />
-                  <span>{t("composer.execute")}</span>
+                  <span>执行</span>
                 </button>
                 <button className={["btn-mini composer-mode-button is-plan", composeMode === "plan" ? "is-active" : ""].filter(Boolean).join(" ")} type="button" onClick={() => setComposeMode("plan")}>
                   <ListTodo className="composer-mode-icon" aria-hidden="true" />
-                  <span>{t("composer.plan")}</span>
+                  <span>计划</span>
                 </button>
               </div>
               <ComposerModelReasoningPicker
@@ -725,12 +723,12 @@ export default function ComposerPanel({
                   onUpdateSandboxModeColon?.(value);
                 }}
               />
-              {variant !== "inline" && serviceTierLabel ? <span className={["composer-service-tier mono", serviceTierLabel === t("composer.fast") ? "is-fast" : ""].filter(Boolean).join(" ")}>{serviceTierLabel}</span> : null}
+              {variant !== "inline" && serviceTierLabel ? <span className={["composer-service-tier mono", serviceTierLabel === "快速" ? "is-fast" : ""].filter(Boolean).join(" ")}>{serviceTierLabel}</span> : null}
             </div>
 
             <div className="composer-toolbar-actions">
               {variant !== "inline" ? (
-                <button id="btn-add-image" className="btn-mini composer-icon-button" type="button" aria-label={t("composer.addImage")} onClick={() => {
+                <button id="btn-add-image" className="btn-mini composer-icon-button" type="button" aria-label="添加图片" onClick={() => {
                   onPickImages?.();
                   onPickImagesKebab?.();
                 }}>
@@ -748,7 +746,7 @@ export default function ComposerPanel({
               <button id="btn-send-stop" className={["composer-send-button", isTurnRunning ? "is-running" : "", sendDisabled && !isTurnRunning ? "is-disabled" : ""].filter(Boolean).join(" ")} type="button" disabled={sendDisabled && !isTurnRunning} aria-label={sendTitle} onClick={send}>
                 {!sendDisabled && !isTurnRunning ? <div className="composer-send-ping" /> : null}
                 <SendHorizontal className="composer-send-icon" />
-                <span className="composer-send-label">{t("composer.send")}</span>
+                <span className="composer-send-label">发送</span>
               </button>
               {isTurnRunning ? (
                 <button className="composer-send-button composer-stop-button is-running" type="button" disabled={interruptDisabled} aria-label={interruptTitle} onClick={interrupt}>

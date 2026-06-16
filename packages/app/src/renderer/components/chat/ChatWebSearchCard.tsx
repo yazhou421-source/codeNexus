@@ -2,7 +2,6 @@ import type { HTMLAttributes } from "react";
 import { CircleDashed, FileSearch, Globe, Search } from "lucide-react";
 import type { ChatWebSearchItem } from "../layout/types/chat.types";
 import ExecutionWaveText from "../ui/ExecutionWaveText";
-import { translate } from "../../i18n/translate";
 
 export type ChatWebSearchCardProps = HTMLAttributes<HTMLDivElement> & {
   item?: ChatWebSearchItem;
@@ -10,18 +9,18 @@ export type ChatWebSearchCardProps = HTMLAttributes<HTMLDivElement> & {
 
 export default function ChatWebSearchCard({ item, className, ...props }: ChatWebSearchCardProps) {
   const running = item?.status === "running";
-  const target = item?.primaryText || item?.summaryText || item?.title || translate("chat.activity.webOperation");
+  const target = item?.primaryText || item?.summaryText || item?.title || "网页操作";
   const activityText = (() => {
     if (running) {
-      if (item?.actionType === "openPage") return translate("chat.activity.openingWeb", { target });
-      if (item?.actionType === "findInPage") return translate("chat.activity.findingWeb", { target });
-      if (item?.actionType === "other") return translate("chat.activity.processingWeb", { target });
-      return translate("chat.activity.searchingWeb", { target });
+      if (item?.actionType === "openPage") return `正在打开 ${target}`;
+      if (item?.actionType === "findInPage") return `正在页内查找 ${target}`;
+      if (item?.actionType === "other") return `正在处理 ${target}`;
+      return `正在搜索 ${target}`;
     }
-    if (item?.actionType === "openPage") return translate("chat.activity.openedWeb", { target });
-    if (item?.actionType === "findInPage") return translate("chat.activity.foundWeb", { target });
-    if (item?.actionType === "other") return translate("chat.activity.processedWeb", { target });
-    return translate("chat.activity.searchedWeb", { target });
+    if (item?.actionType === "openPage") return `已打开 ${target}`;
+    if (item?.actionType === "findInPage") return `已查找 ${target}`;
+    if (item?.actionType === "other") return `已处理 ${target}`;
+    return `已搜索 ${target}`;
   })();
   const Icon = item?.actionType === "openPage" ? Globe : item?.actionType === "findInPage" ? FileSearch : item?.actionType === "other" ? CircleDashed : Search;
 

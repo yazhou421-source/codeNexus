@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { getRuntimeOrchestrator } from "../../domain/runtimeOrchestrator";
 import type { UserInputQuestion } from "../../domain/types";
-import { translate } from "../../i18n/translate";
 import { useRuntimeStore } from "../../stores/runtime.store";
 import { useUserInputStore } from "../../stores/userInput.store";
 import { safeJsonStringify } from "../../utils/safeJson";
@@ -223,45 +222,45 @@ export default function UserInputDock({ threadId, variant = "composer", classNam
       : question?.question ?? "";
   const progress =
     prompt?.kind === "elicitationUrl"
-      ? translate("userInput.linkConfirm")
+      ? "链接确认"
       : emptyElicitation
-        ? translate("common.confirm")
+        ? "确认"
         : prompt?.kind === "elicitationForm"
-          ? translate("userInput.jsonInput")
+          ? "JSON 输入"
           : prompt
             ? `${Math.min(step + 1, prompt.questions.length)}/${prompt.questions.length}`
             : "0/0";
   const textPlaceholder =
     prompt?.kind === "elicitationForm"
-      ? translate("userInput.jsonPlaceholder", { example: '{"key":"value"}' })
+      ? `请输入 JSON，例如 {"key":"value"}`
       : question?.isOther
-        ? translate("userInput.otherPlaceholder")
-        : translate("userInput.answerPlaceholder");
+        ? "请输入其他内容"
+        : "请输入答案";
   const submitText = !prompt
-    ? translate("userInput.submit")
+    ? "提交"
     : prompt.kind === "elicitationUrl"
-      ? translate("userInput.completed")
+      ? "已完成"
       : emptyElicitation
-        ? translate("common.confirm")
+        ? "确认"
         : prompt.kind === "elicitationForm"
-          ? translate("userInput.submitJson")
+          ? "提交 JSON"
           : isLast
-            ? translate("userInput.submit")
-            : translate("userInput.next");
+            ? "提交"
+            : "下一步";
 
   return (
-    <div className={rootClass} role="region" aria-label={translate("userInput.title")}>
+    <div className={rootClass} role="region" aria-label="计划问答">
       <div className="row" style={{ alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
         <div className="row" style={{ alignItems: "center", gap: 8 }}>
           <span className="attn-dot" aria-hidden="true" />
-          <div className="text-[12px] font-semibold tracking-[0.2px] text-[color:var(--text)]">{translate("userInput.title")}</div>
+          <div className="text-[12px] font-semibold tracking-[0.2px] text-[color:var(--text)]">计划问答</div>
         </div>
-        <span className="mono dim text-[11px]">{queueSize > 0 ? translate("userInput.pendingCount", { count: queueSize }) : "0"}</span>
+        <span className="mono dim text-[11px]">{queueSize > 0 ? `待输入 ${queueSize}` : "0"}</span>
       </div>
 
       <div id={`user-input-box:${resolvedThreadId || "no-thread"}`} className={prompt ? "" : "dim"}>
         {!prompt ? (
-          translate("userInput.empty")
+          "当前无待回答问题"
         ) : (
           <div className="user-input-card">
             <div className="user-input-head">
@@ -272,7 +271,7 @@ export default function UserInputDock({ threadId, variant = "composer", classNam
 
             {prompt.kind === "elicitationUrl" ? (
               <div className="grid gap-2 rounded-xl border border-[var(--ui-well-border)] bg-[var(--ui-well-bg)] p-2">
-                <div className="dim text-[11px]">{translate("userInput.externalConfirm")}</div>
+                <div className="dim text-[11px]">请在浏览器中完成外部确认，然后回到这里继续。</div>
                 <div className="mono text-[11px] break-all">{prompt.url}</div>
               </div>
             ) : null}
@@ -372,15 +371,15 @@ export default function UserInputDock({ threadId, variant = "composer", classNam
 
             <div className="user-input-actions">
               <button className="danger" type="button" onClick={() => void runtime.cancelUserInputPromptForThread(resolvedThreadId)}>
-                {translate("common.cancel")}
+                取消
               </button>
               {prompt.kind === "elicitationUrl" ? (
                 <button type="button" onClick={() => void runtime.openExternalUrl(prompt.url)}>
-                  {translate("userInput.openLink")}
+                  打开链接
                 </button>
               ) : (
                 <button type="button" disabled={!canGoPrev} onClick={prevStep}>
-                  {translate("userInput.previous")}
+                  上一步
                 </button>
               )}
               <button type="button" disabled={!canGoNext} onClick={() => void submitOrNext()}>

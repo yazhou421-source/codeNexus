@@ -2,8 +2,7 @@ import "./paper-workbench.css";
 
 import { BookOpen } from "lucide-react";
 import { type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
-import { usePaperStore, type PaperSectionStatus } from "../store";
+import { PAPER_SECTION_STATUS_LABELS, usePaperStore, type PaperSectionStatus } from "../store";
 
 type PaperWorkspaceSidebarProps = {
   className?: string;
@@ -11,15 +10,14 @@ type PaperWorkspaceSidebarProps = {
 };
 
 export default function PaperWorkspaceSidebar({ className, children }: PaperWorkspaceSidebarProps) {
-  const { t, i18n } = useTranslation();
   const paper = usePaperStore();
 
   function statusLabel(status: PaperSectionStatus): string {
-    return t(`paperWorkspace.status.${status}`);
+    return PAPER_SECTION_STATUS_LABELS[status];
   }
 
   return (
-    <aside className={["sidebar sidebar-left paper-workspace-sidebar", className].filter(Boolean).join(" ")} aria-label={t("paperWorkspace.aria")}>
+    <aside className={["sidebar sidebar-left paper-workspace-sidebar", className].filter(Boolean).join(" ")} aria-label="论文工作区">
       <div className="paper-side-shell">
         <header className="paper-side-head">
           <div className="paper-side-title-block">
@@ -27,8 +25,8 @@ export default function PaperWorkspaceSidebar({ className, children }: PaperWork
               <BookOpen />
             </span>
             <div className="paper-side-title-copy">
-              <h2>{t("paperWorkspace.title")}</h2>
-              <span className="mono">{t("paperWorkspace.progress", { progress: paper.progressPercent })}</span>
+              <h2>论文工作区</h2>
+              <span className="mono">{`完成度 ${paper.progressPercent}%`}</span>
             </div>
           </div>
         </header>
@@ -38,7 +36,7 @@ export default function PaperWorkspaceSidebar({ className, children }: PaperWork
             <div className="paper-project-title">{paper.title}</div>
             <div className="paper-project-meta">
               <span>{paper.field}</span>
-              <span className="mono">{paper.targetWords.toLocaleString(i18n.language)} words</span>
+              <span className="mono">{paper.targetWords.toLocaleString("zh-CN")} words</span>
             </div>
             <div className="paper-progress-track" aria-hidden="true">
               <div className="paper-progress-bar" style={{ width: `${paper.progressPercent}%` }} />
@@ -47,7 +45,7 @@ export default function PaperWorkspaceSidebar({ className, children }: PaperWork
 
           <section className="paper-side-section">
             <div className="paper-section-head">
-              <span>{t("paperWorkspace.sections")}</span>
+              <span>章节结构</span>
               <span className="mono">
                 {paper.completedSectionCount}/{paper.sections.length}
               </span>
@@ -68,8 +66,8 @@ export default function PaperWorkspaceSidebar({ className, children }: PaperWork
                 >
                   <span className="paper-section-status" aria-hidden="true" />
                   <span className="paper-section-copy">
-                    <span className="paper-section-title">{t(`paperWorkspace.sectionNames.${section.titleKey}`)}</span>
-                    <span className="paper-section-note">{t(`paperWorkspace.sectionNotes.${section.noteKey}`)}</span>
+                    <span className="paper-section-title">{section.title}</span>
+                    <span className="paper-section-note">{section.note}</span>
                   </span>
                   <span className="paper-section-words mono">{section.wordTarget}</span>
                 </button>
@@ -79,17 +77,17 @@ export default function PaperWorkspaceSidebar({ className, children }: PaperWork
 
           <section className="paper-side-section">
             <div className="paper-section-head">
-              <span>{t("paperWorkspace.queue")}</span>
+              <span>生成队列</span>
               <span className="mono">{paper.activeSectionCount}</span>
             </div>
             <div className="paper-task-list">
               {paper.tasks.map((task) => (
                 <article key={task.id} className={`paper-task-item is-${task.status}`}>
                   <div className="paper-task-topline">
-                    <span>{t(`paperWorkspace.tasks.${task.titleKey}`)}</span>
+                    <span>{task.title}</span>
                     <span>{statusLabel(task.status)}</span>
                   </div>
-                  <p>{t(`paperWorkspace.tasks.${task.descriptionKey}`)}</p>
+                  <p>{task.description}</p>
                 </article>
               ))}
             </div>

@@ -2,7 +2,6 @@
 import { defineStore } from "./zustandCompat";
 import type { GlobalConfigDraft } from "../domain/types";
 import { createDefaultGlobalConfigDraft } from "../domain/serverInterop";
-import { translate } from "../i18n/translate";
 
 function createDefaultDraft(): GlobalConfigDraft {
   return createDefaultGlobalConfigDraft();
@@ -11,7 +10,7 @@ function createDefaultDraft(): GlobalConfigDraft {
 export const useConfigStore = defineStore("config", {
   state: () => ({
     loadState: "idle" as "idle" | "loading" | "ready" | "error",
-    statusText: translate("runtime.noService") as string,
+    statusText: "未连接服务" as string,
     saving: false,
     draft: createDefaultDraft(),
     snapshot: createDefaultDraft(),
@@ -39,7 +38,7 @@ export const useConfigStore = defineStore("config", {
       this.draft = { ...next };
     },
     // 重置为初始态，通常在断开连接或切换工作区后调用。
-    resetState(statusText = translate("runtime.noService")) {
+    resetState(statusText = "未连接服务") {
       this.loadState = "idle";
       this.statusText = statusText;
       this.saving = false;

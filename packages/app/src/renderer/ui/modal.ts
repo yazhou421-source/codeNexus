@@ -1,5 +1,3 @@
-import { translate } from "../i18n/translate";
-
 type PromptNumberModalOptions = {
   title: string;
   message: string;
@@ -80,11 +78,11 @@ export async function promptNumberModal(options: PromptNumberModalOptions): Prom
     throw new Error("promptNumberModal: another modal is already open");
   }
 
-  const title = String(options?.title ?? "").trim() || translate("common.input");
+  const title = String(options?.title ?? "").trim() || "输入";
   const message = String(options?.message ?? "").trim() || "";
   const detail = typeof options?.detail === "string" ? options.detail : undefined;
-  const confirmText = String(options?.confirmText ?? "").trim() || translate("common.confirm");
-  const cancelText = String(options?.cancelText ?? "").trim() || translate("common.cancel");
+  const confirmText = String(options?.confirmText ?? "").trim() || "确认";
+  const cancelText = String(options?.cancelText ?? "").trim() || "取消";
   const danger = Boolean(options?.danger);
 
   const min = Number.isFinite(options?.min) ? Math.round(options.min) : 1;
@@ -286,13 +284,13 @@ export async function promptGoalModal(options: PromptGoalModalOptions): Promise<
     throw new Error("promptGoalModal: another modal is already open");
   }
 
-  const title = String(options?.title ?? "").trim() || translate("common.input");
+  const title = String(options?.title ?? "").trim() || "输入";
   const message = String(options?.message ?? "").trim() || "";
-  const objectiveLabel = String(options?.objectiveLabel ?? "").trim() || translate("common.input");
+  const objectiveLabel = String(options?.objectiveLabel ?? "").trim() || "输入";
   const budgetLabel = String(options?.budgetLabel ?? "").trim() || "Token budget";
   const budgetHint = String(options?.budgetHint ?? "").trim();
-  const confirmText = String(options?.confirmText ?? "").trim() || translate("common.confirm");
-  const cancelText = String(options?.cancelText ?? "").trim() || translate("common.cancel");
+  const confirmText = String(options?.confirmText ?? "").trim() || "确认";
+  const cancelText = String(options?.cancelText ?? "").trim() || "取消";
   const shutdownOnCompleteLabel = String(options?.shutdownOnCompleteLabel ?? "").trim();
   const shutdownOnCompleteHint = String(options?.shutdownOnCompleteHint ?? "").trim();
   const previousFocus = document.activeElement as HTMLElement | null;
@@ -537,11 +535,11 @@ export async function confirmModal(options: ConfirmModalOptions): Promise<boolea
     throw new Error("confirmModal: another modal is already open");
   }
 
-  const title = String(options?.title ?? "").trim() || translate("common.confirm");
+  const title = String(options?.title ?? "").trim() || "确认";
   const message = String(options?.message ?? "").trim() || "";
   const detail = typeof options?.detail === "string" ? options.detail : undefined;
-  const confirmText = String(options?.confirmText ?? "").trim() || translate("common.confirm");
-  const cancelText = String(options?.cancelText ?? "").trim() || translate("common.cancel");
+  const confirmText = String(options?.confirmText ?? "").trim() || "确认";
+  const cancelText = String(options?.cancelText ?? "").trim() || "取消";
   const danger = Boolean(options?.danger);
 
   const previousFocus = document.activeElement as HTMLElement | null;
@@ -714,7 +712,7 @@ export async function actionModal(options: ActionModalOptions): Promise<string> 
     throw new Error("actionModal: another modal is already open");
   }
 
-  const title = String(options?.title ?? "").trim() || translate("common.confirm");
+  const title = String(options?.title ?? "").trim() || "确认";
   const message = String(options?.message ?? "").trim() || "";
   const detail = typeof options?.detail === "string" ? options.detail : undefined;
   const buttons = Array.isArray(options?.buttons)

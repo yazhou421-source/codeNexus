@@ -1,6 +1,4 @@
 // 轻量 Toast 提示：用于在页面右上角展示短时反馈信息。
-import { translate } from "../i18n/translate";
-
 export type ToastKind = "info" | "success" | "warn" | "error";
 
 export type ToastOptions = {
@@ -56,7 +54,7 @@ export function showToast(options: ToastOptions): void {
   const close = document.createElement("button");
   close.type = "button";
   close.className = "codex-toast-close";
-  close.setAttribute("aria-label", translate("common.closeNotification"));
+  close.setAttribute("aria-label", "关闭提示");
   close.textContent = "×";
   toast.appendChild(close);
 

@@ -14,7 +14,6 @@ import { useUserInputStore } from "../../stores/userInput.store";
 import { useApprovalStore } from "../../stores/approval.store";
 import { useImageWorkbenchStore } from "@codenexus/feature-imagegen/renderer/store";
 import { useRuntimeStore } from "../../stores/runtime.store";
-import { translate } from "../../i18n/translate";
 import { normalizeUserInputPrompt } from "../../domain/userInputInterop";
 import { safeJsonStringify } from "../../utils/safeJson";
 import { isCodexServerRequestMessage } from "@codenexus/shared/codex-protocol";
@@ -273,17 +272,17 @@ async function waitForImageGenerationTask(taskId: string): Promise<ImageGenerati
   while (Date.now() - startedAt < IMAGE_TOOL_TASK_WAIT_TIMEOUT_MS) {
     const taskRes = await codexDesktop.app.listImageGenerationTasks();
     const task = (Array.isArray(taskRes.tasks) ? taskRes.tasks : []).find((item) => item.id === taskId);
-    if (!task) throw new Error(translate("runtime.imageTaskMissingOrDeleted"));
+    if (!task) throw new Error("图片生成任务不存在或已被删除。");
     if (task.status === "succeeded" || task.status === "failed" || task.status === "canceled") return task;
     await sleep(IMAGE_TOOL_TASK_POLL_INTERVAL_MS);
   }
-  throw new Error(translate("runtime.imageTaskWaitTimeout"));
+  throw new Error("图片生成任务等待超时。");
 }
 
 async function resolveImageGenerationHistoryItem(historyId: string): Promise<ImageGenerationHistoryItem> {
   const historyRes = await codexDesktop.app.listImageGenerationHistory();
   const item = (Array.isArray(historyRes.items) ? historyRes.items : []).find((entry) => entry.id === historyId);
-  if (!item) throw new Error(translate("runtime.imageHistoryMissingAfterCompletion"));
+  if (!item) throw new Error("图片生成已完成，但未找到对应历史记录。");
   return item;
 }
 
@@ -393,10 +392,10 @@ export function installRequestResponder(storeScope: unknown) {
         );
 
         try {
-          if (!args.prompt) throw new Error(translate("runtime.imagePromptRequired"));
+          if (!args.prompt) throw new Error("图片生成提示词不能为空。");
           const referenceResolution = await resolveImageToolReferenceImages(timelineStore, toolParams);
           if (referenceResolution.requestedCount > 0 && referenceResolution.inputImages.length === 0) {
-            throw new Error(translate("runtime.referenceImagesUnreadable"));
+            throw new Error("当前消息包含参考图片，但这些图片都无法读取。");
           }
           const submitResult = await codexDesktop.app.submitImageGenerationTask({
             threadId: toolParams.threadId,
@@ -411,7 +410,7 @@ export function installRequestResponder(storeScope: unknown) {
             n: args.n,
           });
           const submittedTaskId = String(submitResult.task?.id ?? "").trim();
-          if (!submittedTaskId) throw new Error(translate("runtime.imageTaskSubmitFailed"));
+          if (!submittedTaskId) throw new Error("图片生成任务提交失败。");
           imageWorkbenchStore.generationTasks = Array.isArray(submitResult.tasks) ? submitResult.tasks : [];
           imageWorkbenchStore.mergeHistoryAndTasks(
             filterPersistedImageWorkbenchHistoryItems(imageWorkbenchStore.historyItems),
@@ -440,12 +439,12 @@ export function installRequestResponder(storeScope: unknown) {
             throw new Error(
               completedTask.errorText ||
                 (completedTask.status === "canceled"
-                  ? translate("runtime.imageTaskCanceled")
-                  : translate("runtime.imageTaskFailed"))
+                  ? "图片生成任务已取消。"
+                  : "图片生成任务失败。")
             );
           }
           const historyId = String(completedTask.historyId ?? "").trim();
-          if (!historyId) throw new Error(translate("runtime.imageTaskMissingHistoryId"));
+          if (!historyId) throw new Error("图片生成任务已完成，但缺少历史记录 ID。");
           const historyItem = await resolveImageGenerationHistoryItem(historyId);
           const savedPaths = historyItem.images.map((image) => image.path).filter(Boolean);
           const revisedPrompt = historyItem.revisedPrompt ?? null;
@@ -476,7 +475,7 @@ export function installRequestResponder(storeScope: unknown) {
           });
         } catch (error: any) {
           await syncImageWorkbenchTasksLazy(imageWorkbenchStore);
-          const message = String(error?.message ?? error ?? translate("runtime.imageGenerationFailed"));
+          const message = String(error?.message ?? error ?? "图片生成失败");
           upsertImageGenerationEvent(timelineStore, toolParams, "item/completed", `failed: ${message}`, message, {
             errorText: message,
             level: "error",

@@ -13,7 +13,6 @@ type WorkspaceFilesStore = ReturnType<typeof useWorkspaceFilesStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 type RefreshRightPanels = (opts?: { forceSkills?: boolean; forceMcp?: boolean }) => Promise<void>;
 
@@ -31,7 +30,6 @@ export type WorkspaceSessionRuntimeDeps = {
   refreshHistory: (force?: boolean) => Promise<void>;
   hydrateThreadMetadataForWorkspace: (workspacePath: string) => Promise<void>;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -73,7 +71,6 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
     refreshHistory,
     hydrateThreadMetadataForWorkspace,
     pushEvent,
-    translate,
     showToast,
   } = deps;
 
@@ -152,7 +149,7 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
     if (!serverId) {
       runtimeState().clearServer();
       appShellState().setServerConnState("disconnected");
-      resetSidePanelStores(translate("runtime.noService"));
+      resetSidePanelStores("未连接服务");
       return "";
     }
     runtimeState().setServer(serverId);
@@ -163,14 +160,14 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
   const warnExperimentalApiUnavailableOnce = (detail: string) => {
     if (warnedExperimentalApiUnavailable) return;
     warnedExperimentalApiUnavailable = true;
-    pushEvent("experimentalApi", detail || translate("runtime.experimentalApiUnavailableDetail"), {
+    pushEvent("experimentalApi", detail || "当前 Codex 服务未启用 experimentalApi，Plan 等能力不可用，建议升级 codex。", {
       threadId: appTimelineId,
       level: "warn",
     });
     showToast({
       kind: "warn",
-      title: translate("runtime.experimentalApiDisabledTitle"),
-      message: detail || translate("runtime.experimentalApiUnavailableMessage"),
+      title: "experimentalApi 未启用",
+      message: detail || "当前 Codex 服务未启用 experimentalApi，Plan 等能力不可用；建议升级 codex。",
     });
   };
 
@@ -220,7 +217,7 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
         appShellState().setServerConnState("connected");
       }
       if (requestedExperimentalApi && !experimentalApi) {
-        warnExperimentalApiUnavailableOnce(translate("runtime.experimentalApiUnavailableDetail"));
+        warnExperimentalApiUnavailableOnce("当前 Codex 服务未启用 experimentalApi，Plan 等能力不可用，建议升级 codex。");
       }
       pushEvent(
         "server",
@@ -242,7 +239,7 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
         appShellState().setServerConnState("failed", msg);
       }
       pushEvent("server:error", msg, { threadId: appTimelineId, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.serverStartFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "服务启动失败", message: msg });
       return "";
     }
   };
@@ -252,8 +249,8 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
     if (!workspace) {
       showToast({
         kind: "warn",
-        title: translate("runtime.noWorkspaceSelected"),
-        message: translate("runtime.selectWorkspaceBeforeStartingServer"),
+        title: "未选择工作区",
+        message: "请先选择工作区后再启动服务。",
       });
       return false;
     }
@@ -287,8 +284,8 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
     if (!selected) {
       showToast({
         kind: "info",
-        title: translate("runtime.sendCanceledTitle"),
-        message: translate("runtime.workspaceSelectionCanceledMessage"),
+        title: "已取消发送",
+        message: "已取消选择工作区，消息未发送。",
       });
       return false;
     }

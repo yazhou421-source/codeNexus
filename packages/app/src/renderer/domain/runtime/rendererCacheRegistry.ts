@@ -4,7 +4,6 @@ import type {
   CacheListResult,
   CacheStatsItem,
 } from "@codenexus/shared/ipc/contracts";
-import { translate } from "../../i18n/translate";
 import {
   invalidateThreadContentCache,
   normalizeCacheNamespace,
@@ -73,7 +72,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
       return {
         items: context.threadContentCacheByKey.size,
         bytes,
-        note: translate("runtime.cacheThreadContentTtl"),
+        note: "threadContent 短 TTL 缓存",
       };
     },
     clear: () => {
@@ -89,7 +88,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
       return {
         items,
         bytes: estimateBytes([...context.replayCacheByThread.entries()]),
-        note: translate("runtime.cacheReplayEvents"),
+        note: "线程回放事件缓存",
       };
     },
     clear: () => {
@@ -105,7 +104,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     getStats: () => ({
       items: context.skillsSnapshotByWorkspace.size,
       bytes: estimateBytes([...context.skillsSnapshotByWorkspace.entries()]),
-      note: translate("runtime.cacheSkillsSnapshot"),
+      note: "右侧 skills 快照缓存",
     }),
     clear: () => {
       context.skillsSnapshotByWorkspace.clear();
@@ -117,7 +116,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     getStats: () => ({
       items: context.mcpSnapshotByWorkspace.size,
       bytes: estimateBytes([...context.mcpSnapshotByWorkspace.entries()]),
-      note: translate("runtime.cacheMcpSnapshot"),
+      note: "右侧 mcp 快照缓存",
     }),
     clear: () => {
       context.mcpSnapshotByWorkspace.clear();
@@ -128,7 +127,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     namespace: "renderer.mcp.resource",
     getStats: () => ({
       ...context.mcpResourceStore.getResourceCacheStats(),
-      note: translate("runtime.cacheMcpResource"),
+      note: "MCP 资源读取缓存",
     }),
     clear: () => {
       context.mcpResourceStore.clearResourceCache();
@@ -139,7 +138,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     namespace: "renderer.workspace.tree",
     getStats: () => ({
       ...context.workspaceFilesStore.getTreeCacheStats(),
-      note: translate("runtime.cacheWorkspaceTree"),
+      note: "工作区目录树缓存",
     }),
     clear: () => {
       context.workspaceFilesStore.clearTreeCache();
@@ -150,7 +149,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     namespace: "renderer.timeline.markdown",
     getStats: async () => {
       const { getMarkdownHtmlCacheStats } = await import("../../features/timeline/markdownRenderer");
-      return { ...getMarkdownHtmlCacheStats(), note: translate("runtime.cacheMarkdownHtml") };
+      return { ...getMarkdownHtmlCacheStats(), note: "Markdown HTML 缓存" };
     },
     clear: async () => {
       const { clearMarkdownHtmlCache } = await import("../../features/timeline/markdownRenderer");
@@ -162,7 +161,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     namespace: "renderer.timeline.diffParsed",
     getStats: async () => {
       const { getParsedDiffCacheStats } = await import("../../features/timeline/renderModel/diff");
-      return { ...getParsedDiffCacheStats(), note: translate("runtime.cacheDiffParsed") };
+      return { ...getParsedDiffCacheStats(), note: "Diff 解析缓存" };
     },
     clear: async () => {
       const { clearParsedDiffCache } = await import("../../features/timeline/renderModel/diff");
@@ -175,7 +174,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     getStats: async () => {
       const { getDiffSyntaxHighlightCacheStats } =
         await import("../../features/timeline/renderModel/diffSyntaxHighlight");
-      return { ...getDiffSyntaxHighlightCacheStats(), note: translate("runtime.cacheDiffHighlight") };
+      return { ...getDiffSyntaxHighlightCacheStats(), note: "Diff 高亮缓存" };
     },
     clear: async () => {
       const { clearDiffSyntaxHighlightCache } = await import("../../features/timeline/renderModel/diffSyntaxHighlight");
@@ -187,7 +186,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     namespace: "renderer.media.localImage",
     getStats: async () => {
       const { getLocalImageCacheStats } = await import("../../features/media/localImageCache");
-      return { ...getLocalImageCacheStats(), note: translate("runtime.cacheLocalImage") };
+      return { ...getLocalImageCacheStats(), note: "本地图片 DataURL 缓存" };
     },
     clear: async () => {
       const { clearLocalImageCache } = await import("../../features/media/localImageCache");
@@ -199,7 +198,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     namespace: "renderer.media.notificationSound",
     getStats: async () => {
       const { getNotificationSoundCacheStats } = await import("../../features/notificationSound/player");
-      return { ...getNotificationSoundCacheStats(), note: translate("runtime.cacheNotificationSound") };
+      return { ...getNotificationSoundCacheStats(), note: "提示音 DataURL 缓存" };
     },
     clear: async () => {
       const { clearNotificationSoundCache } = await import("../../features/notificationSound/player");
@@ -211,7 +210,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     namespace: "renderer.local.settingsMemory",
     getStats: async () => {
       const { getLocalSettingsMemoryCacheStats } = await import("../localSettings");
-      return { ...getLocalSettingsMemoryCacheStats(), note: translate("runtime.cacheLocalSettingsMemory") };
+      return { ...getLocalSettingsMemoryCacheStats(), note: "本地设置内存镜像" };
     },
     clear: async () => {
       const { clearLocalSettingsMemoryCache } = await import("../localSettings");
@@ -223,7 +222,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     namespace: "renderer.local.draftMemory",
     getStats: async () => {
       const { getLocalDraftMemoryCacheStats } = await import("../localDraftState");
-      return { ...getLocalDraftMemoryCacheStats(), note: translate("runtime.cacheDraftMemory") };
+      return { ...getLocalDraftMemoryCacheStats(), note: "草稿内存镜像" };
     },
     clear: async () => {
       const { clearLocalDraftMemoryCache } = await import("../localDraftState");
@@ -235,7 +234,7 @@ function buildRendererCacheProviders(context: RuntimeRendererCacheContext): Map<
     namespace: "renderer.local.outboxMemory",
     getStats: async () => {
       const { getLocalMessageOutboxMemoryCacheStats } = await import("../localMessageOutbox");
-      return { ...getLocalMessageOutboxMemoryCacheStats(), note: translate("runtime.cacheOutboxMemory") };
+      return { ...getLocalMessageOutboxMemoryCacheStats(), note: "消息出站内存镜像" };
     },
     clear: async () => {
       const { clearLocalMessageOutboxMemoryCache } = await import("../localMessageOutbox");

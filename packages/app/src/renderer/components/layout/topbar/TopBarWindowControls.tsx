@@ -1,6 +1,5 @@
 import { Copy, Minus, Square, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import type { AppWindowState } from "@codenexus/shared/ipc/contracts";
 import { codexDesktop } from "../../../api/codexDesktopClient";
 import { useAppClosingStore } from "../../../stores/appClosing.store";
@@ -12,7 +11,6 @@ const DEFAULT_WINDOW_STATE: AppWindowState = {
 };
 
 export default function TopBarWindowControls() {
-  const { t } = useTranslation();
   const appClosingStore = useAppClosingStore();
   const [windowState, setWindowState] = useState<AppWindowState>(DEFAULT_WINDOW_STATE);
   const [closeInFlight, setCloseInFlight] = useState(false);
@@ -93,14 +91,14 @@ export default function TopBarWindowControls() {
 
   return (
     <>
-      <button id="btn-window-minimize" className="btn-icon" type="button" aria-label={t("topbarExtra.minimize")} onClick={onWindowMinimize}>
+      <button id="btn-window-minimize" className="btn-icon" type="button" aria-label="最小化" onClick={onWindowMinimize}>
         <Minus aria-hidden="true" />
       </button>
       <button
         id="btn-window-maximize"
         className="btn-icon"
         type="button"
-        aria-label={windowExpanded ? t("topbarExtra.restore") : t("topbarExtra.maximize")}
+        aria-label={windowExpanded ? "还原" : "最大化"}
         onClick={onWindowToggleMaximize}
       >
         {windowExpanded ? <Copy aria-hidden="true" /> : <Square aria-hidden="true" />}
@@ -110,7 +108,7 @@ export default function TopBarWindowControls() {
         className="btn-icon danger"
         type="button"
         disabled={closeInFlight || appClosingStore.visible}
-        aria-label={t("topbarExtra.close")}
+        aria-label="关闭"
         onClick={onWindowClose}
       >
         <X aria-hidden="true" />

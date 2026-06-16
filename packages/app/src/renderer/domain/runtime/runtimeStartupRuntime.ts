@@ -4,7 +4,6 @@ import { installRequestResponder } from "../../processes/protocol-request-respon
 import { createHistoryTitleOverridesRuntime } from "./historyTitleOverridesRuntime";
 
 type ThreadStore = ReturnType<typeof useThreadStore>;
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 
 export type RuntimeStartupRuntimeDeps = {
   storeScope: unknown;
@@ -13,7 +12,6 @@ export type RuntimeStartupRuntimeDeps = {
   subscribeCodexServerEvents: () => () => void;
   refreshHistory: (force?: boolean) => Promise<void>;
   resetSidePanelStores: (statusText?: string) => void;
-  translate: TranslateFn;
 };
 
 export type RuntimeStartupRuntime = {
@@ -31,7 +29,7 @@ export function createRuntimeStartupRuntime(deps: RuntimeStartupRuntimeDeps): Ru
     const historyTitleOverridesRuntime = createHistoryTitleOverridesRuntime({ threadStore: deps.threadStore });
     void historyTitleOverridesRuntime.refreshThreadTitleOverrides();
     void deps.refreshHistory(false);
-    deps.resetSidePanelStores(deps.translate("runtime.noService"));
+    deps.resetSidePanelStores("未连接服务");
 
     return disposers;
   };

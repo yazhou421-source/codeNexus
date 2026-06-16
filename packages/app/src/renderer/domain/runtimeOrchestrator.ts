@@ -1,6 +1,5 @@
 import { codexDesktop } from "../api/codexDesktopClient";
 import { showToast } from "../ui/toast";
-import { translate } from "../i18n/translate";
 import { appendDebugLog } from "../shared/debugLog";
 import { isPendingThreadId } from "../shared/threadCreateDebug";
 import { useRuntimeStore } from "../stores/runtime.store";
@@ -253,7 +252,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
   const threadPreparingRuntime = createThreadPreparingRuntime({
     appTimelineId: APP_TIMELINE_ID,
     timelineStore,
-    translate,
   });
   const { upsertThreadPreparingEvent, clearThreadPreparingEvent } = threadPreparingRuntime;
 
@@ -295,7 +293,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     skillsSnapshotByWorkspace,
     mcpSnapshotByWorkspace,
     normalizeWorkspacePath,
-    translate,
   });
   const {
     saveSkillsSnapshot,
@@ -314,7 +311,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
   const threadTitleUpdateRuntime = createThreadTitleUpdateRuntime({
     threadStore,
     findThreadListItem,
-    translate,
   });
   const { seedThreadTitleFromDraft } = threadTitleUpdateRuntime;
 
@@ -332,7 +328,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     refreshHistory: (force) => refreshHistory(force),
     hydrateThreadMetadataForWorkspace: (workspace) => hydrateThreadMetadataForWorkspace(workspace),
     pushEvent,
-    translate,
     showToast,
   });
   const {
@@ -372,7 +367,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     setThreadWorkspace,
     clearThreadWorkspace,
     pushEvent,
-    translate,
   });
   const { rememberThreadStartConfigOverrides, clearThreadStartConfigOverrides, ensureThreadModelToolCompatibility } =
     threadModelCompatibilityRuntime;
@@ -395,7 +389,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     threadStore,
     goalShutdownStore,
     ensureServerForThread,
-    translate,
     showToast,
   });
   const {
@@ -428,7 +421,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     getActiveTurnId: (threadId) => String(threadStore.activeTurnIdByThread.get(threadId) ?? "").trim(),
     getServerIdForThread,
     pushEvent,
-    translate,
   });
   const { requestTurnInterrupt, interruptTurn, compactThread } = threadTurnControlRuntime;
 
@@ -443,7 +435,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     historyReplayBatch: HISTORY_REPLAY_BATCH,
     historyReplayTurnSegments: HISTORY_REPLAY_TURN_SEGMENTS,
     timelineMaxVisibleTurns: TIMELINE_MAX_VISIBLE_TURNS,
-    translate,
   });
   const { hydrateReplayFromCacheIfNeeded, loadHistoryMessages, loadOlderHistoryTurns } = historyReplayWindowRuntime;
 
@@ -479,7 +470,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     requestConfigRequirementsRead,
     requestConfigBatchWrite,
     pushEvent,
-    translate,
     showToast,
   });
   const { refreshGlobalConfig, ensureGlobalConfigLoadedOnce, saveGlobalConfig, resetGlobalConfig } =
@@ -493,12 +483,11 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     requestConfigBatchWrite,
     refreshGlobalConfig,
     pushEvent,
-    translate,
     showToast,
   });
   const { applyCodexProfile } = codexProfileRuntime;
 
-  const externalUrlRuntime = createExternalUrlRuntime({ translate });
+  const externalUrlRuntime = createExternalUrlRuntime();
   const { openExternalUrl } = externalUrlRuntime;
 
   const {
@@ -523,7 +512,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     saveSkillsSnapshot,
     invalidateSkillsSnapshot,
     pushEvent,
-    translate,
     showToast,
   });
   const { refreshSkills, scheduleSkillsRefresh, toggleSkill, addSkillRoot, removeSkillRoot } = skillsManagementRuntime;
@@ -539,7 +527,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     refreshMcp: () => refreshMcp(),
     invalidateMcpSnapshot,
     getWorkspacePath: getRuntimeWorkspacePath,
-    translate,
     showToast,
   });
   const {
@@ -571,7 +558,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     saveMcpSnapshot,
     invalidateMcpSnapshot,
     pushEvent,
-    translate,
     showToast,
   });
   const {
@@ -647,7 +633,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     getServerIdForThread,
     ensureThreadResumed,
     pushEvent,
-    translate,
     showToast,
   });
   const { requestThreadRollback, rollbackTurns } = threadRollbackRuntime;
@@ -663,7 +648,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     requestThreadRollback,
     requestTurnInterrupt,
     pushEvent,
-    translate,
     showToast,
   });
   const { rollbackHistoryRewriteBeforeSend } = historyRewriteRuntime;
@@ -672,7 +656,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     appTimelineId: APP_TIMELINE_ID,
     appShellStore,
     pushEvent,
-    translate,
     showToast,
   });
   const { checkEnvironment } = environmentRuntime;
@@ -707,7 +690,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     threadContentCacheByKey,
     clearThreadRuntimeState,
     pushEvent,
-    translate,
     showToast,
   });
   const { deleteHistoryThread } = historyThreadDeletionRuntime;
@@ -743,7 +725,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     cloneUserTurnInputs,
     buildComposeAttachmentsFromUserTurnInputs,
     pushEvent,
-    translate,
     showToast,
   });
   const { createThread } = threadCreationRuntime;
@@ -752,7 +733,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     getServerIdForThread,
     toCodexUserInputs,
     pushEvent,
-    translate,
   });
   const { requestTurnSteer } = turnSteerRuntime;
 
@@ -800,8 +780,8 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     if (!workspaceReady) {
       showToast({
         kind: "error",
-        title: translate("runtime.cannotSendTitle"),
-        message: translate("runtime.workspaceUnavailable"),
+        title: "无法发送",
+        message: "未选择工作区或工作区不可用。",
       });
       return false;
     }
@@ -810,8 +790,8 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     if (!activeServerId) {
       showToast({
         kind: "error",
-        title: translate("runtime.cannotSendTitle"),
-        message: translate("runtime.serviceUnavailable"),
+        title: "无法发送",
+        message: "未连接服务或服务不可用。",
       });
       return false;
     }
@@ -822,8 +802,8 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     if (!threadId) {
       showToast({
         kind: "error",
-        title: translate("runtime.cannotSendTitle"),
-        message: translate("runtime.threadNotReadyRetry"),
+        title: "无法发送",
+        message: "会话尚未就绪，请稍后重试。",
       });
       return false;
     }
@@ -868,8 +848,8 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     if (!threadServerId) {
       showToast({
         kind: "error",
-        title: translate("runtime.cannotSendTitle"),
-        message: translate("runtime.threadServiceUnavailable"),
+        title: "无法发送",
+        message: "当前会话对应的服务不可用。",
       });
       return false;
     }
@@ -882,7 +862,7 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
       model: requestedModel,
     });
     if (!compatibility.ok) {
-      showToast({ kind: "warn", title: translate("runtime.threadMustBeRecreatedTitle"), message: compatibility.error });
+      showToast({ kind: "warn", title: "会话需要新建", message: compatibility.error });
       pushEvent("turn:error", compatibility.error, { threadId, level: "error" });
       return false;
     }
@@ -893,8 +873,8 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
       if (!threadServerId) {
         showToast({
           kind: "error",
-          title: translate("runtime.cannotSendTitle"),
-          message: translate("runtime.threadServiceUnavailable"),
+          title: "无法发送",
+          message: "当前会话对应的服务不可用。",
         });
         return false;
       }
@@ -923,8 +903,8 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
       if (!resumed) {
         showToast({
           kind: "error",
-          title: translate("runtime.cannotSendTitle"),
-          message: translate("runtime.threadResumeFailed"),
+          title: "无法发送",
+          message: "会话未就绪（resume 失败）。",
         });
         return false;
       }
@@ -1032,7 +1012,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     buildTimelineUserMessagePayload,
     fileNameFromPathLike,
     pushEvent,
-    translate,
     showToast,
   });
   const { flushQueueForThread, sendQueuedMessageNow, editQueuedMessage, removeQueuedMessage } = messageQueueRuntime;
@@ -1054,8 +1033,8 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     if (!anchorTurnId) {
       showToast({
         kind: "error",
-        title: translate("runtime.rewriteUnavailableTitle"),
-        message: translate("runtime.rewriteTurnNotFound"),
+        title: "无法重写历史",
+        message: "找不到该消息对应的回合。",
       });
       return false;
     }
@@ -1081,7 +1060,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     getServerIdForWorkspace,
     getServerIdForThread,
     pushEvent,
-    translate,
     showToast,
   });
   const { resetCodexMemory, setCurrentThreadMemoryMode } = threadMemoryRuntime;
@@ -1093,7 +1071,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     userInputStore,
     respond: (args) => codexDesktop.codexServer.respond(args as Parameters<typeof codexDesktop.codexServer.respond>[0]),
     pushEvent,
-    translate,
     showToast,
   });
   const {
@@ -1134,7 +1111,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     hydrateThreadHandoffDiagnostics,
     notifyCompletedTurnIfBackground,
     flushQueueForThread,
-    translate,
   });
   const runtimeStartupRuntime = createRuntimeStartupRuntime({
     storeScope,
@@ -1143,7 +1119,6 @@ export function initRuntimeOrchestrator(storeScope: unknown): RuntimeOrchestrato
     subscribeCodexServerEvents: codexServerEventRuntime.subscribeCodexServerEvents,
     refreshHistory,
     resetSidePanelStores,
-    translate,
   });
   disposers.push(...runtimeStartupRuntime.startRuntime());
 

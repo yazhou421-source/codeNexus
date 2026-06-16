@@ -1,5 +1,3 @@
-import { translate } from "../../i18n/translate";
-
 function normalizeThreadId(value: unknown): string {
   return String(value ?? "").trim();
 }
@@ -32,7 +30,7 @@ export function isFallbackThreadTitle(threadIdValue: string, titleValue: unknown
 export function fallbackDisplayThreadTitle(threadIdValue: string): string {
   const threadId = normalizeThreadId(threadIdValue);
   const suffix = threadId.length > 8 ? threadId.slice(-8) : threadId;
-  return suffix ? translate("runtime.untitledThreadWithSuffix", { suffix }) : translate("runtime.untitledThread");
+  return suffix ? `未命名线程 · ${suffix}` : "未命名线程";
 }
 
 export function resolveDisplayThreadTitleWithOverride(

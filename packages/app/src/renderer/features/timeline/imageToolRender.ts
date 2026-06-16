@@ -1,5 +1,4 @@
 import { basenameFromPath } from "../../domain/workspaceFiles";
-import { translate } from "../../i18n/translate";
 import type {
   ChatImageEntry,
   ChatImageToolItem,
@@ -81,7 +80,7 @@ function buildImageEntry(id: string, sourceValue: unknown, titleValue?: unknown)
   const source = String(sourceValue ?? "").trim();
   if (!source) return null;
   const sourceKind = inferImageSourceKind(source);
-  const title = String(titleValue ?? "").trim() || basenameFromPath(source) || translate("imageTool.generateImage");
+  const title = String(titleValue ?? "").trim() || basenameFromPath(source) || "生成图片";
   return { id, sourceKind, source, title };
 }
 
@@ -112,10 +111,10 @@ export function buildImageToolItemFromProtocolItem(item: unknown, eventMethod: s
     return {
       itemId: id,
       itemType: "imageView",
-      title: translate("imageTool.viewImage"),
+      title: "查看图片",
       status: eventMethod === "item/started" ? "running" : "completed",
       detailText: path ? `path=${path}` : "",
-      errorText: path ? "" : translate("imageTool.missingImagePath"),
+      errorText: path ? "" : "缺少图片路径",
       revisedPrompt: "",
       images: image ? [image] : [],
     };
@@ -154,12 +153,12 @@ export function buildImageToolItemFromProtocolItem(item: unknown, eventMethod: s
     if (image) images.push(image);
   };
   for (const path of allSavedPaths) addImage(path, basenameFromPath(path) || path);
-  for (const source of resultSources) addImage(source, translate("imageTool.generateImage"));
+  for (const source of resultSources) addImage(source, "生成图片");
 
   return {
     itemId: id,
     itemType: "imageGeneration",
-    title: translate("imageTool.generateImage"),
+    title: "生成图片",
     status,
     pendingImageCount,
     detailText: [
@@ -175,8 +174,8 @@ export function buildImageToolItemFromProtocolItem(item: unknown, eventMethod: s
       .join("\n"),
     errorText:
       explicitErrorText ||
-      (status === "failed" ? (statusText ? `status=${statusText}` : translate("imageTool.generationFailed")) : ""),
-    revisedPrompt: revisedPrompt ? translate("imageTool.revisedPromptWithText", { prompt: revisedPrompt }) : "",
+      (status === "failed" ? (statusText ? `status=${statusText}` : "生成失败") : ""),
+    revisedPrompt: revisedPrompt ? `修订提示词：\n${revisedPrompt}` : "",
     images,
   };
 }

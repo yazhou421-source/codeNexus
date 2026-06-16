@@ -6,7 +6,6 @@ type RuntimeStore = ReturnType<typeof useRuntimeStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
@@ -16,7 +15,6 @@ export type ThreadMemoryRuntimeDeps = {
   getServerIdForWorkspace: (workspacePath: string) => string;
   getServerIdForThread: (threadId: string) => string;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -32,7 +30,6 @@ export function createThreadMemoryRuntime(deps: ThreadMemoryRuntimeDeps): Thread
     getServerIdForWorkspace,
     getServerIdForThread,
     pushEvent,
-    translate,
     showToast,
   } = deps;
 
@@ -41,8 +38,8 @@ export function createThreadMemoryRuntime(deps: ThreadMemoryRuntimeDeps): Thread
     if (!serverId) {
       showToast({
         kind: "warn",
-        title: translate("runtime.cannotResetMemoryTitle"),
-        message: translate("runtime.currentlyNoCodexService"),
+        title: "无法重置记忆",
+        message: "当前未连接 Codex 服务。",
       });
       return;
     }
@@ -50,15 +47,15 @@ export function createThreadMemoryRuntime(deps: ThreadMemoryRuntimeDeps): Thread
       await codexDesktop.codexServer.rpc({ serverId, method: "memory/reset" });
       showToast({
         kind: "success",
-        title: translate("runtime.memoryResetTitle"),
-        message: translate("runtime.memoryResetMessage"),
+        title: "记忆已重置",
+        message: "Codex 记忆已清空。",
       });
       pushEvent("memory/reset", "Codex memory reset", { threadId: runtimeStore.currentThreadId || appTimelineId });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message || e.name : String(e ?? "");
       showToast({
         kind: "error",
-        title: translate("runtime.memoryResetFailedTitle"),
+        title: "重置记忆失败",
         message: msg || "memory/reset failed",
       });
       pushEvent("memory/reset:error", msg || "memory/reset failed", {
@@ -73,8 +70,8 @@ export function createThreadMemoryRuntime(deps: ThreadMemoryRuntimeDeps): Thread
     if (!threadId) {
       showToast({
         kind: "warn",
-        title: translate("runtime.cannotSetMemoryTitle"),
-        message: translate("runtime.selectThreadFirst"),
+        title: "无法设置记忆",
+        message: "请先选择一个线程。",
       });
       return;
     }
@@ -82,8 +79,8 @@ export function createThreadMemoryRuntime(deps: ThreadMemoryRuntimeDeps): Thread
     if (!serverId) {
       showToast({
         kind: "warn",
-        title: translate("runtime.cannotSetMemoryTitle"),
-        message: translate("runtime.currentThreadNoService"),
+        title: "无法设置记忆",
+        message: "当前线程未连接 Codex 服务。",
       });
       return;
     }
@@ -92,17 +89,17 @@ export function createThreadMemoryRuntime(deps: ThreadMemoryRuntimeDeps): Thread
       const enabled = mode === "enabled";
       showToast({
         kind: "success",
-        title: enabled ? translate("runtime.threadMemoryEnabledTitle") : translate("runtime.threadMemoryDisabledTitle"),
+        title: enabled ? "线程记忆已启用" : "线程记忆已关闭",
         message: enabled
-          ? translate("runtime.threadMemoryEnabledMessage")
-          : translate("runtime.threadMemoryDisabledMessage"),
+          ? "当前线程会使用 Codex 记忆。"
+          : "当前线程不会使用 Codex 记忆。",
       });
       pushEvent("memory/mode", `thread memory mode: ${mode}`, { threadId });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message || e.name : String(e ?? "");
       showToast({
         kind: "error",
-        title: translate("runtime.memoryModeSetFailedTitle"),
+        title: "设置记忆失败",
         message: msg || "thread/memoryMode/set failed",
       });
       pushEvent("memory/mode:error", msg || "thread/memoryMode/set failed", { threadId, level: "error" });

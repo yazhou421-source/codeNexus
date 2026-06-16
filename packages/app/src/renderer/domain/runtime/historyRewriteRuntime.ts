@@ -11,7 +11,6 @@ type TimelineStore = ReturnType<typeof useTimelineStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
@@ -28,7 +27,6 @@ export type HistoryRewriteRuntimeDeps = {
   requestThreadRollback: (threadId: string, turns: number) => Promise<boolean>;
   requestTurnInterrupt: TurnInterruptRequest;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -63,7 +61,6 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
     requestThreadRollback,
     requestTurnInterrupt,
     pushEvent,
-    translate,
     showToast,
   } = deps;
 
@@ -139,8 +136,8 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
     if (!tid) {
       showToast({
         kind: "info",
-        title: translate("runtime.rewriteUnavailableTitle"),
-        message: translate("runtime.noThreadSelected"),
+        title: "无法重写历史",
+        message: "未选择会话。",
       });
       return false;
     }
@@ -150,16 +147,16 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
     if (!workspace) {
       showToast({
         kind: "error",
-        title: translate("runtime.rewriteUnavailableTitle"),
-        message: translate("runtime.workspaceUnavailable"),
+        title: "无法重写历史",
+        message: "未选择工作区或工作区不可用。",
       });
       return false;
     }
     if (!serverId) {
       showToast({
         kind: "error",
-        title: translate("runtime.rewriteUnavailableTitle"),
-        message: translate("runtime.serviceUnavailable"),
+        title: "无法重写历史",
+        message: "未连接服务或服务不可用。",
       });
       return false;
     }
@@ -171,8 +168,8 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
       if (!noVisibleOutputBelowAnchor || !activeTurnId || activeTurnId !== anchorTurnId) {
         showToast({
           kind: "warn",
-          title: translate("runtime.threadRunningTitle"),
-          message: translate("runtime.waitBeforeSendingEditedMessage"),
+          title: "线程运行中",
+          message: "请等待当前回合完成后再发送编辑后的消息。",
         });
         return false;
       }
@@ -180,8 +177,8 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
       if (!interrupted) {
         showToast({
           kind: "error",
-          title: translate("runtime.rewriteFailedTitle"),
-          message: translate("runtime.stopTurnFailed"),
+          title: "重写失败",
+          message: "停止当前回合失败，请稍后重试。",
         });
         return false;
       }
@@ -189,16 +186,16 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
       if (stopped === "timeout") {
         showToast({
           kind: "warn",
-          title: translate("runtime.rewriteWaitTimeoutTitle"),
-          message: translate("runtime.turnStillRunningRetry"),
+          title: "重写等待超时",
+          message: "当前回合仍在运行，请稍后重试。",
         });
         return false;
       }
       if (threadStore.runningThreadIds.has(tid)) {
         showToast({
           kind: "warn",
-          title: translate("runtime.threadRunningTitle"),
-          message: translate("runtime.turnStillRunningRetry"),
+          title: "线程运行中",
+          message: "当前回合仍在运行，请稍后重试。",
         });
         return false;
       }
@@ -213,8 +210,8 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
       }
       showToast({
         kind: "error",
-        title: translate("runtime.rewriteUnavailableTitle"),
-        message: translate("runtime.rewriteRollbackNotFound"),
+        title: "无法重写历史",
+        message: "找不到该消息对应的可撤回回合，请改用最新消息继续对话。",
       });
       return false;
     }
@@ -223,11 +220,11 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
       let confirmed = false;
       try {
         confirmed = await confirmModalLazy({
-          title: translate("runtime.sendEditedHistoryTitle"),
-          message: translate("runtime.sendEditedHistoryMessage", { count: rollback.count }),
-          detail: translate("runtime.rollbackDetail"),
-          confirmText: translate("runtime.rollbackAndSend"),
-          cancelText: translate("common.cancel"),
+          title: "发送编辑后的历史消息？",
+          message: `会先撤回从该消息开始的 ${rollback.count} 个已完成回合，再发送编辑后的内容。`,
+          detail: "撤回会回退线程上下文，并尝试回退这些回合产生的文件内容改动（不回退命令副作用）。",
+          confirmText: "撤回并发送",
+          cancelText: "取消",
           danger: true,
         });
       } catch (e: unknown) {
@@ -235,8 +232,8 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
         const isBusy = msg.includes("another modal is already open");
         showToast({
           kind: isBusy ? "warn" : "error",
-          title: translate("runtime.confirmModalOpenFailedTitle"),
-          message: isBusy ? translate("runtime.modalAlreadyOpen") : translate("runtime.modalOpenFailed"),
+          title: "无法打开确认弹窗",
+          message: isBusy ? "当前已有弹窗打开，请先关闭后再重试。" : "打开弹窗失败",
         });
         return false;
       }
@@ -249,14 +246,14 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
         diffText: rollback.combinedDiff,
       });
       if (!dry.ok) {
-        pushEvent("rollback:error", translate("runtime.rollbackFilesFailed", { error: dry.error }), {
+        pushEvent("rollback:error", `无法回退文件内容：${dry.error}`, {
           threadId: tid,
           level: "error",
         });
         showToast({
           kind: "error",
-          title: translate("runtime.rewriteFailedTitle"),
-          message: translate("runtime.fileRollbackPrecheckFailed"),
+          title: "重写失败",
+          message: "文件回退预检失败（工作区可能已手动修改）",
         });
         return false;
       }
@@ -276,14 +273,14 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
         timelineStore.removeTurnEvents(tid, rollback.turnIds);
         threadStore.removeTurnsFromState(tid, rollback.turnIds);
         runtimeStore.endHistoryRewrite();
-        pushEvent("rollback:error", translate("runtime.contextRolledBackFilesFailed", { error: applied.error }), {
+        pushEvent("rollback:error", `上下文已撤回，但文件回退失败：${applied.error}`, {
           threadId: tid,
           level: "error",
         });
         showToast({
           kind: "error",
-          title: translate("runtime.partialFailureTitle"),
-          message: translate("runtime.contextRolledBackFilesFailedCheckWorkspace"),
+          title: "部分失败",
+          message: "上下文已撤回，但文件回退失败；请手动检查工作区。",
         });
         return false;
       }
@@ -301,8 +298,8 @@ export function createHistoryRewriteRuntime(deps: HistoryRewriteRuntimeDeps): Hi
     if (!noVisibleOutputBelowAnchor) {
       showToast({
         kind: "success",
-        title: translate("runtime.historyRolledBackTitle"),
-        message: translate("runtime.historyRolledBackMessage", { count: rollback.count }),
+        title: "历史已回退",
+        message: `已撤回 ${rollback.count} 个回合，正在发送编辑内容。`,
       });
     }
     return true;

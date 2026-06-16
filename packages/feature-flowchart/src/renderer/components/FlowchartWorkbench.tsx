@@ -49,7 +49,6 @@ import {
   Workflow,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import {
   createDefaultFlowchartDocument,
   FLOWCHART_TEMPLATE_TYPES,
@@ -118,6 +117,14 @@ const templateIconByType: Record<FlowchartTemplateType, typeof Workflow> = {
   architecture: Network,
   org: SplitSquareHorizontal,
   sequence: GitBranch,
+};
+
+const templateLabelByType: Record<FlowchartTemplateType, string> = {
+  basic: "基础流程",
+  swimlane: "泳道流程",
+  architecture: "系统架构",
+  org: "组织结构",
+  sequence: "时序图",
 };
 
 function nowId(prefix: string) {
@@ -283,7 +290,6 @@ function FlowchartShapeNode({ data, selected }: NodeProps<ShapeNode>) {
 }
 
 export default function FlowchartWorkbench({ className, children }: FlowchartWorkbenchProps) {
-  const { t } = useTranslation();
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const latestDocumentRef = useRef<FlowchartDocument | null>(null);
   const pendingSaveDocumentRef = useRef<FlowchartDocument | null>(null);
@@ -310,39 +316,39 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
     () =>
       FLOWCHART_TEMPLATE_TYPES.map((type) => ({
         type,
-        label: t(`flowchart.template${type[0].toUpperCase()}${type.slice(1)}`),
+        label: templateLabelByType[type],
         icon: templateIconByType[type],
       })),
-    [t]
+    []
   );
   const shapePresets = useMemo(
     () => [
-      { type: "rectangle" as const, label: t("flowchart.shapeRectangle"), icon: Square },
-      { type: "rounded-rectangle" as const, label: t("flowchart.shapeRoundedRectangle"), icon: RectangleHorizontal },
-      { type: "diamond" as const, label: t("flowchart.shapeDiamond"), icon: Diamond },
-      { type: "ellipse" as const, label: t("flowchart.shapeEllipse"), icon: Circle },
-      { type: "text" as const, label: t("flowchart.shapeText"), icon: Type },
-      { type: "database" as const, label: t("flowchart.shapeDatabase"), icon: Database },
-      { type: "actor" as const, label: t("flowchart.shapeActor"), icon: UserRound },
+      { type: "rectangle" as const, label: "矩形", icon: Square },
+      { type: "rounded-rectangle" as const, label: "圆角矩形", icon: RectangleHorizontal },
+      { type: "diamond" as const, label: "菱形", icon: Diamond },
+      { type: "ellipse" as const, label: "圆/椭圆", icon: Circle },
+      { type: "text" as const, label: "文本", icon: Type },
+      { type: "database" as const, label: "数据库", icon: Database },
+      { type: "actor" as const, label: "参与者", icon: UserRound },
     ],
-    [t]
+    []
   );
   const edgePresets = useMemo<EdgePreset[]>(
     () => [
-      { kind: "straight-line", type: "straight", markerEnd: false, label: t("flowchart.edgeLine"), icon: Minus },
-      { kind: "straight-arrow", type: "straight", markerEnd: true, label: t("flowchart.edgeArrow"), icon: ArrowRight },
-      { kind: "smoothstep-arrow", type: "smoothstep", markerEnd: true, label: t("flowchart.edgeSmoothArrow"), icon: CornerDownRight },
+      { kind: "straight-line", type: "straight", markerEnd: false, label: "直线", icon: Minus },
+      { kind: "straight-arrow", type: "straight", markerEnd: true, label: "箭头", icon: ArrowRight },
+      { kind: "smoothstep-arrow", type: "smoothstep", markerEnd: true, label: "折线箭头", icon: CornerDownRight },
     ],
-    [t]
+    []
   );
   const framePresets = useMemo(
     () => [
-      { type: "frame" as const, label: t("flowchart.frameContainer"), width: 420, height: 240, borderStyle: "solid", icon: Square },
-      { type: "lane-frame" as const, label: t("flowchart.frameLane"), width: 720, height: 150, borderStyle: "solid", icon: Rows3 },
-      { type: "system-frame" as const, label: t("flowchart.frameSystem"), width: 520, height: 320, borderStyle: "dashed", icon: Network },
-      { type: "phase-frame" as const, label: t("flowchart.framePhase"), width: 360, height: 220, borderStyle: "dashed", icon: SplitSquareHorizontal },
+      { type: "frame" as const, label: "容器", width: 420, height: 240, borderStyle: "solid", icon: Square },
+      { type: "lane-frame" as const, label: "泳道", width: 720, height: 150, borderStyle: "solid", icon: Rows3 },
+      { type: "system-frame" as const, label: "系统边界", width: 520, height: 320, borderStyle: "dashed", icon: Network },
+      { type: "phase-frame" as const, label: "阶段分组", width: 360, height: 220, borderStyle: "dashed", icon: SplitSquareHorizontal },
     ],
-    [t]
+    []
   );
 
   const selectedNode = currentDocument.nodes.find((node) => selectedNodeIds.includes(node.id)) ?? null;
@@ -355,8 +361,8 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
   }, [historyItems, historyQuery]);
   const connectionHintText = connectionTool
     ? connectionTool.stage === "select-source"
-      ? t("flowchart.connectingSelectSource", { label: connectionTool.preset.label })
-      : t("flowchart.connectingFrom", { label: connectionTool.sourceLabel })
+      ? `已选择「${connectionTool.preset.label}」，点击起点节点开始连接，Esc 取消。`
+      : `正在从「${connectionTool.sourceLabel}」连接，点击目标节点完成，Esc 取消。`
     : "";
 
   useEffect(() => {
@@ -421,11 +427,11 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
     } catch (error: any) {
       showFlowchartToast({
         kind: "error",
-        title: t("flowchart.historyLoadFailed"),
+        title: "历史加载失败",
         message: String(error?.message ?? error ?? "unknown error"),
       });
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     void refreshHistory();
@@ -501,14 +507,14 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
 
   const addEdgeWithPreset = (sourceId: string, targetId: string, preset: EdgePreset) => {
     if (sourceId === targetId) {
-      showFlowchartToast({ kind: "warn", title: t("flowchart.cannotConnectTitle"), message: t("flowchart.cannotConnectSelf") });
+      showFlowchartToast({ kind: "warn", title: "无法连接", message: "不能连接到同一个节点。" });
       return;
     }
     const current = syncCurrentGraph();
     const source = current.nodes.find((node) => node.id === sourceId);
     const target = current.nodes.find((node) => node.id === targetId);
     if (!isConnectableNodeType(source?.type) || !isConnectableNodeType(target?.type)) {
-      showFlowchartToast({ kind: "warn", title: t("flowchart.cannotConnectTitle"), message: t("flowchart.cannotConnectNode") });
+      showFlowchartToast({ kind: "warn", title: "无法连接", message: "文本节点和框节点不能作为连接端点。" });
       return;
     }
     const edge: FlowchartEdge = {
@@ -547,7 +553,7 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
         const preset = edgePresets.find((item) => item.kind === payload.type);
         if (preset) {
           setConnectionTool({ preset, stage: "select-source", sourceId: null, sourceLabel: "" });
-          showFlowchartToast({ kind: "info", title: t("flowchart.edgeDropTargetTitle"), message: t("flowchart.edgeDropTargetMessage") });
+          showFlowchartToast({ kind: "info", title: "无法创建连线", message: "请先把连接线放到画布上，再点击起点和目标节点。" });
         }
       }
     } catch {}
@@ -565,7 +571,7 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
     }
     const source = currentDocument.nodes.find((item) => item.id === node.id);
     if (!isConnectableNodeType(source?.type)) {
-      showFlowchartToast({ kind: "warn", title: t("flowchart.cannotConnectTitle"), message: t("flowchart.cannotConnectNode") });
+      showFlowchartToast({ kind: "warn", title: "无法连接", message: "文本节点和框节点不能作为连接端点。" });
       return;
     }
     if (connectionTool.stage === "select-source") {
@@ -863,8 +869,8 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
       applyDocument(result.document, { pushUndo: true });
       showFlowchartToast({
         kind: "success",
-        title: t("flowchart.aiSuccess"),
-        message: result.repaired ? t("flowchart.aiRepaired") : t("flowchart.aiGenerated"),
+        title: "流程图已更新",
+        message: result.repaired ? "AI 首次返回无效，已自动修复一次。" : "AI 已生成 JSON 图模型。",
       });
     } catch (error: any) {
       setAiError(String(error?.message ?? error));
@@ -934,7 +940,7 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
       <aside className="flowchart-panel flowchart-panel--left app-scrollbar">
         <header className="flowchart-panel-head">
           <div>
-            <div className="flowchart-kicker">{t("flowchart.templates")}</div>
+            <div className="flowchart-kicker">模板</div>
             <h2>{currentDocument.title}</h2>
           </div>
           <button className="flowchart-icon-btn" type="button" title="New diagram" onClick={() => createFromTemplate(selectedTemplate)}>
@@ -960,7 +966,7 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
         </div>
 
         <div className="flowchart-section-head">
-          <span>{t("flowchart.shapePresets")}</span>
+          <span>基础形状</span>
         </div>
         <div className="flowchart-shape-grid">
           {shapePresets.map((preset) => {
@@ -982,7 +988,7 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
         </div>
 
         <div className="flowchart-section-head">
-          <span>{t("flowchart.connectionPresets")}</span>
+          <span>连接线</span>
         </div>
         <div className="flowchart-edge-grid">
           {edgePresets.map((preset) => {
@@ -1004,7 +1010,7 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
         </div>
 
         <div className="flowchart-section-head">
-          <span>{t("flowchart.framePresets")}</span>
+          <span>预设框</span>
         </div>
         <div className="flowchart-frame-grid">
           {framePresets.map((preset) => {
@@ -1026,16 +1032,16 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
         </div>
 
         <div className="flowchart-section-head">
-          <span>{t("flowchart.history")}</span>
+          <span>历史</span>
           <button className="flowchart-text-btn" type="button" onClick={() => void refreshHistory()}>
-            {t("common.refresh")}
+            刷新
           </button>
         </div>
         <input
           className="flowchart-input"
           type="search"
           value={historyQuery}
-          placeholder={t("flowchart.searchHistory")}
+          placeholder="搜索历史"
           onChange={(event) => setHistoryQuery(event.currentTarget.value)}
         />
         <div className="flowchart-history-list">
@@ -1060,7 +1066,7 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
               />
             </button>
           ))}
-          {filteredHistory.length === 0 ? <div className="flowchart-empty">{t("flowchart.emptyHistory")}</div> : null}
+          {filteredHistory.length === 0 ? <div className="flowchart-empty">暂无历史</div> : null}
         </div>
       </aside>
 
@@ -1087,19 +1093,19 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
           </div>
           <div className="flowchart-tool-group">
             <button className="flowchart-text-btn" type="button" disabled={gridLayoutTargetNodes().length === 0} onClick={layoutGrid}>
-              {t("flowchart.gridLayout")}
+              网格排布
             </button>
             <button className="flowchart-text-btn" type="button" disabled={selectedNodeIds.length < 2} onClick={() => alignSelected("left")}>
-              {t("flowchart.alignLeft")}
+              左对齐
             </button>
             <button className="flowchart-text-btn" type="button" disabled={selectedNodeIds.length < 2} onClick={() => alignSelected("top")}>
-              {t("flowchart.alignTop")}
+              顶对齐
             </button>
             <button className="flowchart-text-btn" type="button" disabled={selectedNodeIds.length < 3} onClick={() => distributeSelected("x")}>
-              {t("flowchart.distributeX")}
+              横向分布
             </button>
             <button className="flowchart-text-btn" type="button" disabled={selectedNodeIds.length < 3} onClick={() => distributeSelected("y")}>
-              {t("flowchart.distributeY")}
+              纵向分布
             </button>
           </div>
           <div className="flowchart-canvas-status">
@@ -1155,15 +1161,15 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
       <aside className="flowchart-panel flowchart-panel--right app-scrollbar">
         <section className="flowchart-card">
           <header className="flowchart-section-head">
-            <span>{t("flowchart.ai")}</span>
+            <span>AI</span>
             <button className="flowchart-text-btn" type="button" onClick={openFlowchartSettings}>
-              {t("flowchart.aiSettings")}
+              设置
             </button>
           </header>
           <textarea
             className="flowchart-textarea"
             value={aiPrompt}
-            placeholder={t("flowchart.aiPlaceholder")}
+            placeholder="描述要生成或修改的流程图，例如：用户提交报销，经理审批，财务打款。"
             disabled={aiBusy}
             onChange={(event) => setAiPrompt(event.currentTarget.value)}
           />
@@ -1179,39 +1185,39 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
               {aiBusy ? (
                 <>
                   <Loader2 className="app-closing-spin" aria-hidden="true" />
-                  {t("flowchart.generating")}
+                  生成中...
                 </>
               ) : (
                 <>
                   <Wand2 aria-hidden="true" />
-                  {t("flowchart.generate")}
+                  生成
                 </>
               )}
             </button>
           </div>
           <button className="flowchart-secondary-btn" type="button" disabled={aiBusy || !aiPrompt.trim()} onClick={() => void runAiAction("modify")}>
-            {t("flowchart.modifyCurrent")}
+            修改当前图
           </button>
           {aiError ? <pre className="flowchart-error">{aiError}</pre> : null}
         </section>
 
         <section className="flowchart-card">
           <header className="flowchart-section-head">
-            <span>{t("flowchart.nodeProps")}</span>
+            <span>节点属性</span>
             <span className="flowchart-muted">{selectedNodeIds.length}</span>
           </header>
           {selectedNode ? (
             <>
               <label className="flowchart-field">
-                <span>{t("flowchart.label")}</span>
+                <span>标题</span>
                 <input className="flowchart-input" type="text" value={selectedNode.label} onChange={(event) => patchSelectedNode({ label: event.currentTarget.value })} />
               </label>
               <label className="flowchart-field">
-                <span>{t("flowchart.type")}</span>
+                <span>类型</span>
                 <input className="flowchart-input" type="text" value={selectedNode.type} onChange={(event) => patchSelectedNode({ type: event.currentTarget.value })} />
               </label>
               <label className="flowchart-field">
-                <span>{t("flowchart.fill")}</span>
+                <span>填充</span>
                 <input
                   className="flowchart-input"
                   type="color"
@@ -1220,7 +1226,7 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
                 />
               </label>
               <label className="flowchart-field">
-                <span>{t("flowchart.border")}</span>
+                <span>边框</span>
                 <input
                   className="flowchart-input"
                   type="color"
@@ -1231,7 +1237,7 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
               {isFrameType(selectedNode.type) ? (
                 <>
                   <label className="flowchart-field">
-                    <span>{t("flowchart.width")}</span>
+                    <span>宽度</span>
                     <input
                       className="flowchart-input"
                       type="number"
@@ -1243,7 +1249,7 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
                     />
                   </label>
                   <label className="flowchart-field">
-                    <span>{t("flowchart.height")}</span>
+                    <span>高度</span>
                     <input
                       className="flowchart-input"
                       type="number"
@@ -1255,37 +1261,37 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
                     />
                   </label>
                   <label className="flowchart-field">
-                    <span>{t("flowchart.borderStyle")}</span>
+                    <span>边框样式</span>
                     <select
                       className="flowchart-input"
                       value={String(selectedNode.style.borderStyle ?? "solid")}
                       onChange={(event) => patchSelectedNode({ style: { borderStyle: event.currentTarget.value } })}
                     >
-                      <option value="solid">{t("flowchart.borderSolid")}</option>
-                      <option value="dashed">{t("flowchart.borderDashed")}</option>
+                      <option value="solid">实线</option>
+                      <option value="dashed">虚线</option>
                     </select>
                   </label>
                 </>
               ) : null}
             </>
           ) : (
-            <div className="flowchart-empty">{t("flowchart.noNodeSelected")}</div>
+            <div className="flowchart-empty">未选择节点</div>
           )}
         </section>
 
         <section className="flowchart-card">
           <header className="flowchart-section-head">
-            <span>{t("flowchart.edgeProps")}</span>
+            <span>连线属性</span>
             <span className="flowchart-muted">{selectedEdgeIds.length}</span>
           </header>
           {selectedEdge ? (
             <>
               <label className="flowchart-field">
-                <span>{t("flowchart.label")}</span>
+                <span>标题</span>
                 <input className="flowchart-input" type="text" value={selectedEdge.label} onChange={(event) => patchSelectedEdge({ label: event.currentTarget.value })} />
               </label>
               <label className="flowchart-field">
-                <span>{t("flowchart.stroke")}</span>
+                <span>线条</span>
                 <input
                   className="flowchart-input"
                   type="color"
@@ -1294,37 +1300,37 @@ export default function FlowchartWorkbench({ className, children }: FlowchartWor
                 />
               </label>
               <label className="flowchart-field">
-                <span>{t("flowchart.edgePathType")}</span>
+                <span>连线路径</span>
                 <select className="flowchart-input" value={selectedEdge.type ?? "smoothstep"} onChange={(event) => patchSelectedEdge({ type: event.currentTarget.value as FlowchartEdgeType })}>
-                  <option value="straight">{t("flowchart.edgeStraight")}</option>
-                  <option value="smoothstep">{t("flowchart.edgeSmoothStep")}</option>
+                  <option value="straight">直线</option>
+                  <option value="smoothstep">折线</option>
                 </select>
               </label>
               <label className="flowchart-switch flowchart-switch--field">
                 <input type="checkbox" checked={selectedEdge.markerEnd !== false} onChange={(event) => patchSelectedEdge({ markerEnd: event.currentTarget.checked })} />
-                <span>{t("flowchart.edgeMarkerEnd")}</span>
+                <span>显示箭头</span>
               </label>
             </>
           ) : (
-            <div className="flowchart-empty">{t("flowchart.noEdgeSelected")}</div>
+            <div className="flowchart-empty">未选择连线</div>
           )}
         </section>
 
         <section className="flowchart-card">
           <header className="flowchart-section-head">
-            <span>{t("flowchart.export")}</span>
+            <span>导出</span>
             <label className="flowchart-switch">
               <input type="checkbox" checked={snapToGrid} onChange={(event) => setSnapToGrid(event.currentTarget.checked)} />
-              <span>{t("flowchart.snapGrid")}</span>
+              <span>吸附网格</span>
             </label>
           </header>
           <button className="flowchart-secondary-btn" type="button" onClick={exportJson}>
             <Download aria-hidden="true" />
-            {t("flowchart.exportJson")}
+            导出 JSON
           </button>
           <button className="flowchart-secondary-btn" type="button" onClick={() => void exportSvg()}>
             <Download aria-hidden="true" />
-            {t("flowchart.exportSvg")}
+            导出 SVG
           </button>
         </section>
         {children}

@@ -2,7 +2,6 @@ import { Trash2 } from "lucide-react";
 import type { CSSProperties, HTMLAttributes } from "react";
 import { useEffect, useState } from "react";
 import { normalizeAbsoluteFsPath } from "../../../domain/workspacePath";
-import { translate } from "../../../i18n/translate";
 import { useWorkspaceFilesStore } from "../../../stores/workspaceFiles.store";
 import WorkspaceFileTreeView from "./WorkspaceFileTreeView";
 
@@ -55,7 +54,7 @@ export default function WorkspaceFilesSidebar({ className, ...props }: HTMLAttri
           className="workspace-file-context-menu"
           style={{ left: contextMenu.x, top: contextMenu.y } as CSSProperties}
           role="menu"
-          aria-label={translate("workspaceFiles.fileActions")}
+          aria-label="文件操作"
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
           onContextMenu={(event) => event.preventDefault()}
@@ -72,7 +71,7 @@ export default function WorkspaceFilesSidebar({ className, ...props }: HTMLAttri
             }}
           >
             <Trash2 className="workspace-file-context-menu__icon" aria-hidden="true" />
-            <span>{translate("workspaceFiles.deleteFile")}</span>
+            <span>删除文件</span>
           </button>
         </div>
       ) : null}

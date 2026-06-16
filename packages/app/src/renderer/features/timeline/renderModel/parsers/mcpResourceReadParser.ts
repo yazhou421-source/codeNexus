@@ -1,5 +1,4 @@
 import type { McpResourceParameterEntry, TimelineEventItem } from "../../../../domain/types";
-import { translate } from "../../../../i18n/translate";
 
 export type ParsedMcpResourceReadContent = {
   uri: string;
@@ -81,14 +80,12 @@ export function summarizeMcpResourcePreviewText(contents: ParsedMcpResourceReadC
   if (firstText) return shortenText(firstText, 220);
   const firstImage = contents.find((content) => /^image\//i.test(content.mimeType));
   if (firstImage) {
-    return translate("mcpResources.previewImage", {
-      text: firstImage.mimeType || firstImage.uri || translate("mcpResources.unknownType"),
-    });
+    return `图片 ｜ ${firstImage.mimeType || firstImage.uri || "未知类型"}`;
   }
   const firstBlob = contents[0];
   if (!firstBlob) return "";
   const parts = [firstBlob.mimeType || "", firstBlob.uri || ""].filter(Boolean);
-  return shortenText(parts.join(translate("timelineFormat.separator")) || translate("mcpResources.binaryContent"), 220);
+  return shortenText(parts.join(" ｜ ") || "二进制内容", 220);
 }
 
 export function summarizeMcpResourceMimeTypes(contents: ParsedMcpResourceReadContent[]): string {
@@ -101,7 +98,7 @@ export function summarizeMcpResourceMimeTypes(contents: ParsedMcpResourceReadCon
   return [...counts.entries()]
     .slice(0, 3)
     .map(([mimeType, count]) => (count > 1 ? `${mimeType} ×${count}` : mimeType))
-    .join(translate("timelineFormat.separator"));
+    .join(" ｜ ");
 }
 
 export function resolveMcpResourceReadStatus(

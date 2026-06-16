@@ -2,7 +2,6 @@ import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { renderMarkdownToSafeHtml } from "../../features/timeline/markdownRenderer";
-import { translate } from "../../i18n/translate";
 import AgentMarkdownContent from "./AgentMarkdownContent";
 
 type ParsedMarkdownPlan = {
@@ -80,11 +79,11 @@ function parseMarkdownPlan(rawText: string): ParsedMarkdownPlan {
   const source = String(rawText ?? "")
     .replace(/\r\n?/g, "\n")
     .trim();
-  if (!source) return { title: translate("planOutput.title"), description: "", body: translate("common.none") };
+  if (!source) return { title: "计划", description: "", body: "（无）" };
 
   const lines = source.split("\n");
   const heading = findBestHeading(lines);
-  if (!heading) return { title: translate("planOutput.title"), description: "", body: source };
+  if (!heading) return { title: "计划", description: "", body: source };
 
   let descriptionStart = -1;
   let descriptionEnd = -1;
@@ -112,7 +111,7 @@ function parseMarkdownPlan(rawText: string): ParsedMarkdownPlan {
   const body = bodyLines.join("\n").trim() || description || heading.title;
 
   return {
-    title: heading.title || translate("planOutput.title"),
+    title: heading.title || "计划",
     description,
     body,
   };
@@ -152,7 +151,7 @@ export default function MarkdownPlanOutputCard({
       ]
         .filter(Boolean)
         .join(" ")}
-      aria-label={translate("planOutput.aria")}
+      aria-label="计划"
     >
       <header className="markdown-plan-card-head grid min-w-0 select-none grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-3 border-b border-[color:var(--ui-well-border)] px-3 py-2.5 transition-[background,border-color] duration-150">
         <div
@@ -177,7 +176,7 @@ export default function MarkdownPlanOutputCard({
               </p>
             ) : null}
           </div>
-          {forceCollapsed ? <div className="mono text-[11px] text-[var(--fg-warning)]">{translate("markdownPlan.executing")}</div> : null}
+          {forceCollapsed ? <div className="mono text-[11px] text-[var(--fg-warning)]">执行计划中</div> : null}
         </div>
         {headerActions && !expanded ? (
           <div className="markdown-plan-card-head-actions" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>

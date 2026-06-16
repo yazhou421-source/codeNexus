@@ -13,7 +13,6 @@ type TimelineStore = ReturnType<typeof useTimelineStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
@@ -58,7 +57,6 @@ export type MessageQueueRuntimeDeps = {
   buildTimelineUserMessagePayload: (values: UserTurnInput[]) => TimelineUserMessagePayload;
   fileNameFromPathLike: (value: string, fallback: string) => string;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -89,7 +87,6 @@ export function createMessageQueueRuntime(deps: MessageQueueRuntimeDeps): Messag
     buildTimelineUserMessagePayload,
     fileNameFromPathLike,
     pushEvent,
-    translate,
     showToast,
   } = deps;
 
@@ -106,8 +103,8 @@ export function createMessageQueueRuntime(deps: MessageQueueRuntimeDeps): Messag
     if (text) return text;
     const inputs = Array.isArray(message.inputs) ? message.inputs : [];
     const imageCount = inputs.filter((item) => item?.type === "image" || item?.type === "localImage").length;
-    if (imageCount > 0) return translate("runtime.imageCount", { count: imageCount });
-    return translate("runtime.emptyMessage");
+    if (imageCount > 0) return `图片 ${imageCount} 张`;
+    return "（空消息）";
   };
 
   const flushQueueForThread = async (threadIdValue: string) => {
@@ -230,8 +227,8 @@ export function createMessageQueueRuntime(deps: MessageQueueRuntimeDeps): Messag
     if (!hasMeaningfulComposeText(prefillText) && attachments.length === 0 && mentions.length === 0) {
       showToast({
         kind: "warn",
-        title: translate("runtime.cannotEditQueuedMessageTitle"),
-        message: translate("runtime.queuedMessageNoEditableContent"),
+        title: "无法编辑排队消息",
+        message: "该排队消息没有可回填的内容。",
       });
       return;
     }
@@ -248,16 +245,16 @@ export function createMessageQueueRuntime(deps: MessageQueueRuntimeDeps): Messag
     if (failedLocalPaths.length > 0) {
       const names = failedLocalPaths
         .slice(0, 2)
-        .map((item) => fileNameFromPathLike(item, translate("runtime.imageFallbackName")));
-      const summary = names.join(translate("runtime.listSeparator"));
+        .map((item) => fileNameFromPathLike(item, "图片"));
+      const summary = names.join("、");
       const suffix =
-        failedLocalPaths.length > 2 ? translate("runtime.moreImagesSuffix", { count: failedLocalPaths.length }) : "";
+        failedLocalPaths.length > 2 ? ` 等 ${failedLocalPaths.length} 张图片` : "";
       showToast({
         kind: "warn",
-        title: translate("runtime.someImagesNotRestoredTitle"),
+        title: "部分图片未恢复",
         message: summary
-          ? translate("runtime.namedImagesNotRestored", { summary: `${summary}${suffix}` })
-          : translate("runtime.someImagesNotRestoredMessage"),
+          ? `${summary}${suffix} 未能回填，请重新添加。`
+          : "部分本地图片未能回填，请重新添加。",
       });
     }
   };
@@ -353,7 +350,7 @@ export function createMessageQueueRuntime(deps: MessageQueueRuntimeDeps): Messag
       if (!turnIdValue) {
         messageQueueStore.markStatus(threadId, msg.id, "queued");
         patchLocalEvent({ localState: "queued", level: "warn" });
-        pushEvent("steer:error", translate("runtime.missingActiveTurnForQueuedSteer"), { threadId, level: "error" });
+        pushEvent("steer:error", "缺少 active turnId，无法立即发送排队消息", { threadId, level: "error" });
         return;
       }
       const ok = await requestTurnSteer(threadId, queueInput, turnIdValue);

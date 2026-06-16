@@ -33,7 +33,6 @@ import {
 import { getDiffLineStats } from "../../../features/timeline/renderModel/diff";
 import { formatTime, isLocalUserEvent, isMarkdownEvent } from "../../../features/timeline/renderModel/formatters";
 import { extractWebSearchTimelineItem } from "../../../features/timeline/webSearch";
-import { translate } from "../../../i18n/translate";
 import { useAppShellStore } from "../../../stores/appShell.store";
 import { useMcpResourceStore } from "../../../stores/mcpResource.store";
 import { useMcpStore } from "../../../stores/mcp.store";
@@ -98,12 +97,12 @@ const DIRECT_STREAMING_MODEL_METHODS = new Set([
 ]);
 const AUX_ACTIVITY_KIND_ORDER = ["reasoning", "search", "command", "mcp", "tool", "activity"] as const;
 const AUX_ACTIVITY_KIND_LABELS: Record<(typeof AUX_ACTIVITY_KIND_ORDER)[number], string> = {
-  reasoning: "timeline.auxReasoning",
-  search: "timeline.auxSearch",
-  command: "timeline.auxCommand",
+  reasoning: "思考",
+  search: "搜索",
+  command: "命令",
   mcp: "MCP",
-  tool: "timeline.auxTool",
-  activity: "timeline.auxActivity",
+  tool: "工具",
+  activity: "活动",
 };
 const paramsObjectSignatureIds = new WeakMap<object, number>();
 let nextParamsObjectSignatureId = 1;
@@ -139,18 +138,12 @@ function streamNotificationActivityText(event: TimelineEventItem): string {
   if (event.method === "command/exec/outputDelta") {
     const stream = String(params.stream ?? "").trim();
     const text = decodeBase64Utf8(params.deltaBase64);
-    const suffix = params.capReached === true ? translate("timelineFormat.truncatedSuffix") : "";
-    return translate("timeline.commandOutput", {
-      stream: stream ? ` ${stream}` : "",
-      text: shortenActivityText(text || event.paramsText || translate("timeline.outputReceived")),
-      suffix,
-    });
+    const suffix = params.capReached === true ? "…（已截断）" : "";
+    return `命令输出${stream ? ` ${stream}` : ""}：${shortenActivityText(text || event.paramsText || "收到输出")}${suffix}`;
   }
   if (event.method === "item/commandExecution/terminalInteraction") {
     const stdin = String(params.stdin ?? event.paramsText ?? "").trim();
-    return translate("timeline.terminalInput", {
-      text: shortenActivityText(stdin || translate("timeline.emptyInput")),
-    });
+    return `终端输入：${shortenActivityText(stdin || "空输入")}`;
   }
   return "";
 }
@@ -294,14 +287,14 @@ function buildAuxActivityGroup(params: {
   }
   const summaryItems: ChatAuxActivitySummaryItem[] = AUX_ACTIVITY_KIND_ORDER.flatMap((key) => {
     const count = counts.get(key) ?? 0;
-    const label = AUX_ACTIVITY_KIND_LABELS[key] === "MCP" ? "MCP" : translate(AUX_ACTIVITY_KIND_LABELS[key]);
+    const label = AUX_ACTIVITY_KIND_LABELS[key];
     return count > 0 ? [{ key, label, count }] : [];
   });
   const fileChangeStats = buildAuxFileChangeStats(params.items);
   if (fileChangeStats) {
     summaryItems.push({
       key: "files",
-      label: translate("timeline.auxFiles"),
+      label: "文件",
       count: fileChangeStats.fileCount,
       valueText: String(fileChangeStats.fileCount),
       addText: `+${fileChangeStats.addedLines}`,
@@ -318,7 +311,7 @@ function buildAuxActivityGroup(params: {
     kind: "auxActivityGroup",
     items: [...params.items],
     summaryItems,
-    summaryText: summaryText || translate("timeline.activityCount", { count: params.items.length }),
+    summaryText: summaryText || `活动 ${params.items.length}`,
     status: mergeAuxActivityStatus(params.items),
     defaultCollapsed: params.defaultCollapsed,
     startedAtMs: params.startedAtMs,
@@ -532,42 +525,42 @@ export default function ChatPane({
     const normalized = extractWebSearchTimelineItem(event);
     if (!normalized) return null;
     const actionType = normalized.action.type;
-    let title = translate("timeline.webSearch");
-    let actionLabel = translate("timeline.webOther");
-    let primaryText = normalized.query || translate("timeline.webAction");
+    let title = "网页搜索";
+    let actionLabel = "其他";
+    let primaryText = normalized.query || "网页操作";
     let secondaryText = "";
-    let summaryText = normalized.query || translate("timeline.webAction");
+    let summaryText = normalized.query || "网页操作";
     let queries: string[] = [];
     let url = "";
     let pattern = "";
     let host = "";
     if (actionType === "search") {
-      actionLabel = translate("timeline.webSearchAction");
+      actionLabel = "搜索";
       queries = uniqueNonEmptyStrings([normalized.action.query, ...(normalized.action.queries || [])]);
-      primaryText = queries[0] || normalized.query || translate("timeline.searchWeb");
-      secondaryText = queries.length > 1 ? translate("timeline.queryCount", { count: queries.length }) : "";
-      summaryText = queries.join(translate("timelineFormat.separator")) || primaryText;
+      primaryText = queries[0] || normalized.query || "搜索网页";
+      secondaryText = queries.length > 1 ? `共 ${queries.length} 个查询` : "";
+      summaryText = queries.join(" ｜ ") || primaryText;
     } else if (actionType === "openPage") {
-      title = translate("timeline.openPage");
-      actionLabel = translate("timeline.openAction");
+      title = "打开页面";
+      actionLabel = "打开";
       url = normalized.action.url || normalized.query || "";
       host = extractUrlHost(url);
-      primaryText = host || url || translate("timeline.openSearchResultPage");
+      primaryText = host || url || "打开搜索结果页面";
       secondaryText = host && url ? url : "";
       summaryText = url || primaryText;
     } else if (actionType === "findInPage") {
-      title = translate("timeline.findInPage");
-      actionLabel = translate("timeline.findAction");
+      title = "页内查找";
+      actionLabel = "查找";
       url = normalized.action.url || "";
       pattern = normalized.action.pattern || "";
       host = extractUrlHost(url);
-      primaryText = pattern || translate("timeline.findInPage");
-      secondaryText = url ? `${host || translate("timeline.page")}${pattern ? `${translate("timelineFormat.separator")}${url}` : ""}` : "";
+      primaryText = pattern || "页内查找";
+      secondaryText = url ? `${host || "页面"}${pattern ? ` ｜ ${url}` : ""}` : "";
       summaryText = pattern
         ? url
-          ? translate("timeline.keywordAndPage", { pattern, url })
-          : translate("timeline.keywordOnly", { pattern })
-        : url || normalized.query || translate("timeline.findInPage");
+          ? `关键词：${pattern} ｜ 页面：${url}`
+          : `关键词：${pattern}`
+        : url || normalized.query || "页内查找";
     }
     return { itemId: normalized.itemId, actionType, status: normalized.status, title, summaryText, actionLabel, primaryText, secondaryText, queries, url, pattern, host };
   }, []);
@@ -616,11 +609,8 @@ export default function ChatPane({
               turnKey,
               kind: "activity",
               text: f
-                ? translate("timeline.contextFileRead", {
-                    file: f,
-                    rules: r && r > 0 ? translate("timeline.contextRulesSuffix", { count: r }) : "",
-                  })
-                : String(e.paramsText ?? "").trim() || translate("timeline.contextInjectedDone"),
+                ? `读取 ${f} 文件${r && r > 0 ? `（规则 ${r}）` : ""}`
+                : String(e.paramsText ?? "").trim() || "已注入上下文",
               createdAt: e.createdAt,
             });
             continue;
@@ -632,7 +622,7 @@ export default function ChatPane({
                 id: `guardian:${e.id}`,
                 turnKey,
                 kind: "activity",
-                text: g.summaryText || String(e.paramsText ?? "").trim() || translate("timeline.guardianReview"),
+                text: g.summaryText || String(e.paramsText ?? "").trim() || "Guardian 复核",
                 createdAt: e.createdAt,
                 tone: g.tone,
               });
@@ -947,7 +937,7 @@ export default function ChatPane({
     const entries: ChatImageEntry[] = [];
     snapshot.images.forEach((source, i) => {
       const kind = inferLazyImageSourceKind(source);
-      entries.push({ id: `${event.id}:img:${i + 1}:${source.length}`, sourceKind: kind === "localPath" ? "remoteUrl" : kind, source, title: translate("lazyImage.imageWithIndex", { index: i + 1 }) });
+      entries.push({ id: `${event.id}:img:${i + 1}:${source.length}`, sourceKind: kind === "localPath" ? "remoteUrl" : kind, source, title: `图片 ${i + 1}` });
     });
     snapshot.localImages.forEach((source, i) => {
       const name = basenameFromPath(source) || source;
@@ -1089,7 +1079,7 @@ export default function ChatPane({
       runtimeStore.setComposeMode("default");
       runtimeStore.composeAttachments = [];
       runtimeStore.composeFileMentions = [];
-      runtimeStore.composeInput = translate("markdownPlan.executing");
+      runtimeStore.composeInput = "执行计划中";
       sendAccepted = await getRuntimeOrchestrator().send();
     } finally {
       runtimeStore.model = prevModel;
@@ -1135,7 +1125,7 @@ export default function ChatPane({
     if (!parentThreadId) return null;
     const resolveThreadLabel = (threadIdValue: unknown) => {
       const tid = String(threadIdValue ?? "").trim();
-      if (!tid) return translate("chatPane.unknownThread");
+      if (!tid) return "未知线程";
       const history = threadHistoryById.get(tid);
       const nickname = String(history?.agentNickname ?? "").trim();
       const title = String(history?.title ?? "").trim();
@@ -1143,21 +1133,21 @@ export default function ChatPane({
     };
     const currentDiagnostics = threadStore.handoffDiagnosticsByThread.get(threadId) ?? null;
     if (threadStore.handoffDiagnosticsLoadingThreadIds.has(threadId) && !currentDiagnostics) {
-      return { text: translate("chatPane.readingHandoffSummary", { thread: resolveThreadLabel(parentThreadId) }), tone: "running" as const };
+      return { text: `正在读取 ${resolveThreadLabel(parentThreadId)} 的 handoff transcript 摘要...`, tone: "running" as const };
     }
     const d = currentDiagnostics;
     if (!d) return null;
     const parentLabel = resolveThreadLabel(d.parentThreadId || parentThreadId);
     const details: string[] = [];
-    if (d.parent?.totalTurns != null) details.push(translate("chatPane.parentThreadTurns", { thread: parentLabel, count: d.parent.totalTurns }));
-    else details.push(translate("chatPane.parentThreadSummaryUnavailable", { thread: parentLabel }));
-    details.push(translate("chatPane.currentTurns", { count: d.current.totalTurns }));
-    if (d.postHandoffTurns != null) details.push(d.postHandoffTurns > 0 ? translate("chatPane.postHandoffTurns", { count: d.postHandoffTurns }) : translate("chatPane.inheritedTranscriptStage"));
+    if (d.parent?.totalTurns != null) details.push(`父线程「${parentLabel}」${d.parent.totalTurns} 轮`);
+    else details.push(`父线程「${parentLabel}」摘要暂不可用`);
+    details.push(`当前 ${d.current.totalTurns} 轮`);
+    if (d.postHandoffTurns != null) details.push(d.postHandoffTurns > 0 ? `handoff 后 +${d.postHandoffTurns}` : "当前仍停留在继承 transcript 阶段");
     const latestDurationMs = typeof d.current.lastTurnDurationMs === "number" ? d.current.lastTurnDurationMs : NaN;
     if (Number.isFinite(latestDurationMs) && latestDurationMs > 0) {
       const seconds = Math.max(1, Math.round(latestDurationMs / 1000));
       const duration = latestDurationMs < 1000 ? `${Math.max(1, Math.round(latestDurationMs))}ms` : seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m${seconds % 60 ? `${seconds % 60}s` : ""}`;
-      details.push(translate("chatPane.latestTurnDuration", { duration }));
+      details.push(`最近回合 ${duration}`);
     }
     return { text: details.join("｜"), tone: d.postHandoffTurns == null ? ("warn" as const) : d.postHandoffTurns > 0 ? ("ok" as const) : ("warn" as const) };
   }, [runtimeStore.timelineKey, threadHistoryById, threadStore.handoffDiagnosticsByThread, threadStore.handoffDiagnosticsLoadingThreadIds]);
@@ -1201,9 +1191,9 @@ export default function ChatPane({
       await codexDesktop.codexServer.rpc({ serverId, method: "command/exec/terminate", params: { processId } }).catch(async () => {
         await codexDesktop.codexServer.rpc({ serverId, method: "process/kill", params: { processHandle: processId } });
       });
-      showToast({ kind: "success", title: translate("chatPane.stopCommandRequested"), message: processId });
+      showToast({ kind: "success", title: "已请求停止命令", message: processId });
     } catch (error: any) {
-      showToast({ kind: "error", title: translate("chatPane.stopCommandFailed"), message: String(error?.message ?? error) });
+      showToast({ kind: "error", title: "停止命令失败", message: String(error?.message ?? error) });
     } finally {
       setStoppingCommandProcessIds((prev) => {
         const next = new Set(prev);
@@ -1252,8 +1242,8 @@ export default function ChatPane({
     const fileCount = parts.filter((part) => part.type === "file").length;
     const imageCount = userMessageImageCount(pinnedUserRow.event);
     const titleParts = parts.map((part) => (part.type === "file" ? part.label : part.type === "text" ? part.text.replace(/\s+/g, " ").trim() : "")).filter(Boolean);
-    const suffix = [fileCount > 0 ? translate("chatPane.fileCount", { count: fileCount }) : "", imageCount > 0 ? translate("chatPane.imageCount", { count: imageCount }) : ""].filter(Boolean);
-    const summary = textParts.join(" ").trim() || translate("chatPane.userMessage");
+    const suffix = [fileCount > 0 ? `+${fileCount} 文件` : "", imageCount > 0 ? `+${imageCount} 图片` : ""].filter(Boolean);
+    const summary = textParts.join(" ").trim() || "用户消息";
     return {
       rowId: pinnedUserRow.id,
       text: summary,
@@ -1397,7 +1387,7 @@ export default function ChatPane({
             {handoffDiagnosticsBanner.tone !== "running" ? (
               <span className={["chat-activity-dot h-1.5 w-1.5 flex-none rounded-full bg-[var(--ui-activity-dot-bg)] shadow-[var(--ui-activity-dot-shadow)]", chatActivityToneClass(handoffDiagnosticsBanner.tone)].filter(Boolean).join(" ")} aria-hidden="true" />
             ) : null}
-            <span className="mono whitespace-nowrap">{translate("chatPane.handoffRecord")}</span>
+            <span className="mono whitespace-nowrap">交接记录</span>
             {handoffDiagnosticsBanner.tone === "running" ? <WaveText className="mono dim" text={handoffDiagnosticsBanner.text} /> : <span>{handoffDiagnosticsBanner.text}</span>}
           </div>
         </div>
@@ -1496,7 +1486,7 @@ export default function ChatPane({
 
       {imageLightboxOpen
         ? createPortal(
-            <div className="composer-lightbox-overlay composer-lightbox-overlay--image" role="dialog" aria-modal="true" aria-label={imageLightboxTitle || translate("lazyImage.previewTitle")}>
+            <div className="composer-lightbox-overlay composer-lightbox-overlay--image" role="dialog" aria-modal="true" aria-label={imageLightboxTitle || "图片预览"}>
               <div className="composer-lightbox-backdrop" aria-hidden="true" onClick={closeImageLightbox} />
               <div className="composer-lightbox-stage composer-lightbox-stage--image" onClick={(event) => event.target === event.currentTarget && closeImageLightbox()}>
                 <div
@@ -1508,23 +1498,23 @@ export default function ChatPane({
                   onPointerCancel={finishImageLightboxDrag}
                   onLostPointerCapture={finishImageLightboxDrag}
                 >
-                  <img className="composer-lightbox-image composer-lightbox-image--interactive" src={imageLightboxSrc} alt={imageLightboxTitle || translate("lazyImage.previewTitle")} style={imageLightboxTransformStyle} draggable={false} />
+                  <img className="composer-lightbox-image composer-lightbox-image--interactive" src={imageLightboxSrc} alt={imageLightboxTitle || "图片预览"} style={imageLightboxTransformStyle} draggable={false} />
                 </div>
                 <div className="composer-lightbox-toolbar app-scrollbar" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
                   <span className="composer-lightbox-zoom mono">{Math.round(imageLightboxZoom * 100)}%</span>
-                  <button className="composer-lightbox-action" type="button" onClick={zoomImageLightboxOut} title={translate("common.zoomOut")}>
+                  <button className="composer-lightbox-action" type="button" onClick={zoomImageLightboxOut} title="缩小">
                     <ZoomOut aria-hidden="true" />
                   </button>
-                  <button className="composer-lightbox-action" type="button" onClick={zoomImageLightboxIn} title={translate("common.zoomIn")}>
+                  <button className="composer-lightbox-action" type="button" onClick={zoomImageLightboxIn} title="放大">
                     <ZoomIn aria-hidden="true" />
                   </button>
-                  <button className="composer-lightbox-action" type="button" onClick={resetImageLightboxView} title={translate("common.reset")}>
+                  <button className="composer-lightbox-action" type="button" onClick={resetImageLightboxView} title="重置">
                     <RotateCcw aria-hidden="true" />
                   </button>
-                  <button className="composer-lightbox-action" type="button" onClick={downloadImageLightboxImage} title={translate("common.download")}>
+                  <button className="composer-lightbox-action" type="button" onClick={downloadImageLightboxImage} title="下载">
                     <Download aria-hidden="true" />
                   </button>
-                  <button ref={imageLightboxCloseButtonRef} className="composer-lightbox-action composer-lightbox-action--close" type="button" onClick={closeImageLightbox} title={translate("common.close")}>
+                  <button ref={imageLightboxCloseButtonRef} className="composer-lightbox-action composer-lightbox-action--close" type="button" onClick={closeImageLightbox} title="关闭">
                     <X aria-hidden="true" />
                   </button>
                 </div>

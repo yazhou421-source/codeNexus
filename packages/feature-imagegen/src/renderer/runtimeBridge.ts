@@ -52,12 +52,10 @@ type ImagegenDesktopApi = {
 type ImagegenToastKind = "success" | "error" | "warn" | "info";
 
 type ImagegenRuntimeBridgeOptions = {
-  translate?: (key: string, params?: Record<string, unknown>) => string;
   workspacePath?: string | null;
 };
 
 const workspacePathRef = { value: "" };
-let translateHandler: ImagegenRuntimeBridgeOptions["translate"] | null = null;
 const localImageDataUrlCache = new Map<string, Promise<string>>();
 
 function toText(value: unknown): string {
@@ -75,7 +73,6 @@ function extractImageSettings(value: unknown): LocalImageGenerationSettings {
 export function installImagegenRuntimeBridge(
   options: ImagegenRuntimeBridgeOptions,
 ): void {
-  translateHandler = options.translate ?? translateHandler;
   if ("workspacePath" in options)
     setImagegenWorkspacePath(options.workspacePath);
 }
@@ -90,17 +87,6 @@ export function useImagegenWorkspacePathRef() {
 
 export function getImagegenWorkspacePath(): string {
   return workspacePathRef.value;
-}
-
-export function translateImagegen(
-  key: string,
-  params?: Record<string, unknown>,
-): string {
-  try {
-    return translateHandler ? translateHandler(key, params) : key;
-  } catch {
-    return key;
-  }
 }
 
 export function showImagegenToast(options: {

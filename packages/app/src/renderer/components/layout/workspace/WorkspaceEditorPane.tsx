@@ -5,7 +5,6 @@ import type { HTMLAttributes } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { basenameFromPath } from "../../../domain/workspaceFiles";
 import { normalizeAbsoluteFsPath } from "../../../domain/workspacePath";
-import { translate } from "../../../i18n/translate";
 import { useWorkspaceFilesStore } from "../../../stores/workspaceFiles.store";
 import {
   createWorkspaceEditorState,
@@ -50,28 +49,28 @@ export default function WorkspaceEditorPane({ className, ...props }: HTMLAttribu
   const editorScrollByPathRef = useRef(new Map<string, EditorScrollPosition>());
   const pendingScrollRestoreFrameRef = useRef<number | null>(null);
   const removeEditorScrollListenerRef = useRef<(() => void) | null>(null);
-  const [cursorPositionLabel, setCursorPositionLabel] = useState(() => translate("workspaceEditor.cursorEmpty"));
-  const [selectionSizeLabel, setSelectionSizeLabel] = useState(() => translate("workspaceEditor.selectionEmpty"));
+  const [cursorPositionLabel, setCursorPositionLabel] = useState(() => "行 —，列 —");
+  const [selectionSizeLabel, setSelectionSizeLabel] = useState(() => "已选 0");
   storeRef.current = store;
 
   const activeRelativePath =
-    relativePathFromWorkspace(store.workspacePath, store.activeFilePath) || store.activeFilePath || translate("workspaceEditor.notRead");
+    relativePathFromWorkspace(store.workspacePath, store.activeFilePath) || store.activeFilePath || "未读取";
   const breadcrumbs = useMemo(() => {
     const segments = activeRelativePath.split("/").filter(Boolean).slice(0, -1);
     if (segments.length <= 4) return segments;
     return [segments[0] ?? "", "...", ...segments.slice(-2)];
   }, [activeRelativePath]);
   const activeIsImage = store.activeFilePreviewKind === "image" && Boolean(store.activeFileImageDataUrl);
-  const activeLanguageLabel = activeIsImage ? translate("lazyImage.image") : getLanguageDisplayNameForPath(store.activeFilePath);
+  const activeLanguageLabel = activeIsImage ? "图片" : getLanguageDisplayNameForPath(store.activeFilePath);
   const activeEncodingLabel = store.activeTab?.encoding ?? "UTF-8";
   const activeLineEndingLabel = store.activeTab?.lineEnding ?? "LF";
   const activeCursorLabel =
     !store.hasActiveFile || store.fileLoading || store.activeFileUnsupportedReason
-      ? translate("workspaceEditor.cursorEmpty")
+      ? "行 —，列 —"
       : cursorPositionLabel;
   const activeSelectionLabel =
     !store.hasActiveFile || store.fileLoading || store.activeFileUnsupportedReason
-      ? translate("workspaceEditor.selectionEmpty")
+      ? "已选 0"
       : selectionSizeLabel;
 
   const isActiveTab = (path: string) => toComparablePath(path) === toComparablePath(storeRef.current.activeFilePath);
@@ -79,24 +78,24 @@ export default function WorkspaceEditorPane({ className, ...props }: HTMLAttribu
   const getEditorDoc = (state: EditorState): string => state.doc.toString();
 
   const formatCursorLabel = (state: EditorState | null): string => {
-    if (!state) return translate("workspaceEditor.cursorEmpty");
+    if (!state) return "行 —，列 —";
     const mainSelection = state.selection.main;
     const line = state.doc.lineAt(mainSelection.head);
     const column = Math.max(1, mainSelection.head - line.from + 1);
-    return translate("workspaceEditor.cursorPosition", { line: line.number, column });
+    return `行 ${line.number}，列 ${column}`;
   };
 
   const formatSelectionLabel = (state: EditorState | null): string => {
-    if (!state) return translate("workspaceEditor.selectionEmpty");
+    if (!state) return "已选 0";
     const selectedChars = state.selection.ranges.reduce((sum, range) => sum + Math.abs(range.to - range.from), 0);
-    return translate("workspaceEditor.selectionCount", { count: formatCount(selectedChars) });
+    return `已选 ${formatCount(selectedChars)}`;
   };
 
   const syncCursorLabel = (state: EditorState | null, pathValue = currentEditorPathRef.current) => {
     const path = String(pathValue ?? "").trim();
     if (!path || !isActiveTab(path)) {
-      setCursorPositionLabel(translate("workspaceEditor.cursorEmpty"));
-      setSelectionSizeLabel(translate("workspaceEditor.selectionEmpty"));
+      setCursorPositionLabel("行 —，列 —");
+      setSelectionSizeLabel("已选 0");
       return;
     }
     setCursorPositionLabel(formatCursorLabel(state));
@@ -165,8 +164,8 @@ export default function WorkspaceEditorPane({ className, ...props }: HTMLAttribu
       editorViewRef.current = null;
     }
     currentEditorPathRef.current = "";
-    setCursorPositionLabel(translate("workspaceEditor.cursorEmpty"));
-    setSelectionSizeLabel(translate("workspaceEditor.selectionEmpty"));
+    setCursorPositionLabel("行 —，列 —");
+    setSelectionSizeLabel("已选 0");
   };
 
   const createEditorStateForPath = (path: string, doc: string): EditorState => {
@@ -311,9 +310,9 @@ export default function WorkspaceEditorPane({ className, ...props }: HTMLAttribu
   }, []);
 
   return (
-    <aside {...props} className={["workspace-editor-pane", className].filter(Boolean).join(" ")} aria-label={translate("workspaceEditor.aria")}>
+    <aside {...props} className={["workspace-editor-pane", className].filter(Boolean).join(" ")} aria-label="文件编辑器">
       <div className="workspace-editor-pane__surface">
-        <div className="workspace-editor-tabs app-scrollbar" role="tablist" aria-label={translate("workspaceEditor.openFilesAria")}>
+        <div className="workspace-editor-tabs app-scrollbar" role="tablist" aria-label="已打开文件">
           {store.openTabs.map((tab) => {
             const active = normalizeAbsoluteFsPath(tab.path) === normalizeAbsoluteFsPath(store.activeFilePath);
             return (
@@ -344,8 +343,8 @@ export default function WorkspaceEditorPane({ className, ...props }: HTMLAttribu
           {!store.hasActiveFile ? (
             <div className="workspace-files-editor-empty">
               <FileText className="workspace-files-editor-empty__icon" aria-hidden="true" />
-              <div className="workspace-files-editor-empty__title">{translate("workspaceEditor.emptyTitle")}</div>
-              <div className="workspace-files-editor-empty__note">{translate("workspaceEditor.emptyNote")}</div>
+              <div className="workspace-files-editor-empty__title">从左侧工作区树打开文件</div>
+              <div className="workspace-files-editor-empty__note">支持多标签编辑，未保存内容会保留在标签页里。</div>
             </div>
           ) : (
             <>
@@ -373,18 +372,18 @@ export default function WorkspaceEditorPane({ className, ...props }: HTMLAttribu
               ) : null}
 
               {store.fileLoading ? (
-                <div className="workspace-files-editor-state">{translate("workspaceEditor.fileLoading")}</div>
+                <div className="workspace-files-editor-state">文件加载中…</div>
               ) : store.activeFileUnsupportedReason ? (
                 <div className="workspace-files-editor-error">{store.activeFileUnsupportedReason}</div>
               ) : activeIsImage ? (
                 <div className="workspace-editor-image-shell">
                   <div className="workspace-editor-image-stage">
-                    <img className="workspace-editor-image" src={store.activeFileImageDataUrl} alt={store.activeFileName || translate("lazyImage.previewTitle")} />
+                    <img className="workspace-editor-image" src={store.activeFileImageDataUrl} alt={store.activeFileName || "图片预览"} />
                   </div>
                 </div>
               ) : (
                 <div className="workspace-editor-code-shell">
-                  <div ref={editorHostRef} className="workspace-editor-code-view" aria-label={translate("workspaceEditor.codeEditorAria")} />
+                  <div ref={editorHostRef} className="workspace-editor-code-view" aria-label="代码编辑器" />
                 </div>
               )}
               <div className="workspace-editor-statusbar">
@@ -395,12 +394,12 @@ export default function WorkspaceEditorPane({ className, ...props }: HTMLAttribu
                     <span className="mono dim">{activeLineEndingLabel}</span>
                     <span className="mono dim">{activeCursorLabel}</span>
                     <span className="mono dim">{activeSelectionLabel}</span>
-                    <span className="mono dim">{translate("workspaceEditor.charCount", { count: formatCount(store.activeFileDraftContent.length) })}</span>
+                    <span className="mono dim">{`字符：${formatCount(store.activeFileDraftContent.length)}`}</span>
                   </>
                 ) : (
                   <>
                     <span className="mono dim">{store.activeFileImageMimeType || "image/*"}</span>
-                    <span className="mono dim">{translate("workspaceEditor.readOnlyPreview")}</span>
+                    <span className="mono dim">只读预览</span>
                   </>
                 )}
                 {store.fileErrorText && !store.activeFileUnsupportedReason ? (

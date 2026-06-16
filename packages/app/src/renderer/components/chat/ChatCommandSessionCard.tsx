@@ -2,7 +2,6 @@ import type { HTMLAttributes } from "react";
 import { useState } from "react";
 import { ChevronDown, ExternalLink, Square, TerminalSquare } from "lucide-react";
 import type { CommandSessionNode } from "../../features/timeline/renderModel/buildTimelineNodes";
-import { translate } from "../../i18n/translate";
 import ExecutionWaveText from "../ui/ExecutionWaveText";
 
 export type ChatCommandSessionCardProps = HTMLAttributes<HTMLDivElement> & {
@@ -36,8 +35,8 @@ export default function ChatCommandSessionCard({
 
   const isRunning = item.status === "running";
   const primaryUrl = item.urls[0] ?? "";
-  const titleText = item.commandShort || item.commandFull || translate("chat.activity.backgroundCommand");
-  const logText = String(item.outputFull ?? "").trimEnd() || translate("chat.activity.noOutput");
+  const titleText = item.commandShort || item.commandFull || "后台命令";
+  const logText = String(item.outputFull ?? "").trimEnd() || "暂无输出";
   const toggleOpen = () => {
     setOpen((value) => !value);
     requestAnimationFrame(() => onLayoutChange?.());
@@ -89,14 +88,14 @@ export default function ChatCommandSessionCard({
               className="command-session__stop"
               type="button"
               disabled={stopping}
-              title={translate("chat.activity.stopProcess")}
+              title="停止进程"
               onClick={(event) => {
                 event.stopPropagation();
                 onStop?.(item);
               }}
             >
               <Square className="command-session__button-icon" aria-hidden="true" />
-              <span>{stopping ? translate("chat.activity.stopping") : translate("chat.activity.stop")}</span>
+              <span>{stopping ? "停止中" : "停止"}</span>
             </button>
           ) : null}
 
@@ -104,8 +103,8 @@ export default function ChatCommandSessionCard({
             className="command-session__icon-button"
             type="button"
             aria-expanded={open ? "true" : "false"}
-            title={translate("chat.activity.expandLog")}
-            aria-label={translate("chat.activity.expandLog")}
+            title="展开日志"
+            aria-label="展开日志"
             onClick={(event) => {
               event.stopPropagation();
               toggleOpen();

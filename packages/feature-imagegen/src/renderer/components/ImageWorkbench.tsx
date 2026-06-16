@@ -2,7 +2,6 @@ import "./imagegen-workbench.css";
 
 import { Copy, Download, Image as ImageIcon, Loader2, RotateCcw, Trash2, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useMemo, useState, type PointerEvent, type ReactNode, type WheelEvent } from "react";
-import { useTranslation } from "react-i18next";
 import { getImagegenDesktopApi, readImagegenLocalImageDataUrl, showImagegenToast as showToast } from "../runtimeBridge";
 import { useImageWorkbenchStore } from "../store";
 
@@ -58,7 +57,6 @@ function pruneRecordByPaths<T>(record: Record<string, T>, allowedPaths: Set<stri
 }
 
 export default function ImageWorkbench({ className, children }: ImageWorkbenchProps) {
-  const { t, i18n } = useTranslation();
   const workbench = useImageWorkbenchStore();
   const selectedHistoryItem = workbench.selectedHistoryItem;
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -91,8 +89,8 @@ export default function ImageWorkbench({ className, children }: ImageWorkbenchPr
   };
   const formatDateTime = (value: number) => {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return t("imageWorkbench.unknownTime");
-    return date.toLocaleString(i18n.language, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    if (Number.isNaN(date.getTime())) return "时间未知";
+    return date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
   };
 
   const ensureImageDataUrl = async (pathValue: string) => {
@@ -137,9 +135,9 @@ export default function ImageWorkbench({ className, children }: ImageWorkbenchPr
     if (!path) return;
     try {
       await getImagegenDesktopApi().app.writeClipboardImageFromPath({ path });
-      showToast({ kind: "success", title: t("imageWorkbench.copySuccessTitle"), message: t("imageWorkbench.copySuccessMessage") });
+      showToast({ kind: "success", title: "已复制图片", message: "可以直接粘贴发送。" });
     } catch (error: any) {
-      showToast({ kind: "error", title: t("imageWorkbench.copyFailedTitle"), message: String(error?.message ?? error ?? "") });
+      showToast({ kind: "error", title: "复制图片失败", message: String(error?.message ?? error ?? "") });
     }
   };
 
@@ -220,11 +218,11 @@ export default function ImageWorkbench({ className, children }: ImageWorkbenchPr
   }, [imageDragState]);
 
   return (
-    <section className={["image-workbench", className].filter(Boolean).join(" ")} aria-label={t("imageWorkbench.aria")}>
+    <section className={["image-workbench", className].filter(Boolean).join(" ")} aria-label="图片工作台">
       {workbench.historyLoading && !selectedHistoryItem ? (
         <div className="image-workbench__empty">
           <Loader2 className="image-workbench__empty-icon is-spinning" aria-hidden="true" />
-          <div>{t("imageWorkbench.loadingHistory")}</div>
+          <div>正在加载图片历史。</div>
         </div>
       ) : selectedHistoryItem && selectedImage ? (
         <div className="image-workbench__viewer">
@@ -235,22 +233,22 @@ export default function ImageWorkbench({ className, children }: ImageWorkbenchPr
             </div>
             <div className="image-workbench__viewer-actions">
               <span className="image-workbench__zoom mono">{Math.round(getImageZoom(selectedImage.path) * 100)}%</span>
-              <button className="image-workbench__tool" type="button" aria-label={t("imageWorkbench.zoomOut")} onClick={() => setImageZoom(selectedImage.path, getImageZoom(selectedImage.path) / ZOOM_STEP)}>
+              <button className="image-workbench__tool" type="button" aria-label="缩小" onClick={() => setImageZoom(selectedImage.path, getImageZoom(selectedImage.path) / ZOOM_STEP)}>
                 <ZoomOut aria-hidden="true" />
               </button>
-              <button className="image-workbench__tool" type="button" aria-label={t("imageWorkbench.zoomIn")} onClick={() => setImageZoom(selectedImage.path, getImageZoom(selectedImage.path) * ZOOM_STEP)}>
+              <button className="image-workbench__tool" type="button" aria-label="放大" onClick={() => setImageZoom(selectedImage.path, getImageZoom(selectedImage.path) * ZOOM_STEP)}>
                 <ZoomIn aria-hidden="true" />
               </button>
-              <button className="image-workbench__tool" type="button" aria-label={t("common.reset")} onClick={() => resetImageZoom(selectedImage.path)}>
+              <button className="image-workbench__tool" type="button" aria-label="重置" onClick={() => resetImageZoom(selectedImage.path)}>
                 <RotateCcw aria-hidden="true" />
               </button>
-              <button className="image-workbench__tool" type="button" aria-label={t("imageWorkbench.copyImage")} onClick={() => void copyImageToClipboard(selectedImage)}>
+              <button className="image-workbench__tool" type="button" aria-label="复制图片" onClick={() => void copyImageToClipboard(selectedImage)}>
                 <Copy aria-hidden="true" />
               </button>
-              <button className="image-workbench__tool" type="button" aria-label={t("imageWorkbench.downloadImage")} onClick={() => downloadImage(selectedImage)}>
+              <button className="image-workbench__tool" type="button" aria-label="下载图片" onClick={() => downloadImage(selectedImage)}>
                 <Download aria-hidden="true" />
               </button>
-              <button className="image-workbench__tool is-danger" type="button" aria-label={t("imageWorkbench.delete")} onClick={() => void workbench.deleteHistoryItem(selectedHistoryItem.id)}>
+              <button className="image-workbench__tool is-danger" type="button" aria-label="删除" onClick={() => void workbench.deleteHistoryItem(selectedHistoryItem.id)}>
                 <Trash2 aria-hidden="true" />
               </button>
             </div>
@@ -266,7 +264,7 @@ export default function ImageWorkbench({ className, children }: ImageWorkbenchPr
             ) : imageDataUrlByPath[selectedImage.path] ? (
               <img src={imageDataUrlByPath[selectedImage.path]} alt={selectedImage.path} style={{ transform: getImageTransform(selectedImage.path) }} draggable={false} />
             ) : (
-              <div className="image-workbench__image-missing">{t("imageWorkbench.imageUnavailable")}</div>
+              <div className="image-workbench__image-missing">图片不可用</div>
             )}
           </div>
 
@@ -288,7 +286,7 @@ export default function ImageWorkbench({ className, children }: ImageWorkbenchPr
       ) : (
         <div className="image-workbench__empty">
           <ImageIcon className="image-workbench__empty-icon" aria-hidden="true" />
-          <div>{workbench.historyItems.length > 0 ? t("imageWorkbench.selectFromWorkspace") : t("imageWorkbench.emptyHistory")}</div>
+          <div>{workbench.historyItems.length > 0 ? "从左侧图片工作区选择一张图片。" : "生成图片后，这里会保存每一次记录。"}</div>
         </div>
       )}
       {children}

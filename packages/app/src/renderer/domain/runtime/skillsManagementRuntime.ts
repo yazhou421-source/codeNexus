@@ -8,7 +8,6 @@ type CodexSkillRootsStore = ReturnType<typeof useCodexSkillRootsStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
@@ -30,7 +29,6 @@ export type SkillsManagementRuntimeDeps = {
   saveSkillsSnapshot: (workspacePath: string, snapshot: SkillsSnapshot) => void;
   invalidateSkillsSnapshot: (workspacePath?: string) => void;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -65,7 +63,6 @@ export function createSkillsManagementRuntime(deps: SkillsManagementRuntimeDeps)
     saveSkillsSnapshot,
     invalidateSkillsSnapshot,
     pushEvent,
-    translate,
     showToast,
   } = deps;
 
@@ -74,11 +71,11 @@ export function createSkillsManagementRuntime(deps: SkillsManagementRuntimeDeps)
   const refreshSkills = async (forceReload = false) => {
     const workspace = normalizeWorkspacePath(getWorkspacePath());
     if (!getServerIdForWorkspace(workspace)) {
-      skillsStore.resetState(translate("runtime.noService"));
+      skillsStore.resetState("未连接服务");
       return;
     }
     if (!workspace) {
-      skillsStore.resetState(translate("runtime.noWorkspaceSelected"));
+      skillsStore.resetState("未选择工作区");
       return;
     }
     const hasVisibleData = skillsStore.loadState === "ready" && skillsStore.items.length > 0;
@@ -134,16 +131,16 @@ export function createSkillsManagementRuntime(deps: SkillsManagementRuntimeDeps)
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
       pushEvent("skills:error", msg, { threadId: appTimelineId, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.skillConfigFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "技能配置失败", message: msg });
       throw error;
     }
   };
 
   const addSkillRoot = async (root: string) => {
     const workspace = normalizeWorkspacePath(getWorkspacePath());
-    if (!workspace) throw new Error(translate("runtime.workspaceRequired"));
+    if (!workspace) throw new Error("未选择工作区。");
     const normalizedRoot = String(root ?? "").trim();
-    if (!normalizedRoot) throw new Error(translate("runtime.skillRootRequired"));
+    if (!normalizedRoot) throw new Error("技能目录不能为空。");
     try {
       await codexSkillRootsStore.addRootForWorkspace(workspace, normalizedRoot);
       invalidateSkillsSnapshot(workspace);
@@ -152,14 +149,14 @@ export function createSkillsManagementRuntime(deps: SkillsManagementRuntimeDeps)
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
       pushEvent("skills:roots:error", msg, { threadId: appTimelineId, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.skillRootAddFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "技能目录添加失败", message: msg });
       throw error;
     }
   };
 
   const removeSkillRoot = async (root: string) => {
     const workspace = normalizeWorkspacePath(getWorkspacePath());
-    if (!workspace) throw new Error(translate("runtime.workspaceRequired"));
+    if (!workspace) throw new Error("未选择工作区。");
     const normalizedRoot = String(root ?? "").trim();
     if (!normalizedRoot) return;
     try {
@@ -170,7 +167,7 @@ export function createSkillsManagementRuntime(deps: SkillsManagementRuntimeDeps)
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
       pushEvent("skills:roots:error", msg, { threadId: appTimelineId, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.skillRootRemoveFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "技能目录移除失败", message: msg });
       throw error;
     }
   };

@@ -24,7 +24,6 @@ type RuntimeStore = ReturnType<typeof useRuntimeStore>;
 type ThreadStore = ReturnType<typeof useThreadStore>;
 type TimelineStore = ReturnType<typeof useTimelineStore>;
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 
 export type ThreadReplayWindowState = {
   nextBefore: number;
@@ -49,7 +48,6 @@ export type HistoryReplayWindowRuntimeDeps = {
   historyReplayBatch: number;
   historyReplayTurnSegments: number;
   timelineMaxVisibleTurns: number;
-  translate: TranslateFn;
 };
 
 export type HistoryReplayWindowRuntime = {
@@ -83,7 +81,6 @@ export function createHistoryReplayWindowRuntime(deps: HistoryReplayWindowRuntim
     historyReplayBatch,
     historyReplayTurnSegments,
     timelineMaxVisibleTurns,
-    translate,
   } = deps;
 
   const preserveNonHistoryTimelineEvents = (
@@ -444,7 +441,7 @@ export function createHistoryReplayWindowRuntime(deps: HistoryReplayWindowRuntim
     } catch (sessionsErr: unknown) {
       if (!isReplayRequestSeqCurrent(threadIdValue, requestSeq)) return false;
       const sessionsMsg = readErrorMessage(sessionsErr);
-      markReplayIncompatible(threadIdValue, translate("runtime.historyReplayFailed", { message: sessionsMsg }));
+      markReplayIncompatible(threadIdValue, `历史回放失败：sessions=${sessionsMsg}`);
       return false;
     }
   };
@@ -494,7 +491,7 @@ export function createHistoryReplayWindowRuntime(deps: HistoryReplayWindowRuntim
       .catch((sessionsErr: unknown) => {
         if (!isReplayRequestSeqCurrent(threadId, requestSeq)) return false;
         const sessionsMsg = readErrorMessage(sessionsErr);
-        markReplayIncompatible(threadId, translate("runtime.historyReplayFailed", { message: sessionsMsg }));
+        markReplayIncompatible(threadId, `历史回放失败：sessions=${sessionsMsg}`);
         return false;
       })
       .finally(() => {

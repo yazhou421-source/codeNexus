@@ -1,7 +1,6 @@
 import type { HTMLAttributes } from "react";
 import { Database } from "lucide-react";
 import type { McpResourceReadNode } from "../../../features/timeline/renderModel/buildTimelineNodes";
-import { translate } from "../../../i18n/translate";
 import DetailDisclosure from "../../ui/DetailDisclosure";
 import ExecutionWaveText from "../../ui/ExecutionWaveText";
 
@@ -13,7 +12,7 @@ type McpResourceReadCardContentProps = HTMLAttributes<HTMLDivElement> & {
 };
 
 function displayResourceLabel(item?: McpResourceReadNode) {
-  return String(item?.resourceLabel || item?.uri || translate("mcpResources.untitledResource"));
+  return String(item?.resourceLabel || item?.uri || "未命名资源");
 }
 
 export default function McpResourceReadCardContent({
@@ -50,7 +49,7 @@ export default function McpResourceReadCardContent({
             <div className="timeline-card-shell-title-wrap min-w-0 inline-flex items-center gap-1.5">
               <Database className="h-[13px] w-[13px] flex-none text-[color:var(--accent)] [stroke-width:2.2]" aria-hidden="true" />
               <span className="inline-flex h-[22px] max-w-full items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-[4px] border border-[var(--ui-well-border)] bg-[var(--ui-well-bg-strong)] px-[9px] text-[11px] tracking-[0.2px] text-[var(--text-muted)]">
-                {translate("mcpResourceRead.tag")}
+                MCP 资源
               </span>
             </div>
             <div className="timeline-card-shell-summaryline min-w-0">
@@ -65,13 +64,13 @@ export default function McpResourceReadCardContent({
           {isRunning ? (
             <ExecutionWaveText
               className="mono inline-flex items-center gap-2 text-[11px]"
-              text={translate("mcpResourceRead.readingResource")}
+              text="读取资源"
             />
           ) : null}
 
           <div className="grid gap-1">
             <div className="text-[12px] font-medium text-[color:var(--text-muted)]">
-              {translate("mcpResources.resourceName")}
+              资源名
             </div>
             <div className="mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] text-[var(--text)]">
               {resourceLabel}
@@ -80,10 +79,10 @@ export default function McpResourceReadCardContent({
 
           <div className="grid gap-1">
             <div className="text-[12px] font-medium text-[color:var(--text-muted)]">
-              {translate("mcpResources.tools")}
+              工具
             </div>
             {toolNames.length === 0 ? (
-              <div className="mono dim text-[11px]">{translate("mcpResources.noTools")}</div>
+              <div className="mono dim text-[11px]">无工具</div>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {toolNames.map((toolName) => (
@@ -100,10 +99,10 @@ export default function McpResourceReadCardContent({
 
           <div className="grid gap-1">
             <div className="text-[12px] font-medium text-[color:var(--text-muted)]">
-              {translate("mcpResources.parameters")}
+              配置参数
             </div>
             {parameterEntries.length === 0 ? (
-              <div className="mono dim text-[11px]">{translate("mcpResources.noParameters")}</div>
+              <div className="mono dim text-[11px]">无配置参数</div>
             ) : (
               <div className="grid gap-1">
                 {parameterEntries.map((entry) => (
@@ -115,7 +114,7 @@ export default function McpResourceReadCardContent({
                       {entry.key}
                     </div>
                     <div className="mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] text-[var(--text)]">
-                      {entry.value || translate("mcpResources.notFilled")}
+                      {entry.value || "未填写"}
                     </div>
                   </div>
                 ))}
@@ -139,7 +138,7 @@ export default function McpResourceReadCardContent({
                   onOpenInPanel(item);
                 }}
               >
-                {translate("mcpResourceRead.openInPanel")}
+                在 MCP 页打开
               </button>
             </div>
           ) : null}

@@ -4,7 +4,6 @@ import { useCustomChatStore } from "../../../stores/customChat.store";
 import { useDebugTimelineStore } from "../../../stores/debugTimeline.store";
 import { useRuntimeStore } from "../../../stores/runtime.store";
 import { useTimelineStore } from "../../../stores/timeline.store";
-import { translate } from "../../../i18n/translate";
 import ChatPane from "../chat/ChatPane";
 
 type DebugTimelineSidebarProps = {
@@ -38,17 +37,17 @@ export default function DebugTimelineSidebar({ className }: DebugTimelineSidebar
     <aside className={["sidebar", "sidebar-right", "debug-timeline-sidebar", className].filter(Boolean).join(" ")}>
       <header className="debug-timeline-sidebar-head">
         <div className="debug-timeline-sidebar-title">
-          <span className="mono">{translate("debugTimeline.title")}</span>
-          <span className="mono dim">{translate("debugTimeline.subtitle")}</span>
+          <span className="mono">调试 JSON</span>
+          <span className="mono dim">事件时间线</span>
         </div>
         <div className="debug-timeline-sidebar-actions">
           <span className="mono dim text-[10px]">Ctrl/⌘ + Alt + J</span>
           <button className="btn-mini" type="button" onClick={() => runtimeStore.setTimelineDebugEnabled(false)}>
-            {translate("common.close")}
+            关闭
           </button>
         </div>
       </header>
-      <div className="debug-timeline-sidebar-body app-scrollbar" role="region" aria-label={translate("debugTimeline.regionAria")}>
+      <div className="debug-timeline-sidebar-body app-scrollbar" role="region" aria-label="调试 JSON 事件列表">
         <ChatPane
           contentEvents={events}
           contentRevision={events.length}

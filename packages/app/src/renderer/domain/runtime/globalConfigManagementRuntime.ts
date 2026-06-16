@@ -15,7 +15,6 @@ type ConfigRequirementsStore = ReturnType<typeof useConfigRequirementsStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
@@ -39,7 +38,6 @@ export type GlobalConfigManagementRuntimeDeps = {
   requestConfigRequirementsRead: () => Promise<ConfigRequirementsReadResponse>;
   requestConfigBatchWrite: (changes: ConfigWriteChange[], filePath?: string | null) => Promise<void>;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -89,7 +87,6 @@ export function createGlobalConfigManagementRuntime(
     requestConfigRequirementsRead,
     requestConfigBatchWrite,
     pushEvent,
-    translate,
     showToast,
   } = deps;
 
@@ -98,12 +95,12 @@ export function createGlobalConfigManagementRuntime(
   const refreshGlobalConfig = async () => {
     const workspace = normalizeWorkspacePath(getWorkspacePath());
     if (!getServerIdForWorkspace(workspace)) {
-      configStore.resetState(translate("runtime.noService"));
-      configRequirementsStore.resetState(translate("runtime.noService"));
+      configStore.resetState("未连接服务");
+      configRequirementsStore.resetState("未连接服务");
       return;
     }
-    configStore.setLoadState("loading", translate("runtime.readingConfig"));
-    configRequirementsStore.setLoadState("loading", translate("runtime.readingRequirements"));
+    configStore.setLoadState("loading", "读取配置中…");
+    configRequirementsStore.setLoadState("loading", "读取 requirements 中…");
 
     const [configResult, requirementsResult] = await Promise.allSettled([
       requestConfigRead(),
@@ -113,10 +110,10 @@ export function createGlobalConfigManagementRuntime(
     if (configResult.status === "fulfilled") {
       const draft = extractGlobalConfigFromReadResult(configResult.value);
       configStore.applySnapshot(draft);
-      configStore.setLoadState("ready", translate("runtime.configReadSynced"));
+      configStore.setLoadState("ready", "已同步生效配置（config/read）");
     } else {
       const msg = readErrorMessage(configResult.reason);
-      configStore.setLoadState("error", translate("runtime.readFailedWithMessage", { message: msg }));
+      configStore.setLoadState("error", `读取失败：${msg}`);
     }
 
     if (requirementsResult.status === "fulfilled") {
@@ -124,7 +121,7 @@ export function createGlobalConfigManagementRuntime(
       configRequirementsStore.setRequirements(requirements);
       configRequirementsStore.setLoadState(
         "ready",
-        requirements ? translate("runtime.requirementsSynced") : translate("runtime.noRequirementsConfigured")
+        requirements ? "已同步服务端限制（configRequirements/read）" : "当前服务端未配置 requirements"
       );
       return;
     }
@@ -133,12 +130,12 @@ export function createGlobalConfigManagementRuntime(
     const requirementsMsg = readErrorMessage(requirementsResult.reason);
     configRequirementsStore.setRequirements(null);
     if (rpcErr?.code === -32601) {
-      configRequirementsStore.setLoadState("ready", translate("runtime.requirementsUnsupported"));
+      configRequirementsStore.setLoadState("ready", "当前服务端未提供 configRequirements/read，已按无约束处理");
       return;
     }
     configRequirementsStore.setLoadState(
       "error",
-      translate("runtime.requirementsReadFailed", { message: requirementsMsg })
+      `读取 requirements 失败：${requirementsMsg}；已按无约束处理`
     );
   };
 
@@ -160,11 +157,11 @@ export function createGlobalConfigManagementRuntime(
     const draft = configStore.draft ?? createDefaultGlobalConfigDraft();
     const changes = buildConfigBatchChangesFromDraft(draft, baseline);
     if (changes.length === 0) {
-      configStore.setLoadState("ready", translate("runtime.configReadSynced"));
+      configStore.setLoadState("ready", "已同步生效配置（config/read）");
       return;
     }
     configStore.setSaving(true);
-    configStore.setLoadState("ready", translate("runtime.saving"));
+    configStore.setLoadState("ready", "保存中…");
     try {
       await requestConfigBatchWrite(changes);
       pushEvent("config", `saved ${changes.length} keys`, { threadId: appTimelineId });
@@ -173,20 +170,20 @@ export function createGlobalConfigManagementRuntime(
         showToast({
           kind: "success",
           title:
-            source === "auto" ? translate("runtime.globalConfigAutoSaved") : translate("runtime.globalConfigSaved"),
-          message: translate("runtime.configItemsWritten", { count: changes.length }),
+            source === "auto" ? "全局配置已自动保存" : "全局配置已保存",
+          message: `已写入 ${changes.length} 项`,
         });
       }
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
-      configStore.setLoadState("error", translate("runtime.saveFailedWithMessage", { message: msg }));
+      configStore.setLoadState("error", `保存失败：${msg}`);
       pushEvent("config:error", msg, { threadId: appTimelineId, level: "error" });
       showToast({
         kind: "error",
         title:
           source === "auto"
-            ? translate("runtime.globalConfigAutoSaveFailed")
-            : translate("runtime.globalConfigSaveFailed"),
+            ? "全局配置自动保存失败"
+            : "全局配置保存失败",
         message: msg,
       });
     } finally {
@@ -194,7 +191,7 @@ export function createGlobalConfigManagementRuntime(
       if (configStore.loadState !== "error") {
         configStore.setLoadState(
           "ready",
-          configStore.isDirty ? translate("runtime.unsavedChanges") : translate("runtime.configReadSynced")
+          configStore.isDirty ? "有未保存改动" : "已同步生效配置（config/read）"
         );
       }
     }
@@ -204,7 +201,7 @@ export function createGlobalConfigManagementRuntime(
     configStore.resetToSnapshot();
     configStore.setLoadState(
       "ready",
-      configStore.isDirty ? translate("runtime.unsavedChanges") : translate("runtime.configReadSynced")
+      configStore.isDirty ? "有未保存改动" : "已同步生效配置（config/read）"
     );
   };
 

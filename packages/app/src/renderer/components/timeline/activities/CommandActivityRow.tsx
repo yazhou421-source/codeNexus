@@ -5,7 +5,6 @@ import type {
   CommandReadNode,
   CommandSearchNode,
 } from "../../../features/timeline/renderModel/buildTimelineNodes";
-import { translate } from "../../../i18n/translate";
 import ExecutionWaveText from "../../ui/ExecutionWaveText";
 
 type CommandActivityKind = "read" | "list" | "search";
@@ -32,21 +31,18 @@ export default function CommandActivityRow({
   const listItem = item as CommandListNode | undefined;
   const searchItem = item as CommandSearchNode | undefined;
   const fileLabel =
-    readItem?.name || basename(readItem?.path ?? "") || readItem?.path || translate("commandActivity.readContent");
+    readItem?.name || basename(readItem?.path ?? "") || readItem?.path || "读取内容";
   const readPathText = readItem?.path || fileLabel;
-  const listScopeText = listItem?.path || translate("commandActivity.currentDirectory");
+  const listScopeText = listItem?.path || "当前目录";
   const searchScopeText = searchItem?.path || "";
-  const queryText = searchItem?.query || translate("commandActivity.search");
+  const queryText = searchItem?.query || "搜索";
   const text =
     kind === "read"
-      ? translate("commandActivity.readFile", { target: readPathText })
+      ? `读取文件：${readPathText}`
       : kind === "list"
-        ? translate("commandActivity.listFiles", { scope: listScopeText })
-        : translate("commandActivity.searchInScope", {
-            query: queryText,
-            scope: searchScopeText ? translate("commandActivity.searchScope", { scope: searchScopeText }) : "",
-          });
-  const meta = kind === "list" ? translate("commandActivity.itemCount", { count: listItem?.filesCount ?? 0 }) : "";
+        ? `列出文件：${listScopeText}`
+        : `搜索："${queryText}"${searchScopeText ? `（${searchScopeText}）` : ""}`;
+  const meta = kind === "list" ? `${listItem?.filesCount ?? 0} 项` : "";
 
   return (
     <div {...props} className={["chat-tool-wrap command-activity-wrap w-full max-w-full min-w-0", className].filter(Boolean).join(" ")}>

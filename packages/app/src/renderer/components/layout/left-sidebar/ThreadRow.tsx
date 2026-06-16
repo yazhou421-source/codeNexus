@@ -1,6 +1,5 @@
 import { BellRing, CheckCircle2, MessageCircleQuestionMark, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
-import { useTranslation } from "react-i18next";
 import { useThreadStore } from "../../../stores/thread.store";
 import LoadingDots from "../../ui/LoadingDots";
 import type { ThreadRowModel } from "./ThreadHistoryPane";
@@ -50,7 +49,6 @@ export default function ThreadRow({
   onDeleteThread,
   className,
 }: ThreadRowProps) {
-  const { t } = useTranslation();
   const threadStore = useThreadStore();
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const threadId = String(row.item.id ?? "").trim();
@@ -161,10 +159,10 @@ export default function ThreadRow({
             {pending ? (
               <LoadingDots
                 className="lsb-thread-title-text"
-                baseText={t("threadRow.creating")}
+                baseText="创建中"
                 intervalMs={350}
                 maxDots={3}
-                ariaLabel={t("threadRow.creating")}
+                ariaLabel="创建中"
               />
             ) : isRenaming ? (
               <input
@@ -172,7 +170,7 @@ export default function ThreadRow({
                 className="lsb-thread-title-input mono"
                 type="text"
                 maxLength={80}
-                aria-label={t("threadRow.renameAria")}
+                aria-label="重命名线程"
                 value={renameDraft}
                 onChange={(event) => setRenameDraft(event.currentTarget.value)}
                 onClick={(event) => event.stopPropagation()}
@@ -189,9 +187,9 @@ export default function ThreadRow({
                 {displayTitle}
               </span>
             )}
-            {hasUserInputQuestion ? <span className="lsb-badge is-question">{t("threadRow.qa")}</span> : null}
+            {hasUserInputQuestion ? <span className="lsb-badge is-question">问答</span> : null}
             {agentNicknameBadge ? <span className="lsb-badge">{agentNicknameBadge}</span> : null}
-            {isInvalidWorkspaceItem(row.item) ? <span className="lsb-badge">{t("threadRow.invalid")}</span> : null}
+            {isInvalidWorkspaceItem(row.item) ? <span className="lsb-badge">无效</span> : null}
           </span>
 
           <span className="lsb-thread-right">
@@ -204,7 +202,7 @@ export default function ThreadRow({
                 <button
                   className="lsb-thread-attention-btn"
                   type="button"
-                  aria-label={t("threadRow.clearAttention")}
+                  aria-label="清除提醒"
                   onClick={(event) => {
                     event.stopPropagation();
                     onClearThreadAttention?.(threadId);
@@ -222,7 +220,7 @@ export default function ThreadRow({
             <button
               className="lsb-icon-btn lsb-delete"
               type="button"
-              aria-label={t("threadRow.deleteHistory")}
+              aria-label="删除历史"
               onClick={(event) => {
                 event.stopPropagation();
                 onDeleteThread?.(threadId);

@@ -1,7 +1,6 @@
 import { buildModelPickerOptions } from "@codenexus/shared/modelCatalog";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { useTranslation } from "react-i18next";
 import { hasMeaningfulComposeText, stripComposeFileTokenChars } from "../../domain/composeFileMentions";
 import { CENTER_TIMELINE_SOFT_MIN_WIDTH_PX } from "../../domain/layoutWidthBudget";
 import { getRuntimeOrchestrator } from "../../domain/runtimeOrchestrator";
@@ -166,7 +165,6 @@ function findNextEnabledSlashIndex(
 }
 
 export default function CenterPane() {
-  const { t } = useTranslation();
   const runtimeStore = useRuntimeStore();
   const threadStore = useThreadStore();
   const timelineStore = useTimelineStore();
@@ -245,32 +243,32 @@ export default function CenterPane() {
   );
   const reasoningEffortOptions = useMemo(
     () => [
-      { value: "low", label: t("composer.low") },
-      { value: "medium", label: t("composer.medium") },
-      { value: "high", label: t("composer.high") },
-      { value: "xhigh", label: t("composer.xhigh") },
+      { value: "low", label: "低" },
+      { value: "medium", label: "中" },
+      { value: "high", label: "高" },
+      { value: "xhigh", label: "极高" },
     ],
-    [t]
+    []
   );
   const sandboxModeOptions = useMemo(
     () => [
-      { value: "read-only", label: t("composer.readOnlyShort") },
-      { value: "workspace-write", label: t("composer.workspaceWriteShort") },
-      { value: "danger-full-access", label: t("composer.dangerFullAccessShort") },
+      { value: "read-only", label: "只读" },
+      { value: "workspace-write", label: "可写" },
+      { value: "danger-full-access", label: "完全" },
     ],
-    [t]
+    []
   );
   const sandboxRiskText =
     runtimeStore.sandboxMode === "danger-full-access"
-      ? t("composer.dangerFullAccessRisk")
+      ? "完全权限：请确认命令来源可信。"
       : runtimeStore.sandboxMode === "read-only"
-        ? t("composer.readOnlyRisk")
-        : t("composer.workspaceWriteRisk");
+        ? "只读权限：无法修改工作区文件。"
+        : "工作区可写：可修改当前工作区文件。";
   const serviceTierLabel =
     appShellStore.serverConnState === "connected" && configStore.loadState === "ready"
       ? configStore.snapshot.fastModeEnabled
-        ? t("composer.fast")
-        : t("composer.standard")
+        ? "快速"
+        : "标准"
       : "";
   const contextUsagePercent = (() => {
     const usedTokens = Number(currentTokenUsage.usedTokens ?? 0);
@@ -289,23 +287,23 @@ export default function CenterPane() {
   })();
   const contextUsageTooltip =
     currentTokenUsage.usedTokens == null || currentTokenUsage.contextWindow == null || currentTokenUsage.contextWindow <= 0
-      ? t("composer.contextUnavailable")
-      : t("composer.contextUsage", { used: currentTokenUsage.usedTokens, total: currentTokenUsage.contextWindow });
+      ? "上下文窗口信息暂不可用"
+      : `上下文使用 ${currentTokenUsage.usedTokens}/${currentTokenUsage.contextWindow} 个 token`;
   const composerStatusText = (() => {
     if (!isPendingThreadId(currentThreadId)) return "";
     const pending = runtimeStore.pendingThreadInitSendCountByThread.get(currentThreadId) ?? 0;
     if (!Number.isFinite(pending) || pending <= 0) return "";
-    return pending === 1 ? t("composer.initializingThread") : t("composer.initializingThreadQueued", { count: pending });
+    return pending === 1 ? "正在初始化线程，初始化完成后将自动发送。" : `正在初始化线程，初始化完成后将自动发送（已排队 ${pending} 条）。`;
   })();
   const sendDisabled =
     !hasMeaningfulComposeText(runtimeStore.composeInput) &&
     runtimeStore.composeAttachments.length === 0 &&
     runtimeStore.composeFileMentions.length === 0;
   const sendTitle = isPendingThreadId(currentThreadId)
-    ? t("composer.sendAfterInit")
+    ? "发送消息（初始化完成后自动发送）"
     : isTurnRunning
-      ? t("composer.sendQueuedWhenRunning")
-      : t("composer.sendMessage");
+      ? "发送消息（运行中将加入队列）"
+      : "发送消息";
 
   const trailingContextCompactionEvent = useMemo<TimelineEventItem | null>(() => {
     for (let i = contentTimelineEvents.length - 1; i >= 0; i -= 1) {
@@ -329,12 +327,12 @@ export default function CenterPane() {
   }, [contentTimelineEvents, currentThreadId, threadStore.activeTurnIdByThread, trailingContextCompactionEvent]);
 
   const compactCommandDisabledHint = !currentThreadId
-    ? t("composer.needThread")
+    ? "需先进入线程"
     : isTurnRunning
-      ? t("composer.threadRunningNoCompact")
+      ? "线程运行中不可压缩"
       : "";
-  const threadContentCommandDisabledHint = !currentThreadId ? t("composer.needThread") : "";
-  const goalCommandDisabledHint = !currentThreadId ? t("composer.needThread") : "";
+  const threadContentCommandDisabledHint = !currentThreadId ? "需先进入线程" : "";
+  const goalCommandDisabledHint = !currentThreadId ? "需先进入线程" : "";
   const slashQuery = (() => {
     const text = stripComposeFileTokenChars(String(runtimeStore.composeInput ?? ""));
     const trimmedStart = text.trimStart();
@@ -349,54 +347,54 @@ export default function CenterPane() {
       {
         id: "compact",
         code: "compact",
-        title: t("composer.slashCompactTitle"),
-        hint: t("composer.slashCompactHint"),
+        title: "压缩当前线程",
+        hint: "调用线程压缩",
         disabled: Boolean(compactCommandDisabledHint),
         disabledHint: compactCommandDisabledHint || undefined,
       },
-      { id: "skills", code: "skills", title: t("composer.slashSkillsTitle"), hint: t("composer.slashSkillsHint") },
+      { id: "skills", code: "skills", title: "打开技能管理器", hint: "查看并管理 workspace skills" },
       {
         id: "goal-set",
         code: "goal-set",
-        title: t("composer.slashGoalSetTitle"),
-        hint: t("composer.slashGoalSetHint"),
+        title: "设置线程目标",
+        hint: "创建或更新当前线程 goal",
         disabled: Boolean(goalCommandDisabledHint),
         disabledHint: goalCommandDisabledHint || undefined,
       },
       {
         id: "goal-complete",
         code: "goal-complete",
-        title: t("composer.slashGoalCompleteTitle"),
-        hint: t("composer.slashGoalCompleteHint"),
+        title: "完成线程目标",
+        hint: "将当前线程 goal 标记为完成",
         disabled: Boolean(goalCommandDisabledHint),
         disabledHint: goalCommandDisabledHint || undefined,
       },
       {
         id: "goal-clear",
         code: "goal-clear",
-        title: t("composer.slashGoalClearTitle"),
-        hint: t("composer.slashGoalClearHint"),
+        title: "清除线程目标",
+        hint: "删除当前线程 goal",
         disabled: Boolean(goalCommandDisabledHint),
         disabledHint: goalCommandDisabledHint || undefined,
       },
       {
         id: "goal-get",
         code: "goal-get",
-        title: t("composer.slashGoalGetTitle"),
-        hint: t("composer.slashGoalGetHint"),
+        title: "读取线程目标",
+        hint: "从 app-server 刷新当前 goal",
         disabled: Boolean(goalCommandDisabledHint),
         disabledHint: goalCommandDisabledHint || undefined,
       },
       {
         id: "thread-content",
         code: "thread-content",
-        title: t("composer.slashThreadContentTitle"),
-        hint: t("composer.slashThreadContentHint"),
+        title: "读取线程内容",
+        hint: "调试：读取当前线程消息与事件窗口",
         disabled: Boolean(threadContentCommandDisabledHint),
         disabledHint: threadContentCommandDisabledHint || undefined,
       },
     ],
-    [compactCommandDisabledHint, goalCommandDisabledHint, t, threadContentCommandDisabledHint]
+    [compactCommandDisabledHint, goalCommandDisabledHint, threadContentCommandDisabledHint]
   );
   const filteredSlashCommands = useMemo(() => {
     if (!slashQuery) return slashCommands;
@@ -610,8 +608,8 @@ export default function CenterPane() {
       const goal = await runtime.refreshThreadGoal();
       showToast({
         kind: "info",
-        title: goal ? t("composer.goalCurrentTitle") : t("composer.goalEmptyTitle"),
-        message: goal?.objective ?? t("composer.goalEmptyMessage"),
+        title: goal ? "当前目标" : "没有目标",
+        message: goal?.objective ?? "当前线程未设置目标。",
       });
     } else if (command.id === "thread-content") {
       const threadId = currentThreadId;
@@ -622,7 +620,7 @@ export default function CenterPane() {
         includeAux: true,
       });
       if (!result.found) {
-        showToast({ kind: "warn", title: t("composer.threadNotFound"), message: threadId || t("composer.noReadableThread") });
+        showToast({ kind: "warn", title: "线程未找到", message: threadId || "当前没有可读取线程。" });
         return;
       }
       const messageCount = result.messages.length;
@@ -631,13 +629,8 @@ export default function CenterPane() {
       const hasMore = result.eventsPage.hasMore;
       showToast({
         kind: "info",
-        title: t("composer.threadContentRead"),
-        message: t("composer.threadContentSummary", {
-          messageCount,
-          eventCount,
-          totalEvents,
-          suffix: hasMore ? t("composer.threadContentHasMore") : "",
-        }),
+        title: "线程内容已读取",
+        message: `消息 ${messageCount} 条；事件 ${eventCount}/${totalEvents}${hasMore ? "（可继续分页）" : ""}`,
       });
     }
     updateComposeInput("");
@@ -795,7 +788,7 @@ export default function CenterPane() {
                     sendDisabled={sendDisabled}
                     sendTitle={sendTitle}
                     interruptDisabled={!isTurnRunning}
-                    interruptTitle={t("composer.stopCurrentTask")}
+                    interruptTitle="停止当前任务"
                     composerInputRef={composerInputRef}
                     onUpdateComposeInput={updateComposeInput}
                     onUpdateComposeFileMentions={updateComposeFileMentions}
@@ -864,7 +857,7 @@ export default function CenterPane() {
               className="composer-lightbox-overlay"
               role="dialog"
               aria-modal="true"
-              aria-label={t("composer.imagePreview")}
+              aria-label="图片预览"
               onClick={(event) => {
                 if (event.target === event.currentTarget) closeComposeLightbox();
               }}
@@ -882,7 +875,7 @@ export default function CenterPane() {
                   type="button"
                   onClick={closeComposeLightbox}
                 >
-                  {t("common.close")}
+                  关闭
                 </button>
               </div>
             </div>,

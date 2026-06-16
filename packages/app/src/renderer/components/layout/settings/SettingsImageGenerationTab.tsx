@@ -12,7 +12,6 @@ import {
   type LocalImageGenerationSettings,
 } from "@codenexus/feature-imagegen/settings";
 import { getCachedUserLocalSettings, patchUserLocalSettings } from "../../../domain/localSettings";
-import { translate } from "../../../i18n/translate";
 import { showToast } from "../../../ui/toast";
 
 function clampNumber(value: unknown, min: number, max: number) {
@@ -30,17 +29,17 @@ export default function SettingsImageGenerationTab() {
   const dirty = JSON.stringify(normalized) !== JSON.stringify(snapshot);
   const configured = Boolean(normalized.enabled && normalized.baseUrl && normalized.apiKey);
   const saveButtonText = saving
-    ? translate("settingsImageGeneration.saving")
+    ? "保存中..."
     : dirty
-      ? translate("settingsImageGeneration.saveConfig")
-      : translate("settingsImageGeneration.configSaved");
+      ? "保存配置"
+      : "配置已保存";
   const statusText = !normalized.enabled
-    ? translate("settingsImageGeneration.disabled")
+    ? "已关闭"
     : !normalized.baseUrl
-      ? translate("settingsImageGeneration.missingServiceUrl")
+      ? "缺少服务地址"
       : !normalized.apiKey
-        ? translate("settingsImageGeneration.missingApiKey")
-        : translate("settingsImageGeneration.configured");
+        ? "缺少 API Key"
+        : "已配置";
   const patch = (next: Partial<LocalImageGenerationSettings>) => setDraft((prev) => ({ ...prev, ...next }));
   const normalizeDraftNumbers = () => {
     const next = normalizeImageGenerationSettings(draft);
@@ -59,13 +58,13 @@ export default function SettingsImageGenerationTab() {
       setDraft(next);
       showToast({
         kind: "success",
-        title: translate("settingsImageGeneration.saveSuccessTitle"),
-        message: translate("settingsImageGeneration.saveSuccessMessage"),
+        title: "保存成功",
+        message: "图片生成配置已更新。",
       });
     } catch (error: any) {
       showToast({
         kind: "error",
-        title: translate("settingsImageGeneration.saveFailedTitle"),
+        title: "保存失败",
         message: String(error?.message ?? error ?? "unknown error"),
       });
     } finally {
@@ -74,9 +73,9 @@ export default function SettingsImageGenerationTab() {
   };
 
   return (
-    <section className="settings-card" aria-label={translate("settingsImageGeneration.aria")}>
+    <section className="settings-card" aria-label="图片生成设置">
       <header className="settings-card-head">
-        <div className="settings-card-title">{translate("settingsImageGeneration.title")}</div>
+        <div className="settings-card-title">图片生成</div>
         <button className="btn-mini" type="button" disabled={saving || !dirty} onClick={() => void save()}>
           {saveButtonText}
         </button>
@@ -84,7 +83,7 @@ export default function SettingsImageGenerationTab() {
       <div className="settings-card-body">
         <div className="settings-grid">
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsImageGeneration.enable")}</span>
+            <span className="context-label dim">启用</span>
             <div className="settings-inline">
               <input
                 id="chk-image-generation-enabled"
@@ -97,7 +96,7 @@ export default function SettingsImageGenerationTab() {
             </div>
           </label>
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsImageGeneration.serviceUrl")}</span>
+            <span className="context-label dim">服务地址</span>
             <input
               id="inp-image-generation-base-url"
               className="context-input mono"
@@ -122,7 +121,7 @@ export default function SettingsImageGenerationTab() {
             />
           </label>
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsImageGeneration.model")}</span>
+            <span className="context-label dim">模型</span>
             <input
               id="inp-image-generation-model"
               className="context-input mono"
@@ -134,7 +133,7 @@ export default function SettingsImageGenerationTab() {
             />
           </label>
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsImageGeneration.defaultSize")}</span>
+            <span className="context-label dim">默认尺寸</span>
             <select
               id="sel-image-generation-size"
               className="context-input mono"
@@ -150,7 +149,7 @@ export default function SettingsImageGenerationTab() {
             </select>
           </label>
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsImageGeneration.defaultQuality")}</span>
+            <span className="context-label dim">默认质量</span>
             <select
               id="sel-image-generation-quality"
               className="context-input mono"
@@ -166,7 +165,7 @@ export default function SettingsImageGenerationTab() {
             </select>
           </label>
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsImageGeneration.outputFormat")}</span>
+            <span className="context-label dim">输出格式</span>
             <select
               id="sel-image-generation-output-format"
               className="context-input mono"
@@ -182,7 +181,7 @@ export default function SettingsImageGenerationTab() {
             </select>
           </label>
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsImageGeneration.defaultBackground")}</span>
+            <span className="context-label dim">默认背景</span>
             <select
               id="sel-image-generation-background"
               className="context-input mono"
@@ -198,7 +197,7 @@ export default function SettingsImageGenerationTab() {
             </select>
           </label>
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsImageGeneration.moderation")}</span>
+            <span className="context-label dim">审核级别</span>
             <select
               id="sel-image-generation-moderation"
               className="context-input mono"
@@ -214,7 +213,7 @@ export default function SettingsImageGenerationTab() {
             </select>
           </label>
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsImageGeneration.outputCompression")}</span>
+            <span className="context-label dim">输出压缩</span>
             <div className="settings-inline">
               <input
                 id="inp-image-generation-output-compression"
@@ -240,7 +239,7 @@ export default function SettingsImageGenerationTab() {
             </div>
           </label>
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsImageGeneration.timeout")}</span>
+            <span className="context-label dim">超时</span>
             <div className="settings-inline">
               <input
                 id="inp-image-generation-timeout"
@@ -266,7 +265,7 @@ export default function SettingsImageGenerationTab() {
             </div>
           </label>
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsImageGeneration.imageCount")}</span>
+            <span className="context-label dim">图片数量</span>
             <div className="settings-inline">
               <input
                 id="inp-image-generation-max-images"
@@ -289,19 +288,19 @@ export default function SettingsImageGenerationTab() {
           </label>
           <div className={`status-panel${configured ? " is-ready" : ""}${!normalized.enabled ? " is-disabled" : ""}`}>
             <div className="status-row">
-              <span className="dim">{translate("settingsImageGeneration.status")}</span>
+              <span className="dim">状态</span>
               <span className="mono">{statusText}</span>
             </div>
             <div className="status-row">
-              <span className="dim">{translate("settingsImageGeneration.mode")}</span>
+              <span className="dim">模式</span>
               <span className="mono">generate / edit</span>
             </div>
             <div className="status-row">
-              <span className="dim">{translate("settingsImageGeneration.generate")}</span>
+              <span className="dim">生成</span>
               <span className="mono">{resolveImageGenerationEndpointPreview(normalized.baseUrl, "generations")}</span>
             </div>
             <div className="status-row">
-              <span className="dim">{translate("settingsImageGeneration.edit")}</span>
+              <span className="dim">编辑</span>
               <span className="mono">{resolveImageGenerationEndpointPreview(normalized.baseUrl, "edits")}</span>
             </div>
           </div>

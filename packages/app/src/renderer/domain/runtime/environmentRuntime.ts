@@ -5,7 +5,6 @@ type AppShellStore = ReturnType<typeof useAppShellStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
@@ -13,7 +12,6 @@ export type EnvironmentRuntimeDeps = {
   appTimelineId: string;
   appShellStore: AppShellStore;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -30,33 +28,24 @@ function readErrorMessage(error: unknown): string {
 }
 
 export function createEnvironmentRuntime(deps: EnvironmentRuntimeDeps): EnvironmentRuntime {
-  const { appTimelineId, appShellStore, pushEvent, translate, showToast } = deps;
+  const { appTimelineId, appShellStore, pushEvent, showToast } = deps;
 
   const checkEnvironment = async () => {
     showToast({
       kind: "info",
-      title: translate("runtime.checkEnvironmentTitle"),
-      message: translate("runtime.checkingCodexNodeNpm"),
+      title: "检查环境",
+      message: "正在检测 codex/node/npm...",
     });
 
     try {
       const res = await codexDesktop.codexServer.getDiagnostics();
       const ready = Boolean(res.codex.ok) && Boolean(res.node.ok) && Boolean(res.npm.ok);
       const details = [
-        translate("runtime.diagnosticLine", {
-          name: "codex",
-          status: res.codex.ok ? translate("runtime.diagnosticOk") : translate("runtime.diagnosticMissing"),
-        }),
+        `codex：${res.codex.ok ? "正常" : "缺失"}`,
         String(res.codex.details ?? "").trim(),
-        translate("runtime.diagnosticLine", {
-          name: "node",
-          status: res.node.ok ? translate("runtime.diagnosticOk") : translate("runtime.diagnosticMissing"),
-        }),
+        `node：${res.node.ok ? "正常" : "缺失"}`,
         String(res.node.details ?? "").trim(),
-        translate("runtime.diagnosticLine", {
-          name: "npm",
-          status: res.npm.ok ? translate("runtime.diagnosticOk") : translate("runtime.diagnosticMissing"),
-        }),
+        `npm：${res.npm.ok ? "正常" : "缺失"}`,
         String(res.npm.details ?? "").trim(),
       ]
         .filter(Boolean)
@@ -70,8 +59,8 @@ export function createEnvironmentRuntime(deps: EnvironmentRuntimeDeps): Environm
       if (ready) {
         showToast({
           kind: "success",
-          title: translate("runtime.environmentReadyTitle"),
-          message: translate("runtime.codexNodeNpmReady"),
+          title: "环境正常",
+          message: "codex/node/npm 已就绪",
         });
         return;
       }
@@ -79,12 +68,12 @@ export function createEnvironmentRuntime(deps: EnvironmentRuntimeDeps): Environm
       appShellStore.openSettings("env");
       showToast({
         kind: "warn",
-        title: translate("runtime.environmentNotReadyTitle"),
-        message: translate("runtime.environmentInstallHint"),
+        title: "环境未就绪",
+        message: "请按“环境检测”中的指引手动安装所需环境。",
       });
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
-      showToast({ kind: "error", title: translate("runtime.checkFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "检查失败", message: msg });
       pushEvent("env:error", msg, { threadId: appTimelineId, level: "error" });
     }
   };

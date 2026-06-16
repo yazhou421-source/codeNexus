@@ -6,7 +6,6 @@ import type {
   McpResourceTemplateEntry as ResourceTemplate,
 } from "../../domain/types";
 import { getRuntimeOrchestrator } from "../../domain/runtimeOrchestrator";
-import { translate } from "../../i18n/translate";
 import { useMcpStore } from "../../stores/mcp.store";
 import { useMcpResourceStore } from "../../stores/mcpResource.store";
 import { useRuntimeStore } from "../../stores/runtime.store";
@@ -45,7 +44,7 @@ function resourceDisplayTitle(resource: Resource): string {
     normalizeText(resource.title) ||
     normalizeText(resource.name) ||
     normalizeText(resource.uri) ||
-    translate("mcpResources.untitledResource")
+    "未命名资源"
   );
 }
 
@@ -54,7 +53,7 @@ function templateDisplayTitle(template: ResourceTemplate): string {
     normalizeText(template.title) ||
     normalizeText(template.name) ||
     normalizeText(template.uriTemplate) ||
-    translate("mcpResources.untitledTemplate")
+    "未命名模板"
   );
 }
 
@@ -197,26 +196,26 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
       : fallbackParameterEntries;
   const serverStatusText = selectedServer
     ? [
-        selectedServer.enabled ? translate("mcpResources.enabled") : translate("mcpResources.disabled"),
+        selectedServer.enabled ? "已启用" : "未启用",
         selectedServer.state === "connected"
-          ? translate("mcpResources.connected")
+          ? "已连接"
           : selectedServer.state === "error"
-            ? translate("mcpResources.error")
+            ? "异常"
             : selectedServer.state === "disabled"
-              ? translate("mcpResources.serverDisabled")
-              : translate("mcpResources.pending"),
+              ? "已禁用"
+              : "待确认",
         typeof selectedServer.authenticated === "boolean"
           ? selectedServer.authenticated
-            ? translate("mcpResources.authenticated")
-            : translate("mcpResources.unauthenticated")
+            ? "已认证"
+            : "未认证"
           : "",
-        translate("mcpResources.resourcesCount", { count: selectedServer.resources.length }),
-        translate("mcpResources.templatesCount", { count: selectedServer.resourceTemplates.length }),
+        `资源 ${selectedServer.resources.length}`,
+        `模板 ${selectedServer.resourceTemplates.length}`,
       ]
         .filter(Boolean)
         .join(" · ")
     : "";
-  const threadHintText = currentThreadId ? "" : translate("mcpResources.threadRequired");
+  const threadHintText = currentThreadId ? "" : "读取 MCP 资源需要当前线程上下文；请先进入一个线程，再执行读取。";
   const isReading = mcpResourceStore.loadState === "loading";
   const canReadSelection = Boolean(selectedServer && currentThreadId && activeSelectionUri);
 
@@ -288,7 +287,7 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
       });
       mcpResourceStore.setLoadState("ready");
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error ?? translate("mcpResources.readFailed"));
+      const message = error instanceof Error ? error.message : String(error ?? "读取失败");
       if (requestSeq !== latestReadSeqRef.current || currentSelectionReadKeyRef.current !== requestKey) return;
       mcpResourceStore.setCurrentResult(null, { cache: false });
       mcpResourceStore.setLoadState("error", message);
@@ -361,7 +360,7 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
     <section className={["mcp-resource-panel grid gap-3", className].filter(Boolean).join(" ")}>
       <div className="grid gap-2">
         <div className="grid gap-1.5">
-          <div className="context-label dim">{translate("mcpResources.server")}</div>
+          <div className="context-label dim">服务器（Server）</div>
           <SelectDropdown
             className="context-input mono w-full"
             modelValue={mcpResourceStore.selectedServerId}
@@ -385,7 +384,7 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
               .join(" ")}
             onClick={() => mcpResourceStore.setActiveTab("resources")}
           >
-            {translate("mcpResources.resourcesCount", { count: selectedServer?.resources.length ?? 0 })}
+            {`资源 ${selectedServer?.resources.length ?? 0}`}
           </button>
           <button
             type="button"
@@ -394,13 +393,13 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
               .join(" ")}
             onClick={() => mcpResourceStore.setActiveTab("templates")}
           >
-            {translate("mcpResources.templatesCount", { count: selectedServer?.resourceTemplates.length ?? 0 })}
+            {`模板 ${selectedServer?.resourceTemplates.length ?? 0}`}
           </button>
         </div>
 
         {!selectedServer ? (
           <div className="rounded-[10px] border border-dashed border-[var(--ui-well-border)] px-3 py-2 text-[12px] leading-[1.35] text-[color:var(--text-muted)]">
-            {translate("mcpResources.noServers")}
+            {"当前没有可用的 MCP 服务器。"}
           </div>
         ) : null}
       </div>
@@ -410,11 +409,11 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
           {activeTab === "resources" ? (
             <div className="grid gap-2">
               <div className="text-[12px] font-medium text-[color:var(--text-muted)]">
-                {translate("mcpResources.readableResources")}
+                {"可读资源"}
               </div>
               {selectedServer.resources.length === 0 ? (
                 <div className="rounded-[10px] border border-dashed border-[var(--ui-well-border)] px-3 py-2 text-[12px] leading-[1.35] text-[color:var(--text-muted)]">
-                  {translate("mcpResources.noReadableResources")}
+                  {"这个服务器当前没有暴露可直接读取的资源。"}
                 </div>
               ) : (
                 <div className="grid max-h-[190px] gap-1 overflow-y-auto pr-1 app-scrollbar">
@@ -434,11 +433,11 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
           ) : (
             <div className="grid gap-2">
               <div className="text-[12px] font-medium text-[color:var(--text-muted)]">
-                {translate("mcpResources.resourceTemplates")}
+                {"资源模板"}
               </div>
               {selectedServer.resourceTemplates.length === 0 ? (
                 <div className="rounded-[10px] border border-dashed border-[var(--ui-well-border)] px-3 py-2 text-[12px] leading-[1.35] text-[color:var(--text-muted)]">
-                  {translate("mcpResources.noResourceTemplates")}
+                  {"这个服务器当前没有暴露资源模板。"}
                 </div>
               ) : (
                 <div className="grid max-h-[190px] gap-1 overflow-y-auto pr-1 app-scrollbar">
@@ -471,7 +470,7 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
                 {selectedTemplateAnalysis.variables.length > 0 ? (
                   <div className="grid gap-2">
                     <div className="text-[12px] font-medium text-[color:var(--text-muted)]">
-                      {translate("mcpResources.parameters")}
+                      {"配置参数"}
                     </div>
                     <div className="grid gap-2">
                       {selectedTemplateAnalysis.variables.map((name) => (
@@ -481,7 +480,7 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
                             className="context-input mono"
                             type="text"
                             value={selectedTemplateDraft.values[name] ?? ""}
-                            placeholder={translate("mcpResources.fillParameter", { name })}
+                            placeholder={`填写 ${name}`}
                             onChange={(event) =>
                               mcpResourceStore.setTemplateField(mcpResourceStore.selectedTemplateKey, name, event.currentTarget.value)
                             }
@@ -493,19 +492,19 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
                 ) : null}
 
                 <div className="grid gap-1">
-                  <div className="context-label dim">{translate("mcpResources.preview")}</div>
+                  <div className="context-label dim">{"展开预览"}</div>
                   <div className="rounded-[10px] border border-[var(--ui-well-border)] bg-[var(--ui-well-bg)] px-2.5 py-2 mono text-[11px] break-all">
-                    {templatePreviewUri || translate("mcpResources.previewPlaceholder")}
+                    {templatePreviewUri || "请先填写模板变量或手动输入 URI"}
                   </div>
                   {!selectedTemplateAnalysis.supported ? (
                     <div className="text-[11px] leading-[1.35] text-[color:var(--text-muted)]">
-                      {translate("mcpResources.complexTemplateHint")}
+                      {"这个模板包含复杂 URI Template 语法，第一版不自动展开，建议直接填写最终 URI。"}
                     </div>
                   ) : null}
                 </div>
 
                 <div className="grid gap-1">
-                  <div className="context-label dim">{translate("mcpResources.manualUri")}</div>
+                  <div className="context-label dim">{"手动 URI"}</div>
                   <input
                     className="context-input mono"
                     type="text"
@@ -520,8 +519,8 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
             ) : (
               <div className="text-[12px] leading-[1.4] text-[color:var(--text-muted)]">
                 {activeTab === "resources"
-                  ? translate("mcpResources.selectResourceHint")
-                  : translate("mcpResources.selectTemplateHint")}
+                  ? "选择一个资源后即可读取内容。"
+                  : "选择一个模板后即可填写变量并读取内容。"}
               </div>
             )}
 
@@ -536,7 +535,7 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="min-w-0 flex-1">{mcpResourceStore.errorText}</span>
                   <button type="button" className="btn-mini" disabled={!canReadSelection || isReading} onClick={() => void readUri(activeSelectionUri, true)}>
-                    {translate("common.retry")}
+                    {"重试"}
                   </button>
                 </div>
               </div>
@@ -546,16 +545,16 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
               <div className="grid gap-2 rounded-[10px] border border-[var(--ui-well-border)] bg-[var(--ui-well-bg)] p-3">
                 <div className="grid gap-1">
                   <div className="text-[12px] font-medium text-[color:var(--text-muted)]">
-                    {translate("mcpResources.resourceName")}
+                    {"资源名"}
                   </div>
                   <div className="text-[12px] font-medium">{summaryResourceLabel}</div>
                 </div>
                 <div className="grid gap-1">
                   <div className="text-[12px] font-medium text-[color:var(--text-muted)]">
-                    {translate("mcpResources.tools")}
+                    {"工具"}
                   </div>
                   {summaryToolNames.length === 0 ? (
-                    <div className="mono dim text-[11px]">{translate("mcpResources.noTools")}</div>
+                    <div className="mono dim text-[11px]">{"无工具"}</div>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {summaryToolNames.map((toolName) => (
@@ -571,10 +570,10 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
                 </div>
                 <div className="grid gap-1">
                   <div className="text-[12px] font-medium text-[color:var(--text-muted)]">
-                    {translate("mcpResources.parameters")}
+                    {"配置参数"}
                   </div>
                   {summaryParameterEntries.length === 0 ? (
-                    <div className="mono dim text-[11px]">{translate("mcpResources.noParameters")}</div>
+                    <div className="mono dim text-[11px]">{"无配置参数"}</div>
                   ) : (
                     <div className="grid gap-1">
                       {summaryParameterEntries.map((entry) => (
@@ -586,7 +585,7 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
                             {entry.key}
                           </div>
                           <div className="mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px]">
-                            {entry.value || translate("mcpResources.notFilled")}
+                            {entry.value || "未填写"}
                           </div>
                         </div>
                       ))}
@@ -596,7 +595,7 @@ export default function McpResourcePanel({ className }: McpResourcePanelProps) {
                 {isReading ? (
                   <div className="mono dim inline-flex items-center gap-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px]">
                     <span className="running-indicator is-muted" aria-hidden="true" />
-                    <span>{translate("mcpResources.reading")}</span>
+                    <span>{"读取中…"}</span>
                   </div>
                 ) : null}
               </div>

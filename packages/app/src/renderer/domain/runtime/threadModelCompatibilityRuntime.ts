@@ -21,7 +21,6 @@ type ThreadStore = ReturnType<typeof useThreadStore>;
 type TimelineStore = ReturnType<typeof useTimelineStore>;
 
 type RuntimeEventLevel = "info" | "warn" | "error";
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 
 type ThreadScopedState = {
@@ -53,7 +52,6 @@ export type ThreadModelCompatibilityRuntimeDeps = {
   setThreadWorkspace: (threadId: string, workspacePath: string | undefined) => void;
   clearThreadWorkspace: (threadId: string) => void;
   pushEvent: PushEvent;
-  translate: TranslateFn;
 };
 
 export type ThreadModelCompatibilityRuntime = {
@@ -104,7 +102,6 @@ export function createThreadModelCompatibilityRuntime(
     setThreadWorkspace,
     clearThreadWorkspace,
     pushEvent,
-    translate,
   } = deps;
 
   const threadStartConfigOverridesByThreadId = new Map<string, ThreadStartConfigOverrides>();
@@ -198,7 +195,7 @@ export function createThreadModelCompatibilityRuntime(
       ...(oldLocalThread ?? {}),
       id: newThreadId,
       title: nextTitle,
-      meta: String(existing?.meta ?? oldLocalThread?.meta ?? workspace).trim() || translate("runtime.noWorkspace"),
+      meta: String(existing?.meta ?? oldLocalThread?.meta ?? workspace).trim() || "无工作区",
       cwd: workspace || undefined,
       createdAt: oldLocalThread?.createdAt ?? now,
       updatedAt: now,
@@ -289,7 +286,7 @@ export function createThreadModelCompatibilityRuntime(
       } catch (error: unknown) {
         return {
           ok: false,
-          error: readErrorMessage(error) || translate("runtime.createImageGenerationDisabledThreadFailed"),
+          error: readErrorMessage(error) || "无法创建已禁用官方图片生成的会话",
         };
       }
     }
@@ -305,7 +302,7 @@ export function createThreadModelCompatibilityRuntime(
 
     return {
       ok: false,
-      error: translate("runtime.cannotDisableOfficialImageGenerationForThread"),
+      error: "当前会话无法关闭官方 image_generation；请新建会话后再发送。",
     };
   };
 

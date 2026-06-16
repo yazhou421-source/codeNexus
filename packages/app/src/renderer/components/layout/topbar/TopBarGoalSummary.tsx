@@ -1,6 +1,5 @@
 import { CheckCircle2, ChevronDown, Pencil, RefreshCw, Target, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { getRuntimeOrchestrator } from "../../../domain/runtimeOrchestrator";
 import { useAppShellStore } from "../../../stores/appShell.store";
 import { useThreadStore } from "../../../stores/thread.store";
@@ -11,8 +10,14 @@ type TopBarGoalSummaryProps = {
 
 const numberFormat = new Intl.NumberFormat();
 
+const GOAL_STATUS_LABELS: Record<string, string> = {
+  active: "进行中",
+  paused: "已暂停",
+  budgetLimited: "预算受限",
+  complete: "已完成",
+};
+
 export default function TopBarGoalSummary({ className }: TopBarGoalSummaryProps) {
-  const { t } = useTranslation();
   const appShellStore = useAppShellStore();
   const threadStore = useThreadStore();
   const runtime = getRuntimeOrchestrator();
@@ -21,7 +26,7 @@ export default function TopBarGoalSummary({ className }: TopBarGoalSummaryProps)
   const goal = threadStore.currentGoal;
   const visible = appShellStore.mainView === "chat" && !appShellStore.settingsOpen && Boolean(goal);
   const status = goal?.status ?? "active";
-  const statusLabel = t(`topbarGoal.status.${status}`, { defaultValue: status });
+  const statusLabel = GOAL_STATUS_LABELS[status] ?? status;
   const tokensText = useMemo(() => {
     const current = Math.max(0, Math.round(Number(goal?.tokensUsed ?? 0)));
     const budget = goal?.tokenBudget;
@@ -31,12 +36,12 @@ export default function TopBarGoalSummary({ className }: TopBarGoalSummaryProps)
   const progressText = goal?.tokenBudget ? tokensText : statusLabel;
   const elapsedText = useMemo(() => {
     const seconds = Math.max(0, Math.round(Number(goal?.timeUsedSeconds ?? 0)));
-    if (seconds < 60) return t("topbarGoal.elapsedSeconds", { count: seconds });
+    if (seconds < 60) return `${seconds} 秒`;
     const minutes = Math.round(seconds / 60);
-    if (minutes < 60) return t("topbarGoal.elapsedMinutes", { count: minutes });
+    if (minutes < 60) return `${minutes} 分钟`;
     const hours = Math.round(minutes / 60);
-    return t("topbarGoal.elapsedHours", { count: hours });
-  }, [goal?.timeUsedSeconds, t]);
+    return `${hours} 小时`;
+  }, [goal?.timeUsedSeconds]);
 
   useEffect(() => {
     if (!visible) setOpen(false);
@@ -98,7 +103,7 @@ export default function TopBarGoalSummary({ className }: TopBarGoalSummaryProps)
         onClick={() => setOpen((next) => !next)}
       >
         <Target className="topbar-goal-icon" aria-hidden="true" />
-        <span className="topbar-goal-label">{t("topbarGoal.goal")}</span>
+        <span className="topbar-goal-label">目标</span>
         <span className="topbar-goal-progress mono">{progressText}</span>
         <span className="topbar-goal-current">
           <span className="topbar-goal-current-text">{goal.objective}</span>
@@ -108,9 +113,9 @@ export default function TopBarGoalSummary({ className }: TopBarGoalSummaryProps)
 
       {open ? (
         <div id="topbar-goal-menu" className="topbar-menu-shell topbar-menu-shell--goal" onClick={(event) => event.stopPropagation()}>
-          <div className="topbar-dropdown topbar-menu topbar-goal-menu app-scrollbar" role="dialog" aria-label={t("topbarGoal.currentGoal")}>
+          <div className="topbar-dropdown topbar-menu topbar-goal-menu app-scrollbar" role="dialog" aria-label="当前线程目标">
             <div className="topbar-goal-menu-head">
-              <span className="topbar-menu-heading">{t("topbarGoal.currentGoal")}</span>
+              <span className="topbar-menu-heading">当前线程目标</span>
               <span className={`topbar-goal-status mono is-${status}`}>{statusLabel}</span>
             </div>
 
@@ -118,11 +123,11 @@ export default function TopBarGoalSummary({ className }: TopBarGoalSummaryProps)
 
             <div className="topbar-goal-metrics">
               <div className="topbar-goal-metric">
-                <span className="topbar-goal-metric-label mono">{t("topbarGoal.tokens")}</span>
+                <span className="topbar-goal-metric-label mono">Token</span>
                 <span className="topbar-goal-metric-value mono">{tokensText}</span>
               </div>
               <div className="topbar-goal-metric">
-                <span className="topbar-goal-metric-label mono">{t("topbarGoal.elapsed")}</span>
+                <span className="topbar-goal-metric-label mono">耗时</span>
                 <span className="topbar-goal-metric-value mono">{elapsedText}</span>
               </div>
             </div>
@@ -130,19 +135,19 @@ export default function TopBarGoalSummary({ className }: TopBarGoalSummaryProps)
             <div className="topbar-menu-section topbar-goal-actions">
               <button className="btn-mini !justify-start" type="button" onClick={() => void onEditGoal()}>
                 <Pencil aria-hidden="true" />
-                {t("topbarGoal.setGoal")}
+                {"设置/更新目标"}
               </button>
               <button className="btn-mini !justify-start" type="button" disabled={goal.status === "complete"} onClick={() => void onCompleteGoal()}>
                 <CheckCircle2 aria-hidden="true" />
-                {t("topbarGoal.completeGoal")}
+                标记完成
               </button>
               <button className="btn-mini !justify-start danger" type="button" onClick={() => void onClearGoal()}>
                 <Trash2 aria-hidden="true" />
-                {t("topbarGoal.clearGoal")}
+                清除目标
               </button>
               <button className="btn-mini !justify-start" type="button" onClick={() => void onRefreshGoal()}>
                 <RefreshCw aria-hidden="true" />
-                {t("topbarGoal.refreshGoal")}
+                刷新目标
               </button>
             </div>
           </div>

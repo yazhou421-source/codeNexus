@@ -1,7 +1,6 @@
 import { codexDesktop } from "../../api/codexDesktopClient";
 
 type RuntimeEventLevel = "info" | "warn" | "error";
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 
 export type TurnInterruptOptions = {
@@ -13,7 +12,6 @@ export type ThreadTurnControlRuntimeDeps = {
   getActiveTurnId: (threadId: string) => string;
   getServerIdForThread: (threadId: string) => string;
   pushEvent: PushEvent;
-  translate: TranslateFn;
 };
 
 export type ThreadTurnControlRuntime = {
@@ -31,7 +29,7 @@ function readErrorMessage(error: unknown): string {
 }
 
 export function createThreadTurnControlRuntime(deps: ThreadTurnControlRuntimeDeps): ThreadTurnControlRuntime {
-  const { getCurrentThreadId, getActiveTurnId, getServerIdForThread, pushEvent, translate } = deps;
+  const { getCurrentThreadId, getActiveTurnId, getServerIdForThread, pushEvent } = deps;
 
   const requestTurnInterrupt = async (
     threadIdValue: string,
@@ -45,7 +43,7 @@ export function createThreadTurnControlRuntime(deps: ThreadTurnControlRuntimeDep
     if (!serverId) return false;
     try {
       await codexDesktop.codexServer.rpc({ serverId, method: "turn/interrupt", params: { threadId, turnId } });
-      if (!opts?.silentSuccess) pushEvent("interrupt", translate("runtime.interruptRequested"), { threadId });
+      if (!opts?.silentSuccess) pushEvent("interrupt", "已请求停止当前回合", { threadId });
       return true;
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
@@ -59,7 +57,7 @@ export function createThreadTurnControlRuntime(deps: ThreadTurnControlRuntimeDep
     if (!threadId) return;
     const turnId = getActiveTurnId(threadId);
     if (!turnId) {
-      pushEvent("interrupt:error", translate("runtime.missingActiveTurnForInterrupt"), { threadId, level: "error" });
+      pushEvent("interrupt:error", "缺少 active turnId，无法执行 turn/interrupt", { threadId, level: "error" });
       return;
     }
     await requestTurnInterrupt(threadId, turnId);

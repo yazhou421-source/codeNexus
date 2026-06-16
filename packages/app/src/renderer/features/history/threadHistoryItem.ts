@@ -1,7 +1,6 @@
 // 历史列表项：把 HistoryThread 转为 UI 可展示的标题与元信息。
 import type { HistoryThread } from "@codenexus/shared/ipc";
 import type { ThreadHistoryItem } from "../../domain/types";
-import { translate } from "../../i18n/translate";
 import { resolveThreadTitle } from "./threadTitle";
 
 function basenameFromPath(value: string): string {
@@ -17,7 +16,7 @@ export function toThreadHistoryItem(item: HistoryThread): ThreadHistoryItem {
   const id = String(item.id ?? "");
   const cwd = String(item.cwd ?? "").trim() || undefined;
   const modelProvider = String(item.modelProvider ?? "").trim() || undefined;
-  const workspaceLabel = cwd ? basenameFromPath(cwd) : translate("runtime.noWorkspace");
+  const workspaceLabel = cwd ? basenameFromPath(cwd) : "无工作区";
   const meta = modelProvider ? `${workspaceLabel} · ${modelProvider}` : workspaceLabel;
   return {
     id,

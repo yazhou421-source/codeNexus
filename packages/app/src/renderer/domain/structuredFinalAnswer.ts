@@ -1,5 +1,3 @@
-import { translate } from "../i18n/translate";
-
 export const STRUCTURED_FINAL_ANSWER_TYPE_V1 = "codenexus.final_answer.v1" as const;
 
 export type StructuredFinalAnswerV1 = {
@@ -66,33 +64,33 @@ function normalizeLines(value: string): string[] {
 
 function listMarkdown(items: string[]): string {
   const lines = items.flatMap((item) => normalizeLines(item));
-  if (lines.length === 0) return `- ${translate("structuredAnswer.none")}`;
+  if (lines.length === 0) return `- （无）`;
   return lines.map((line) => `- ${line}`).join("\n");
 }
 
 export function structuredFinalAnswerToMarkdownV1(answer: StructuredFinalAnswerV1): string {
-  const summary = String(answer.summary ?? "").trim() || translate("structuredAnswer.none");
+  const summary = String(answer.summary ?? "").trim() || "（无）";
   const changes = listMarkdown(Array.isArray(answer.changes) ? answer.changes : []);
   const nextSteps = listMarkdown(Array.isArray(answer.next_steps) ? answer.next_steps : []);
   const commands = (Array.isArray(answer.commands) ? answer.commands : [])
     .map((cmd) => String(cmd ?? "").trim())
     .filter(Boolean);
 
-  const commandBlock = commands.length > 0 ? commands.join("\n") : `# ${translate("structuredAnswer.none")}`;
+  const commandBlock = commands.length > 0 ? commands.join("\n") : `# （无）`;
 
   return [
-    `## ${translate("structuredAnswer.summary")}`,
+    `## 总结`,
     summary,
     "",
-    `## ${translate("structuredAnswer.changes")}`,
+    `## 变更`,
     changes,
     "",
-    `## ${translate("structuredAnswer.commands")}`,
+    `## 命令`,
     "```bash",
     commandBlock,
     "```",
     "",
-    `## ${translate("structuredAnswer.nextSteps")}`,
+    `## 下一步`,
     nextSteps,
     "",
   ].join("\n");

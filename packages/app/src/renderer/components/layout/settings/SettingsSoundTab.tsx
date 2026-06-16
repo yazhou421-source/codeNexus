@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from "react";
 import { playNotificationSoundOnce } from "../../../features/notificationSound/player";
-import { translate } from "../../../i18n/translate";
 import { useNotificationSoundStore } from "../../../stores/notificationSound.store";
 import SelectDropdown from "../../ui/SelectDropdown";
 
@@ -15,13 +14,13 @@ export default function SettingsSoundTab() {
     soundStore.loadState === "idle"
       ? ""
       : soundStore.loadState === "loading"
-        ? translate("settingsSound.loading")
+        ? "加载中…"
         : soundStore.loadState === "error"
           ? soundStore.errorText
-            ? translate("settingsSound.loadFailedWithMessage", { message: soundStore.errorText })
-            : translate("settingsSound.loadFailed")
+            ? `加载失败：${soundStore.errorText}`
+            : "加载失败"
           : soundStore.available.length === 0
-            ? translate("settingsSound.noBuiltInSounds")
+            ? "未发现内置铃声（music/）"
             : "";
 
   useEffect(() => {
@@ -35,9 +34,9 @@ export default function SettingsSoundTab() {
   };
 
   return (
-    <section className="settings-card" aria-label={translate("settingsSound.aria")}>
+    <section className="settings-card" aria-label="提示音设置">
       <header className="settings-card-head">
-        <div className="settings-card-title">{translate("settingsSound.title")}</div>
+        <div className="settings-card-title">提示音</div>
         <div className="row" style={{ gap: 8, alignItems: "center" }}>
           <button
             id="btn-settings-sound-preview"
@@ -46,14 +45,14 @@ export default function SettingsSoundTab() {
             disabled={controlsDisabled}
             onClick={() => void preview()}
           >
-            {translate("settingsSound.preview")}
+            试听
           </button>
         </div>
       </header>
       <div className="settings-card-body">
         <div className="settings-grid">
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsSound.sound")}</span>
+            <span className="context-label dim">铃声</span>
             <SelectDropdown
               id="sel-settings-notification-sound"
               className="context-input mono w-full"
@@ -69,7 +68,7 @@ export default function SettingsSoundTab() {
           </label>
           {statusText ? <div className="dim text-[12px] leading-[1.25]">{statusText}</div> : null}
           <label className="settings-row">
-            <span className="context-label dim">{translate("settingsSound.volume")}</span>
+            <span className="context-label dim">音量</span>
             <div className="settings-volume">
               <input
                 id="rng-settings-notification-sound-volume"
@@ -85,7 +84,7 @@ export default function SettingsSoundTab() {
               <span className="mono dim settings-volume-value">{soundStore.volumePercent}%</span>
             </div>
           </label>
-          <div className="dim text-[12px] leading-[1.25]">{translate("settingsSound.description")}</div>
+          <div className="dim text-[12px] leading-[1.25]">线程结束时将播放一次提示音。音量设置会影响所有提示音播放。</div>
         </div>
       </div>
     </section>

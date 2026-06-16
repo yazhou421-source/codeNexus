@@ -11,7 +11,6 @@ type UserInputStore = ReturnType<typeof useUserInputStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 type CodexRespond = (args: {
@@ -29,7 +28,6 @@ export type PromptResponseRuntimeDeps = {
   userInputStore: UserInputStore;
   respond: CodexRespond;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -68,7 +66,7 @@ function isEmptyMcpElicitationSchema(value: unknown): boolean {
 }
 
 export function createPromptResponseRuntime(deps: PromptResponseRuntimeDeps): PromptResponseRuntime {
-  const { appTimelineId, runtimeStore, approvalStore, userInputStore, respond, pushEvent, translate, showToast } = deps;
+  const { appTimelineId, runtimeStore, approvalStore, userInputStore, respond, pushEvent, showToast } = deps;
 
   const submitUserInputPromptForThread = async (threadIdValue: unknown) => {
     const tid = String(threadIdValue ?? "").trim();
@@ -84,9 +82,9 @@ export function createPromptResponseRuntime(deps: PromptResponseRuntimeDeps): Pr
           const draft = userInputStore.getDraft(promptThreadId, prompt.requestId, question.id);
           const normalized = draft.map((answer) => answer.trim()).filter(Boolean);
           if (normalized.length === 0) {
-            const detail = translate("runtime.questionUnanswered", { header: question.header });
+            const detail = `问题未作答：${question.header}`;
             pushEvent("plan:input:error", detail, { threadId: promptThreadId || appTimelineId, level: "error" });
-            showToast({ kind: "warn", title: translate("runtime.qaIncompleteTitle"), message: detail });
+            showToast({ kind: "warn", title: "问答未完成", message: detail });
             return;
           }
           answers[question.id] = { answers: normalized };
@@ -98,7 +96,7 @@ export function createPromptResponseRuntime(deps: PromptResponseRuntimeDeps): Pr
           method: prompt.method,
           result: { answers },
         });
-        pushEvent("plan:input", translate("runtime.qaSubmitted", { count: prompt.questions.length }), {
+        pushEvent("plan:input", `已提交问答（${prompt.questions.length} 题）`, {
           threadId: promptThreadId || appTimelineId,
         });
       } else if (prompt.kind === "elicitationForm") {
@@ -108,9 +106,9 @@ export function createPromptResponseRuntime(deps: PromptResponseRuntimeDeps): Pr
         const raw = String(draft[0] ?? "").trim();
         const isEmptySchema = isEmptyMcpElicitationSchema(prompt.requestedSchema);
         if (!raw && !isEmptySchema) {
-          const detail = translate("runtime.mcpInputIncomplete", { server: prompt.serverName });
+          const detail = `MCP 输入未完成：${prompt.serverName}`;
           pushEvent("mcp:elicitation:error", detail, { threadId: promptThreadId || appTimelineId, level: "error" });
-          showToast({ kind: "warn", title: translate("runtime.inputIncompleteTitle"), message: detail });
+          showToast({ kind: "warn", title: "输入未完成", message: detail });
           return;
         }
 
@@ -118,9 +116,9 @@ export function createPromptResponseRuntime(deps: PromptResponseRuntimeDeps): Pr
         try {
           if (raw) content = JSON.parse(raw) as JsonValue;
         } catch {
-          const detail = translate("runtime.mcpInputInvalidJson");
+          const detail = "MCP 输入必须是合法 JSON";
           pushEvent("mcp:elicitation:error", detail, { threadId: promptThreadId || appTimelineId, level: "error" });
-          showToast({ kind: "warn", title: translate("runtime.invalidJsonTitle"), message: detail });
+          showToast({ kind: "warn", title: "JSON 无效", message: detail });
           return;
         }
 
@@ -130,7 +128,7 @@ export function createPromptResponseRuntime(deps: PromptResponseRuntimeDeps): Pr
           method: prompt.method,
           result: { action: "accept", content, _meta: null },
         });
-        pushEvent("mcp:elicitation", translate("runtime.mcpInputSubmitted", { server: prompt.serverName }), {
+        pushEvent("mcp:elicitation", `已提交 MCP 输入（${prompt.serverName}）`, {
           threadId: promptThreadId || appTimelineId,
         });
       } else {
@@ -140,7 +138,7 @@ export function createPromptResponseRuntime(deps: PromptResponseRuntimeDeps): Pr
           method: prompt.method,
           result: { action: "accept", content: null, _meta: null },
         });
-        pushEvent("mcp:elicitation", translate("runtime.mcpLinkConfirmed", { server: prompt.serverName }), {
+        pushEvent("mcp:elicitation", `已确认 MCP 链接操作（${prompt.serverName}）`, {
           threadId: promptThreadId || appTimelineId,
         });
       }
@@ -152,8 +150,8 @@ export function createPromptResponseRuntime(deps: PromptResponseRuntimeDeps): Pr
         prompt.method === "mcpServer/elicitation/request" ? "mcp:elicitation:error" : "plan:input:error";
       const title =
         prompt.method === "mcpServer/elicitation/request"
-          ? translate("runtime.mcpInputSubmitFailedTitle")
-          : translate("runtime.qaSubmitFailedTitle");
+          ? "MCP 输入提交失败"
+          : "问答提交失败";
       pushEvent(eventMethod, msg, { threadId: promptThreadId || appTimelineId, level: "error" });
       showToast({ kind: "error", title, message: msg });
     }
@@ -200,8 +198,8 @@ export function createPromptResponseRuntime(deps: PromptResponseRuntimeDeps): Pr
         kind: "error",
         title:
           prompt.method === "mcpServer/elicitation/request"
-            ? translate("runtime.cancelMcpInputFailedTitle")
-            : translate("runtime.cancelQaFailedTitle"),
+            ? "取消 MCP 输入失败"
+            : "取消问答失败",
         message: msg,
       });
     } finally {
@@ -290,13 +288,13 @@ export function createPromptResponseRuntime(deps: PromptResponseRuntimeDeps): Pr
       const decisionText = typeof decision === "string" ? decision : safeJsonStringify(decision, { space: 0 });
       showToast({
         kind: "success",
-        title: translate("runtime.approvalSubmittedTitle"),
+        title: "已提交审批",
         message: `decision=${decisionText}`,
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message || e.name : String(e ?? "");
       pushEvent("approval:error", msg, { threadId, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.approvalSubmitFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "审批提交失败", message: msg });
     }
   };
 

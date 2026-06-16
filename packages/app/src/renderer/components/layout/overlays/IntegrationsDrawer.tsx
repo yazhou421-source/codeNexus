@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { normalizeCodexMcpServerId } from "@codenexus/shared/codexMcp";
 import { codexDesktop } from "../../../api/codexDesktopClient";
 import { getRuntimeOrchestrator } from "../../../domain/runtimeOrchestrator";
@@ -41,7 +40,6 @@ function mcpArgsLabel(server: McpServerState) {
 
 export default function IntegrationsDrawer({ mode = "drawer", className }: IntegrationsDrawerProps) {
   const runtime = getRuntimeOrchestrator();
-  const { t } = useTranslation();
   const appShellStore = useAppShellStore();
   const runtimeStore = useRuntimeStore();
   const skillsStore = useSkillsStore();
@@ -101,14 +99,14 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
   };
 
   const skillsStateText = () => {
-    if (!runtimeStore.serverId) return t("skills.disconnected");
-    if (!runtimeStore.workspacePath) return t("skills.noWorkspace");
-    if (skillsStore.loadState === "loading") return t("skills.loading");
+    if (!runtimeStore.serverId) return "未连接服务";
+    if (!runtimeStore.workspacePath) return "未选择工作区";
+    if (skillsStore.loadState === "loading") return "加载中…";
     if (skillsStore.loadState === "error")
-      return skillsStore.errorText ? t("skills.loadFailedWithMessage", { message: skillsStore.errorText }) : t("skills.loadFailed");
+      return skillsStore.errorText ? `加载失败：${skillsStore.errorText}` : "加载失败";
     if (skillsStore.items.length === 0) {
-      if (skillsStore.parseErrors.length > 0) return t("skills.emptyWithErrorsRaw", { count: skillsStore.parseErrors.length });
-      return t("skills.empty");
+      if (skillsStore.parseErrors.length > 0) return `暂无可用技能（errors=${skillsStore.parseErrors.length}）`;
+      return "暂无可用技能";
     }
     return "";
   };
@@ -116,52 +114,52 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
   const activeHintText = () => {
     if (normalizedActiveTab === "skills") {
       const state = skillsStateText();
-      return state || t("integrations.skillsReadyHint");
+      return state || "按需启用，保持精简。";
     }
-    if (!runtimeStore.serverId) return t("skills.disconnected");
-    if (mcpStore.loadState === "loading") return t("skills.loading");
+    if (!runtimeStore.serverId) return "未连接服务";
+    if (mcpStore.loadState === "loading") return "加载中…";
     if (mcpStore.loadState === "error")
-      return mcpStore.errorText ? t("skills.loadFailedWithMessage", { message: mcpStore.errorText }) : t("skills.loadFailed");
-    return t("integrations.mcpReadyHint");
+      return mcpStore.errorText ? `加载失败：${mcpStore.errorText}` : "加载失败";
+    return "按需启用，减少依赖。";
   };
 
   const mcpStateText = () => {
-    if (!runtimeStore.serverId) return t("skills.disconnected");
-    if (mcpStore.loadState === "loading") return t("skills.loading");
+    if (!runtimeStore.serverId) return "未连接服务";
+    if (mcpStore.loadState === "loading") return "加载中…";
     if (mcpStore.loadState === "error")
-      return mcpStore.errorText ? t("skills.loadFailedWithMessage", { message: mcpStore.errorText }) : t("skills.loadFailed");
-    if (mcpStore.servers.length === 0) return t("integrations.noMcpConfig");
+      return mcpStore.errorText ? `加载失败：${mcpStore.errorText}` : "加载失败";
+    if (mcpStore.servers.length === 0) return "暂无 MCP 配置";
     return "";
   };
 
   const switcherStatusText = () => {
-    if (codexConfigSwitcherStore.loadState === "loading") return t("skills.loading");
+    if (codexConfigSwitcherStore.loadState === "loading") return "加载中…";
     if (codexConfigSwitcherStore.loadState === "error") return codexConfigSwitcherStore.errorText;
     const active = codexConfigSwitcherStore.activeProfile;
     const count = codexConfigSwitcherStore.profiles.length;
     const target = codexConfigSwitcherStore.codexConfigPath || "~/.codex/config.toml";
-    if (!active) return t("integrations.switcherEmpty", { target });
-    return t("integrations.switcherActive", { name: active.name, count, target });
+    if (!active) return `未接管配置；目标：${target}`;
+    return `当前：${active.name}；配置集 ${count} 个；目标：${target}`;
   };
 
   const mcpStateLabel = (server: McpServerState) => {
-    if (!server.enabled) return t("integrations.stateDisabled");
-    if (server.state === "connected") return t("integrations.stateConnected");
-    if (server.state === "connecting") return t("integrations.stateConnecting");
-    if (server.state === "error") return t("integrations.stateError");
-    if (server.state === "disabled") return t("integrations.stateDisabledServer");
-    return server.state ? String(server.state) : t("integrations.stateUnknown");
+    if (!server.enabled) return "未启用";
+    if (server.state === "connected") return "已连接";
+    if (server.state === "connecting") return "连接中";
+    if (server.state === "error") return "异常";
+    if (server.state === "disabled") return "已禁用";
+    return server.state ? String(server.state) : "未知";
   };
 
   const mcpTransportLabel = (server: McpServerState) => {
     if (server.url) return String(server.url);
     if (server.command) return `cmd=${String(server.command)}`;
-    return t("integrations.stateUnknown");
+    return "未知";
   };
 
   const mcpSummarySubtext = (server: McpServerState) => {
     const transport = mcpTransportLabel(server);
-    if (!transport || transport === t("integrations.stateUnknown")) return "";
+    if (!transport || transport === "未知") return "";
     return transport;
   };
 
@@ -197,7 +195,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
       await runtime.importCurrentCodexConfigProfile();
       setSwitcherSelectedProfileId(codexConfigSwitcherStore.state.activeProfileId ?? "");
     } catch (error: any) {
-      setSwitcherErrorText(String(error?.message ?? error ?? t("integrations.importFailed")));
+      setSwitcherErrorText(String(error?.message ?? error ?? "导入失败"));
     } finally {
       setSwitcherPending(false);
     }
@@ -211,7 +209,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
     try {
       await runtime.activateCodexConfigProfile(id);
     } catch (error: any) {
-      setSwitcherErrorText(String(error?.message ?? error ?? t("integrations.activateFailed")));
+      setSwitcherErrorText(String(error?.message ?? error ?? "激活失败"));
     } finally {
       setSwitcherPending(false);
     }
@@ -222,7 +220,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
     setMcpJsonResultIsError(false);
     const text = mcpJsonText.trim();
     if (!text) {
-      setMcpJsonResultText(t("integrations.inputJson"));
+      setMcpJsonResultText("请输入 JSON。");
       setMcpJsonResultIsError(true);
       return;
     }
@@ -232,13 +230,13 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
       setMcpJsonResultIsError(res.imported === 0 || res.errors.length > 0);
       setMcpJsonResultText(
         res.errors.length > 0
-          ? t("integrations.importedWithErrors", { count: res.imported, errors: res.errors.join("; ") })
-          : t("integrations.importedMcp", { count: res.imported })
+          ? `已导入 ${res.imported} 个；错误：${res.errors.join("; ")}`
+          : `已导入 ${res.imported} 个 MCP。`
       );
       if (res.imported > 0) setMcpJsonText("");
     } catch (error: any) {
       setMcpJsonResultIsError(true);
-      setMcpJsonResultText(String(error?.message ?? error ?? t("integrations.importFailed")));
+      setMcpJsonResultText(String(error?.message ?? error ?? "导入失败"));
     } finally {
       setMcpConfigPending(false);
     }
@@ -268,7 +266,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
     if (hasCcswitchConflict) return;
     const id = normalizeCodexMcpServerId(serverId);
     if (!id) return;
-    if (!window.confirm(t("integrations.confirmDeleteMcp", { id }))) return;
+    if (!window.confirm(`删除 MCP「${id}」？`)) return;
     setMcpConfigPending(true);
     try {
       await runtime.deleteMcpServer(id);
@@ -322,7 +320,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
       <header className="global-config-drawer-head">
         <div className="integrations-head-grid">
           <div className="integrations-head-left">
-            <div className="panel-title">{t("integrations.title")}</div>
+            <div className="panel-title">扩展能力</div>
           </div>
           <div className="integrations-head-center">
             <div className="integrations-tabs">
@@ -346,7 +344,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
             <span className={`status-chip mono integrations-head-chip ${activeChipClass}`}>{activeChipText}</span>
             {!isSettings ? (
               <button ref={closeBtnRef} className="btn-mini" type="button" onClick={close}>
-                {t("integrations.close")}
+                关闭
               </button>
             ) : null}
           </div>
@@ -360,19 +358,19 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
               {normalizedActiveTab === "skills" ? (
                 <>
                   <button className="btn-mini" type="button" disabled={!canOpenSkillsManager} onClick={openSkillsManager}>
-                    {t("skills.manager")}
+                    管理器
                   </button>
                   <button className="btn-mini" type="button" disabled={!canRefreshSkills} onClick={() => void runtime.refreshSkills(true)}>
-                    {t("skills.refresh")}
+                    刷新
                   </button>
                 </>
               ) : (
                 <>
                   <button className="btn-mini" type="button" disabled={!canRefreshMcp} onClick={() => void runtime.refreshMcp()}>
-                    {t("skills.refresh")}
+                    刷新
                   </button>
                   <button className="btn-mini" type="button" disabled={!canReloadMcp} onClick={() => void runtime.reloadMcpConfig()}>
-                    {t("integrations.reload")}
+                    重载
                   </button>
                 </>
               )}
@@ -384,11 +382,11 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
               <section className="integrations-config-section">
                 <div className="integrations-section-head">
                   <div>
-                    <div className="integrations-mcp-section-title">{t("integrations.skillRootsTitle")}</div>
-                    <div className="integrations-section-subtitle dim">{t("integrations.skillRootsSubtitle")}</div>
+                    <div className="integrations-mcp-section-title">本地 Skills Roots</div>
+                    <div className="integrations-section-subtitle dim">仅对当前工作区追加扫描目录。</div>
                   </div>
                   <button className="btn-mini" type="button" disabled={!canMutateSkillRoots} onClick={() => void onPickSkillRoot()}>
-                    {t("integrations.chooseDirectory")}
+                    选择目录
                   </button>
                 </div>
                 <div className="integrations-root-add">
@@ -406,7 +404,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
                     }}
                   />
                   <button className="btn-mini" type="button" disabled={!canAddSkillRoot} onClick={() => void onAddSkillRoot()}>
-                    {t("integrations.add")}
+                    添加
                   </button>
                 </div>
                 {currentSkillRoots.length > 0 ? (
@@ -420,13 +418,13 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
                           disabled={codexSkillRootsStore.saving}
                           onClick={() => void runtime.removeSkillRoot(root)}
                         >
-                          {t("integrations.remove")}
+                          移除
                         </button>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="integrations-section-subtitle dim">{t("integrations.noSkillRoots")}</div>
+                  <div className="integrations-section-subtitle dim">当前工作区未配置额外 Skills 目录。</div>
                 )}
               </section>
 
@@ -434,7 +432,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
                 items={skillsStore.items}
                 pendingPath={skillPendingPath}
                 stateText={skillsStateText()}
-                emptyText={t("skills.empty")}
+                emptyText="暂无可用技能"
                 mode="compact"
                 onToggleSkill={onToggleSkill}
               />
@@ -444,8 +442,8 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
               <section className="integrations-config-section">
                 <div className="integrations-section-head">
                   <div>
-                    <div className="integrations-mcp-section-title">{t("integrations.switcherTitle")}</div>
-                    <div className="integrations-section-subtitle dim">{t("integrations.switcherSubtitle")}</div>
+                    <div className="integrations-mcp-section-title">Codex 配置切换器</div>
+                    <div className="integrations-section-subtitle dim">以本地受管配置集为准，激活后写入 Codex 用户配置。</div>
                   </div>
                   <div className="row integrations-inline-actions">
                     <button
@@ -454,7 +452,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
                       disabled={!canManageSwitcher || hasCcswitchConflict}
                       onClick={() => void onImportCurrentCodexConfig()}
                     >
-                      {t("integrations.importCurrent")}
+                      导入当前
                     </button>
                     <button
                       className="btn-mini"
@@ -462,7 +460,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
                       disabled={!canActivateSwitcherProfile || hasCcswitchConflict}
                       onClick={() => void onActivateSwitcherProfile()}
                     >
-                      {t("integrations.activate")}
+                      激活
                     </button>
                   </div>
                 </div>
@@ -473,7 +471,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
                     disabled={!canManageSwitcher || hasCcswitchConflict || codexConfigSwitcherStore.profiles.length === 0}
                     onChange={(event) => setSwitcherSelectedProfileId(event.currentTarget.value)}
                   >
-                    <option value="">{t("integrations.noManagedProfile")}</option>
+                    <option value="">暂无受管配置集</option>
                     {codexConfigSwitcherStore.profiles.map((profile) => (
                       <option key={profile.id} value={profile.id}>
                         {profile.name}
@@ -484,7 +482,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
                 <div className="integrations-section-subtitle mono dim">{switcherStatusText()}</div>
                 {hasCcswitchConflict ? (
                   <div className="integrations-section-subtitle mono is-error">
-                    {t("integrations.ccswitchDetected", { path: ccswitchConflictPath })}
+                    {`检测到 ccswitch（${ccswitchConflictPath}）。建议继续通过 ccswitch 管理 Codex 配置；如需改用 CodeNexus，请先删除或停用 ccswitch 后再启用全局切换器。`}
                   </div>
                 ) : null}
                 {switcherErrorText ? <div className="integrations-section-subtitle mono is-error">{switcherErrorText}</div> : null}
@@ -493,13 +491,13 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
               <section className="integrations-config-section">
                 <div className="integrations-section-head">
                   <div>
-                    <div className="integrations-mcp-section-title">{t("integrations.mcpJsonImport")}</div>
+                    <div className="integrations-mcp-section-title">MCP JSON 导入</div>
                     <div className="integrations-section-subtitle dim">
-                      {t("integrations.mcpJsonImportDesc", { schema: MCP_JSON_SCHEMA_TEXT })}
+                      {`支持 ${MCP_JSON_SCHEMA_TEXT} 或单个 server JSON。`}
                     </div>
                   </div>
                   <button className="btn-mini" type="button" disabled={!canWriteMcpConfig} onClick={() => void onImportMcpJson()}>
-                    {t("integrations.import")}
+                    导入
                   </button>
                 </div>
                 <textarea
@@ -515,7 +513,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
               </section>
 
               <section className="integrations-mcp-resource">
-                <div className="integrations-mcp-section-title">{t("integrations.resources")}</div>
+                <div className="integrations-mcp-section-title">资源查看</div>
                 <McpResourcePanel />
               </section>
 
@@ -557,24 +555,24 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
                       <div className="mcp-body">
                         <div className="mcp-meta">
                           <div className="mcp-meta-row">
-                            <div className="mcp-meta-key dim">{t("integrations.status")}</div>
+                            <div className="mcp-meta-key dim">状态</div>
                             <div className="mcp-meta-val mono">{mcpStateLabel(server)}</div>
                           </div>
                           <div className="mcp-meta-row">
-                            <div className="mcp-meta-key dim">{t("integrations.transport")}</div>
+                            <div className="mcp-meta-key dim">传输</div>
                             <div className="mcp-meta-val mono">{mcpTransportLabel(server)}</div>
                           </div>
                           {mcpArgsLabel(server) ? (
                             <div className="mcp-meta-row">
-                              <div className="mcp-meta-key dim">{t("integrations.params")}</div>
+                              <div className="mcp-meta-key dim">参数</div>
                               <div className="mcp-meta-val mono">{mcpArgsLabel(server)}</div>
                             </div>
                           ) : null}
                           {typeof server.authenticated === "boolean" ? (
                             <div className="mcp-meta-row">
-                              <div className="mcp-meta-key dim">{t("integrations.auth")}</div>
+                              <div className="mcp-meta-key dim">认证</div>
                               <div className="mcp-meta-val mono">
-                                {server.authenticated ? t("integrations.authenticated") : t("integrations.unauthenticated")}
+                                {server.authenticated ? "已认证" : "未认证"}
                               </div>
                             </div>
                           ) : null}
@@ -584,7 +582,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
                         ) : null}
                         <div className="mcp-actions">
                           <button type="button" className="btn-mini" onClick={() => onOpenMcpResources(server.id)}>
-                            {t("integrations.viewResources")}
+                            查看资源
                           </button>
                           <button
                             type="button"
@@ -592,7 +590,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
                             disabled={!server.enabled || mcpOauthPendingId === server.id}
                             onClick={() => void onMcpOAuth(server.id)}
                           >
-                            {t("integrations.oauthLogin")}
+                            OAuth 登录
                           </button>
                           <button
                             type="button"
@@ -600,7 +598,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
                             disabled={hasCcswitchConflict}
                             onClick={() => void onDeleteMcpServer(server.id)}
                           >
-                            {t("integrations.delete")}
+                            删除
                           </button>
                         </div>
                       </div>
@@ -617,7 +615,7 @@ export default function IntegrationsDrawer({ mode = "drawer", className }: Integ
 
   if (isSettings) return <div className="global-config-drawer-overlay is-settings">{panel}</div>;
   return (
-    <div className="global-config-drawer-overlay" role="dialog" aria-modal="true" aria-label={t("integrations.aria")} onClick={close}>
+    <div className="global-config-drawer-overlay" role="dialog" aria-modal="true" aria-label="扩展能力" onClick={close}>
       <div className="global-config-drawer-backdrop" onClick={close} />
       {panel}
     </div>

@@ -7,7 +7,6 @@ import {
   type ParsedMemoryCitation,
 } from "../../domain/taggedMessageBlocks";
 import { tryParseStructuredFinalAnswerV1 } from "../../domain/structuredFinalAnswer";
-import { translate } from "../../i18n/translate";
 import type { SandboxMode } from "../../stores/runtime.store";
 import type { PlanDeltaExecUiState } from "../layout/types/chat.types";
 import AgentMarkdownContent from "../ui/AgentMarkdownContent";
@@ -78,10 +77,7 @@ export default function ChatAssistantMessage({
   const memoryCitationRaw = memoryCitation?.raw ?? "";
   const memoryCitationSummary =
     memoryCitation && (memoryCitationEntries.length > 0 || memoryCitationThreadIds.length > 0 || memoryCitationRaw)
-      ? translate("chat.memoryCitation.summary", {
-          entries: memoryCitationEntries.length,
-          threads: memoryCitationThreadIds.length,
-        })
+      ? `记忆引用 · ${memoryCitationEntries.length} 条 · 线程 ${memoryCitationThreadIds.length} 个`
       : "";
   const planActions = execState && event ? (
     <ChatPlanDeltaActions
@@ -148,7 +144,7 @@ export default function ChatAssistantMessage({
               ) : null}
               {memoryCitationThreadIds.length > 0 ? (
                 <div className="assistant-memory-citation__threads mono">
-                  {translate("chat.memoryCitation.threadIds")} {memoryCitationThreadIds.join(", ")}
+                  线程 {memoryCitationThreadIds.join(", ")}
                 </div>
               ) : null}
               {memoryCitationEntries.length === 0 && memoryCitationThreadIds.length === 0 && memoryCitationRaw ? (

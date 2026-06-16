@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import {
   MAX_FLOWCHART_AI_TIMEOUT_MS,
   MIN_FLOWCHART_AI_TIMEOUT_MS,
@@ -25,7 +24,6 @@ function sameSettings(a: LocalFlowchartAiSettings, b: LocalFlowchartAiSettings) 
 }
 
 export default function SettingsFlowchartAiTab({ className, children }: SettingsFlowchartAiTabProps) {
-  const { t } = useTranslation();
   const initial = useMemo(() => cloneFlowchartAiSettings(getInitialFlowchartAiSettings()), []);
   const [snapshot, setSnapshot] = useState<LocalFlowchartAiSettings>(initial);
   const [draft, setDraft] = useState<LocalFlowchartAiSettings>(initial);
@@ -35,17 +33,17 @@ export default function SettingsFlowchartAiTab({ className, children }: Settings
   const hasChanges = useMemo(() => !sameSettings(normalizedDraft, snapshot), [normalizedDraft, snapshot]);
   const isConfigured = Boolean(normalizedDraft.enabled && normalizedDraft.baseUrl && normalizedDraft.apiKey);
   const saveButtonText = saving
-    ? t("settingsFlowchartAi.saving")
+    ? "保存中..."
     : hasChanges
-      ? t("settingsFlowchartAi.saveConfig")
-      : t("settingsFlowchartAi.configSaved");
+      ? "保存配置"
+      : "配置已保存";
   const statusText = !normalizedDraft.enabled
-    ? t("settingsFlowchartAi.disabled")
+    ? "已关闭"
     : !normalizedDraft.baseUrl
-      ? t("settingsFlowchartAi.missingServiceUrl")
+      ? "缺少服务地址"
       : !normalizedDraft.apiKey
-        ? t("settingsFlowchartAi.missingApiKey")
-        : t("settingsFlowchartAi.configured");
+        ? "缺少 API Key"
+        : "已配置";
   const endpointPreview = resolveFlowchartAiEndpointPreview(normalizedDraft.baseUrl);
 
   const applySnapshot = (next: LocalFlowchartAiSettings) => {
@@ -81,13 +79,13 @@ export default function SettingsFlowchartAiTab({ className, children }: Settings
       applySnapshot(nextSettings);
       showFlowchartToast({
         kind: "success",
-        title: t("settingsFlowchartAi.saveSuccessTitle"),
-        message: t("settingsFlowchartAi.saveSuccessMessage"),
+        title: "保存成功",
+        message: "流程图 AI 配置已更新。",
       });
     } catch (error: any) {
       showFlowchartToast({
         kind: "error",
-        title: t("settingsFlowchartAi.saveFailedTitle"),
+        title: "保存失败",
         message: String(error?.message ?? error ?? "unknown error"),
       });
     } finally {
@@ -96,9 +94,9 @@ export default function SettingsFlowchartAiTab({ className, children }: Settings
   };
 
   return (
-    <section className={["settings-card", className].filter(Boolean).join(" ")} aria-label={t("settingsFlowchartAi.aria")}>
+    <section className={["settings-card", className].filter(Boolean).join(" ")} aria-label="流程图 AI 设置">
       <header className="settings-card-head">
-        <div className="settings-card-title">{t("settingsFlowchartAi.title")}</div>
+        <div className="settings-card-title">流程图 AI</div>
         <button className="btn-mini" type="button" disabled={saving || !hasChanges} onClick={() => void onSave()}>
           {saveButtonText}
         </button>
@@ -107,7 +105,7 @@ export default function SettingsFlowchartAiTab({ className, children }: Settings
       <div className="settings-card-body">
         <div className="settings-grid">
           <label className="settings-row">
-            <span className="context-label dim">{t("settingsFlowchartAi.enable")}</span>
+            <span className="context-label dim">启用</span>
             <div className="settings-inline">
               <input
                 id="chk-flowchart-ai-enabled"
@@ -121,7 +119,7 @@ export default function SettingsFlowchartAiTab({ className, children }: Settings
           </label>
 
           <label className="settings-row">
-            <span className="context-label dim">{t("settingsFlowchartAi.serviceUrl")}</span>
+            <span className="context-label dim">服务地址</span>
             <input
               id="inp-flowchart-ai-base-url"
               className="context-input mono"
@@ -148,7 +146,7 @@ export default function SettingsFlowchartAiTab({ className, children }: Settings
           </label>
 
           <label className="settings-row">
-            <span className="context-label dim">{t("settingsFlowchartAi.model")}</span>
+            <span className="context-label dim">模型</span>
             <input
               id="inp-flowchart-ai-model"
               className="context-input mono"
@@ -161,7 +159,7 @@ export default function SettingsFlowchartAiTab({ className, children }: Settings
           </label>
 
           <label className="settings-row">
-            <span className="context-label dim">{t("settingsFlowchartAi.timeout")}</span>
+            <span className="context-label dim">超时</span>
             <div className="settings-inline">
               <input
                 id="inp-flowchart-ai-timeout"
@@ -181,15 +179,15 @@ export default function SettingsFlowchartAiTab({ className, children }: Settings
 
           <div className={`status-panel${isConfigured ? " is-ready" : ""}${!normalizedDraft.enabled ? " is-disabled" : ""}`}>
             <div className="status-row">
-              <span className="dim">{t("settingsFlowchartAi.status")}</span>
+              <span className="dim">状态</span>
               <span className="mono">{statusText}</span>
             </div>
             <div className="status-row">
-              <span className="dim">{t("settingsFlowchartAi.endpoint")}</span>
+              <span className="dim">请求端点</span>
               <span className="mono">{endpointPreview}</span>
             </div>
             <div className="status-row">
-              <span className="dim">{t("settingsFlowchartAi.mode")}</span>
+              <span className="dim">模式</span>
               <span className="mono">generate / modify</span>
             </div>
           </div>

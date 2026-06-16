@@ -1,5 +1,4 @@
 import type { ToastKind, ToastOptions } from "./toast";
-import { translate } from "../i18n/translate";
 
 let centerToastHost: HTMLDivElement | null = null;
 const CENTER_TOAST_EXIT_ANIMATION_MS = 180;
@@ -45,7 +44,7 @@ export function showCenterToast(options: ToastOptions): void {
   const close = document.createElement("button");
   close.type = "button";
   close.className = "codex-toast-close";
-  close.setAttribute("aria-label", translate("common.closeNotification"));
+  close.setAttribute("aria-label", "关闭提示");
   close.textContent = "×";
   toast.appendChild(close);
 

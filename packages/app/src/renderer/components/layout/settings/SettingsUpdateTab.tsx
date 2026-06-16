@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import type { AppUpdateSnapshot } from "@codenexus/shared/ipc/contracts";
 import { codexDesktop } from "../../../api/codexDesktopClient";
-import { translate } from "../../../i18n/translate";
+
+const UPDATE_STATUS_TEXT: Record<string, string> = {
+  unsupported: "开发模式不可用",
+  idle: "待检查",
+  checking: "正在检查",
+  available: "发现新版本",
+  not_available: "已是最新版本",
+  downloading: "正在下载",
+  downloaded: "已下载，等待安装",
+  error: "更新失败",
+};
 
 const DEFAULT_STATE: AppUpdateSnapshot = {
   status: "idle",
@@ -23,16 +33,16 @@ export default function SettingsUpdateTab() {
   const progress = Math.max(0, Math.min(100, Math.round(Number(state.progress?.percent ?? 0) || 0)));
   const disabled = running || !state.isPackaged || state.status === "checking" || state.status === "downloading";
   const actionLabel = running
-    ? translate("settingsUpdate.processing")
+    ? "处理中..."
     : state.status === "checking"
-      ? translate("settingsUpdate.checking")
+      ? "检查中..."
       : state.status === "downloading"
-        ? translate("settingsUpdate.downloading")
+        ? "下载中..."
         : state.status === "available"
-          ? translate("settingsUpdate.download")
+          ? "下载更新"
           : state.status === "downloaded"
-            ? translate("settingsUpdate.install")
-            : translate("settingsUpdate.check");
+            ? "重启安装"
+            : "检查更新";
   const releaseSummary = [state.releaseName, state.releaseNotes].filter(Boolean).join("\n\n");
 
   useEffect(() => {
@@ -66,9 +76,9 @@ export default function SettingsUpdateTab() {
   };
 
   return (
-    <section className="settings-card" aria-label={translate("settingsUpdate.aria")}>
+    <section className="settings-card" aria-label="应用更新设置">
       <header className="settings-card-head">
-        <div className="settings-card-title">{translate("settingsUpdate.title")}</div>
+        <div className="settings-card-title">应用更新</div>
         <div className="row settings-update-actions">
           <button className="btn-mini" type="button" disabled={disabled} onClick={() => void primaryAction()}>
             {actionLabel}
@@ -78,28 +88,28 @@ export default function SettingsUpdateTab() {
       <div className="settings-card-body">
         <div className="settings-grid">
           <div className="settings-row">
-            <span className="context-label dim">{translate("settingsUpdate.currentVersion")}</span>
+            <span className="context-label dim">当前版本</span>
             <span className="mono">{state.currentVersion}</span>
           </div>
           <div className="settings-row">
-            <span className="context-label dim">{translate("settingsUpdate.latestVersion")}</span>
-            <span className="mono">{state.latestVersion || translate("settingsUpdate.unknown")}</span>
+            <span className="context-label dim">最新版本</span>
+            <span className="mono">{state.latestVersion || "未知"}</span>
           </div>
           <div className="settings-row">
-            <span className="context-label dim">{translate("settingsUpdate.status")}</span>
-            <span className="mono">{translate(`settingsUpdate.statuses.${state.status}`)}</span>
+            <span className="context-label dim">状态</span>
+            <span className="mono">{UPDATE_STATUS_TEXT[state.status] ?? state.status}</span>
           </div>
           {state.status === "downloading" ? (
             <div className="settings-update-progress" aria-live="polite">
               <div className="settings-update-progress-track">
                 <div className="settings-update-progress-fill" style={{ width: `${progress}%` }} />
               </div>
-              <div className="mono dim text-[12px]">{translate("settingsUpdate.progress", { percent: progress })}</div>
+              <div className="mono dim text-[12px]">{`下载进度 ${progress}%`}</div>
             </div>
           ) : null}
           {state.errorMessage ? <div className="dim text-[12px] leading-[1.25]">{state.errorMessage}</div> : null}
           {releaseSummary ? <div className="dim text-[12px] leading-[1.35] whitespace-pre-line">{releaseSummary}</div> : null}
-          <div className="dim text-[12px] leading-[1.25]">{translate("settingsUpdate.description")}</div>
+          <div className="dim text-[12px] leading-[1.25]">应用启动后会自动检查 GitHub Releases。发现新版本后，需要手动下载并重启安装。</div>
         </div>
       </div>
     </section>

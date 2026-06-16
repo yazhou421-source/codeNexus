@@ -7,7 +7,6 @@ type CodexProfilesStore = ReturnType<typeof useCodexProfilesStore>;
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
 
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
@@ -19,7 +18,6 @@ export type CodexProfileRuntimeDeps = {
   requestConfigBatchWrite: (changes: ConfigWriteChange[], filePath?: string | null) => Promise<void>;
   refreshGlobalConfig: () => Promise<void>;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -42,15 +40,14 @@ function resolveCodexProfileBaseUrl(profile: CodexProviderProfile, baseUrlOverri
 
 function buildCodexProfileConfigChanges(
   profile: CodexProviderProfile,
-  translate: TranslateFn,
   baseUrlOverride?: string
 ): ConfigWriteChange[] {
   const providerId = String(profile.modelProviderId ?? "").trim();
-  if (!providerId) throw new Error(translate("runtime.providerIdRequired"));
+  if (!providerId) throw new Error("模型供应商 ID 不能为空。");
   const model = String(profile.model ?? "").trim();
-  if (!model) throw new Error(translate("runtime.modelIdRequired"));
+  if (!model) throw new Error("模型 ID 不能为空。");
   const baseUrl = resolveCodexProfileBaseUrl(profile, baseUrlOverride);
-  if (!baseUrl) throw new Error(translate("runtime.baseUrlRequired"));
+  if (!baseUrl) throw new Error("Base URL 不能为空。");
   return [
     { keyPath: "model_provider", value: providerId },
     { keyPath: "model", value: model },
@@ -79,20 +76,19 @@ export function createCodexProfileRuntime(deps: CodexProfileRuntimeDeps): CodexP
     requestConfigBatchWrite,
     refreshGlobalConfig,
     pushEvent,
-    translate,
     showToast,
   } = deps;
 
   const applyCodexProfile = async (profileId: string) => {
     const id = String(profileId ?? "").trim();
-    if (!id) throw new Error(translate("runtime.profileIdRequired"));
+    if (!id) throw new Error("缺少模型配置 ID。");
     if (codexProfilesStore.loadState === "idle") {
       await codexProfilesStore.refresh();
     }
     const profile = codexProfilesStore.profiles.find((item) => item.id === id);
-    if (!profile) throw new Error(translate("runtime.profileNotFound"));
+    if (!profile) throw new Error("找不到该模型配置。");
     const workspace = normalizeWorkspacePath(getWorkspacePath());
-    if (!getServerIdForWorkspace(workspace)) throw new Error(translate("runtime.noServiceCannotApplyCodexConfig"));
+    if (!getServerIdForWorkspace(workspace)) throw new Error("未连接服务，无法应用 Codex 配置。");
 
     codexProfilesStore.applyingProfileId = id;
     try {
@@ -121,14 +117,14 @@ export function createCodexProfileRuntime(deps: CodexProfileRuntimeDeps): CodexP
       }
       if (isDeepSeekProfile) {
         await requestConfigBatchWrite(
-          buildCodexProfileConfigChanges(profile, translate, codexBaseUrl),
+          buildCodexProfileConfigChanges(profile, codexBaseUrl),
           profile.configFilePath
         );
       } else if (String(profile.configFilePath ?? "").trim() && configFileContent) {
         await codexDesktop.app.writeTextFile({ path: profile.configFilePath, content: configFileContent });
       } else {
         await requestConfigBatchWrite(
-          buildCodexProfileConfigChanges(profile, translate, codexBaseUrl),
+          buildCodexProfileConfigChanges(profile, codexBaseUrl),
           profile.configFilePath
         );
       }
@@ -143,13 +139,13 @@ export function createCodexProfileRuntime(deps: CodexProfileRuntimeDeps): CodexP
       );
       showToast({
         kind: "success",
-        title: translate("runtime.profileSwitchedTitle"),
+        title: "模型配置已切换",
         message: `${profile.name} · ${profile.model}`,
       });
     } catch (error: unknown) {
       const msg = readErrorMessage(error);
       pushEvent("codex:profile:error", msg, { threadId: appTimelineId, level: "error" });
-      showToast({ kind: "error", title: translate("runtime.profileSwitchFailedTitle"), message: msg });
+      showToast({ kind: "error", title: "模型配置切换失败", message: msg });
       throw error;
     } finally {
       codexProfilesStore.applyingProfileId = "";

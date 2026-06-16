@@ -1,5 +1,4 @@
 import { SlidersHorizontal } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { getRuntimeOrchestrator } from "../../../domain/runtimeOrchestrator";
 import { showToast } from "../../../ui/toast";
 
@@ -10,14 +9,13 @@ type TopBarToolsMenuProps = {
 };
 
 export default function TopBarToolsMenu({ className, open = false, onToggle }: TopBarToolsMenuProps) {
-  const { t } = useTranslation();
   const runtime = getRuntimeOrchestrator();
 
   const onContextActionComingSoon = () => {
     showToast({
       kind: "info",
-      title: t("topbarExtra.rollbackRecent"),
-      message: t("topbarExtra.rollbackUnavailableToast"),
+      title: "撤回最近 N 轮",
+      message: "正在开发中，暂时无法使用...",
       timeoutMs: 4500,
     });
   };
@@ -32,34 +30,34 @@ export default function TopBarToolsMenu({ className, open = false, onToggle }: T
           type="button"
           aria-haspopup="menu"
           aria-expanded={open}
-          aria-label={t("topbarExtra.tools")}
+          aria-label="工具"
           onClick={(event) => {
             event.stopPropagation();
             onToggle?.();
           }}
         >
           <SlidersHorizontal aria-hidden="true" />
-          <span className="topbar-right-switch-label">{t("topbarExtra.tools")}</span>
+          <span className="topbar-right-switch-label">工具</span>
         </button>
       </div>
 
       {open ? (
         <div className="topbar-menu-shell topbar-menu-shell--tools" onClick={(event) => event.stopPropagation()}>
-          <div className="topbar-dropdown topbar-menu app-scrollbar" role="menu" aria-label={t("topbarExtra.toolsMenu")}>
+          <div className="topbar-dropdown topbar-menu app-scrollbar" role="menu" aria-label="工具菜单">
             <div className="topbar-menu-section">
-              <div className="topbar-menu-heading">{t("topbarExtra.contextActions")}</div>
+              <div className="topbar-menu-heading">上下文操作</div>
               <button id="btn-topbar-rollback" className="btn-mini !justify-start" type="button" onClick={onContextActionComingSoon}>
-                {t("topbarExtra.rollbackRecent")}
+                撤回最近 N 轮
               </button>
-              <div className="topbar-menu-note">{t("topbarExtra.rollbackUnavailable")}</div>
+              <div className="topbar-menu-note">撤回功能开发中，暂不可用。</div>
               <button className="btn-mini !justify-start" id="btn-topbar-memory-enable" type="button" onClick={() => void runtime.setCurrentThreadMemoryMode("enabled")}>
-                {t("topbarExtra.enableThreadMemory")}
+                启用当前线程记忆
               </button>
               <button className="btn-mini !justify-start" id="btn-topbar-memory-disable" type="button" onClick={() => void runtime.setCurrentThreadMemoryMode("disabled")}>
-                {t("topbarExtra.disableThreadMemory")}
+                关闭当前线程记忆
               </button>
               <button className="btn-mini !justify-start danger" id="btn-topbar-memory-reset" type="button" onClick={() => void runtime.resetCodexMemory()}>
-                {t("topbarExtra.resetCodexMemory")}
+                重置 Codex 记忆
               </button>
             </div>
           </div>

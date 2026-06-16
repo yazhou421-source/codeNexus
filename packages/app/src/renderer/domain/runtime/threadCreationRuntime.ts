@@ -31,7 +31,6 @@ type TimelineStore = ReturnType<typeof useTimelineStore>;
 
 type RuntimeEventLevel = "info" | "warn" | "error";
 type ToastKind = "info" | "success" | "warn" | "error";
-type TranslateFn = (key: string, params?: Record<string, unknown>) => string;
 type PushEvent = (method: string, paramsText: string, opts?: { threadId?: string; level?: RuntimeEventLevel }) => void;
 type ShowToast = (options: { kind?: ToastKind; title?: string; message: string }) => void;
 
@@ -75,7 +74,6 @@ export type ThreadCreationRuntimeDeps = {
     failedLocalPaths: string[];
   }>;
   pushEvent: PushEvent;
-  translate: TranslateFn;
   showToast: ShowToast;
 };
 
@@ -121,7 +119,6 @@ export function createThreadCreationRuntime(deps: ThreadCreationRuntimeDeps): Th
     cloneUserTurnInputs,
     buildComposeAttachmentsFromUserTurnInputs,
     pushEvent,
-    translate,
     showToast,
   } = deps;
 
@@ -151,8 +148,8 @@ export function createThreadCreationRuntime(deps: ThreadCreationRuntimeDeps): Th
       runtimeStore.saveThreadComposeFileMentions(runtimeStore.currentThreadId);
       showToast({
         kind: "warn",
-        title: translate("runtime.threadCreateFailedTitle"),
-        message: translate("runtime.pendingContentRestored"),
+        title: "线程创建失败",
+        message: "已恢复待发送内容，请重试发送。",
       });
     } catch {}
   };
@@ -194,8 +191,8 @@ export function createThreadCreationRuntime(deps: ThreadCreationRuntimeDeps): Th
     const optimisticCreatedAt = Date.now();
     const optimisticLocalThread: LocalThreadItem = {
       id: optimisticThreadId,
-      title: translate("runtime.creating"),
-      meta: workspaceBeforeStart || translate("runtime.noWorkspace"),
+      title: "创建中",
+      meta: workspaceBeforeStart || "无工作区",
       cwd: workspaceBeforeStart || undefined,
       createdAt: optimisticCreatedAt,
       updatedAt: optimisticCreatedAt,
@@ -284,7 +281,7 @@ export function createThreadCreationRuntime(deps: ThreadCreationRuntimeDeps): Th
       const finalizedLocalThread: LocalThreadItem = {
         id,
         title: `Thread ${id.slice(-8)}`,
-        meta: workspace || translate("runtime.noWorkspace"),
+        meta: workspace || "无工作区",
         cwd: workspace || undefined,
         createdAt: optimisticCreatedAt,
         updatedAt: Date.now(),
@@ -297,7 +294,7 @@ export function createThreadCreationRuntime(deps: ThreadCreationRuntimeDeps): Th
       markThreadResumed(id);
       setThreadWorkspace(id, workspace);
       clearThreadWorkspace(optimisticThreadId);
-      pushEvent("thread", translate("runtime.threadCreated"), { threadId: id });
+      pushEvent("thread", "会话已创建", { threadId: id });
       appendDebugLog("thread.create", "local state applied", {
         attemptId,
         threadId: id,
