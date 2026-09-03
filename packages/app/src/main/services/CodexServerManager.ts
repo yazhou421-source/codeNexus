@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { CodexAppServer, type ServerMode } from "../codexAppServer";
+import type { CodexAppServerRuntimeConfig } from "../codexRouterRuntime";
+import { logger } from "../utils/logger";
 import type {
   CodexIncomingMessage,
   CodexNotifyArgs,
@@ -17,6 +19,13 @@ type ServerRecord = {
 export class CodexServerManager {
   private readonly servers = new Map<string, ServerRecord>();
 
+  constructor(
+    private readonly options: {
+      resolveRuntimeConfig?: () => CodexAppServerRuntimeConfig | null;
+      createServer?: (options: ConstructorParameters<typeof CodexAppServer>[0]) => CodexAppServer;
+    } = {}
+  ) {}
+
   async start(args: {
     cwd?: string;
     experimentalApi?: boolean;
@@ -27,17 +36,55 @@ export class CodexServerManager {
       args.onMessage({ serverId, msg });
     };
 
-    const server = new CodexAppServer({
-      id: serverId,
-      mode: "native" as ServerMode,
+    const runtimeConfig = this.options.resolveRuntimeConfig?.() ?? null;
+    let server = this.createServer({
+      serverId,
       cwd: args.cwd,
-      experimentalApiOptIn: Boolean(args.experimentalApi),
+      experimentalApi: args.experimentalApi,
       onMessage,
+      runtimeConfig,
     });
-    await server.start();
+    try {
+      await server.start();
+    } catch (error) {
+      server.stop();
+      if (!runtimeConfig) throw error;
+      logger.warn("codex-server", "Router-backed app-server failed; retrying normal Codex mode");
+      server = this.createServer({
+        serverId,
+        cwd: args.cwd,
+        experimentalApi: args.experimentalApi,
+        onMessage,
+        runtimeConfig: null,
+      });
+      try {
+        await server.start();
+      } catch (fallbackError) {
+        server.stop();
+        throw fallbackError;
+      }
+    }
 
     this.servers.set(serverId, { server, cwd: args.cwd });
     return { serverId, capabilities: server.capabilities };
+  }
+
+  private createServer(args: {
+    serverId: string;
+    cwd?: string;
+    experimentalApi?: boolean;
+    onMessage: (msg: CodexIncomingMessage) => void;
+    runtimeConfig: CodexAppServerRuntimeConfig | null;
+  }): CodexAppServer {
+    const create = this.options.createServer ?? ((options) => new CodexAppServer(options));
+    return create({
+      id: args.serverId,
+      mode: "native" as ServerMode,
+      cwd: args.cwd,
+      experimentalApiOptIn: Boolean(args.experimentalApi),
+      onMessage: args.onMessage,
+      runtimeConfig: args.runtimeConfig,
+    });
   }
 
   stop(serverId: string): { ok: true } {

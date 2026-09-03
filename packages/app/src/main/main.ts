@@ -43,6 +43,7 @@ import {
   shouldStopEmbeddedRouterOnWindowClose,
   startEmbeddedRouterFailSoft,
 } from "./embeddedRouterLifecycle";
+import { createCodexRouterRuntime } from "./codexRouterRuntime";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 
@@ -59,7 +60,6 @@ let embeddedRouterStopRequested = false;
 let appCloseFlowStartedAt = 0;
 let appCloseForceExitTimer: NodeJS.Timeout | null = null;
 
-const codexServerManager = new CodexServerManager();
 const workspacePatchService = new WorkspacePatchService();
 const runtimeThreadStateTracker = new RuntimeThreadStateTracker();
 const cacheRegistryService = new CacheRegistryService();
@@ -68,6 +68,9 @@ const embeddedRouterManager = new EmbeddedRouterManager((level, message, error) 
   if (level === "error") logger.error("embedded-router", message, error);
   else if (level === "warn") logger.warn("embedded-router", message, error);
   else logger.info("embedded-router", message);
+});
+const codexServerManager = new CodexServerManager({
+  resolveRuntimeConfig: () => createCodexRouterRuntime(embeddedRouterManager.ownedConnection),
 });
 
 const APP_CLOSE_OVERLAY_BOOT_MS = 56;

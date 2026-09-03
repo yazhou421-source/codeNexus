@@ -13,6 +13,7 @@ export { EmbeddedRouterManager } from "./EmbeddedRouterManager";
 export type {
   EmbeddedRouterLog,
   EmbeddedRouterManagerOptions,
+  EmbeddedRouterOwnedConnection,
   RouterStartResult,
   RouterStartStatus,
 } from "./EmbeddedRouterManager";

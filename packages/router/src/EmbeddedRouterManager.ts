@@ -34,6 +34,15 @@ export type EmbeddedRouterManagerOptions = {
   healthProbeTimeoutMs?: number;
 };
 
+export type EmbeddedRouterOwnedConnection = {
+  origin: string;
+  authToken: string;
+  routes: ReadonlyArray<{
+    modelId: string;
+    authMode: "api_key" | "codex_openai";
+  }>;
+};
+
 type LifecycleState = "idle" | "starting" | "running" | "stopping";
 
 const HEALTH_RESPONSE_LIMIT_BYTES = 4 * 1024;
@@ -44,6 +53,8 @@ export class EmbeddedRouterManager {
   private stopPromise: Promise<void> | null = null;
   private listenAbortController: AbortController | null = null;
   private lastAddress: { host: string; port: number } | null = null;
+  private ownedAuthToken: string | null = null;
+  private ownedRoutes: EmbeddedRouterOwnedConnection["routes"] = [];
   private state: LifecycleState = "idle";
   private readonly healthProbeTimeoutMs: number;
 
@@ -66,6 +77,17 @@ export class EmbeddedRouterManager {
     return routerOrigin(this.lastAddress.host, this.lastAddress.port);
   }
 
+  /** Main-process-only credentials for app-server routing. Never expose over IPC. */
+  get ownedConnection(): EmbeddedRouterOwnedConnection | null {
+    const origin = this.ownedOrigin;
+    if (!origin || !this.ownedAuthToken) return null;
+    return {
+      origin,
+      authToken: this.ownedAuthToken,
+      routes: this.ownedRoutes.map((route) => ({ ...route })),
+    };
+  }
+
   async start(config: RouterConfig): Promise<RouterStartResult> {
     if (this.stopPromise) await this.stopPromise;
     if (this.running && this.lastAddress) {
@@ -86,7 +108,17 @@ export class EmbeddedRouterManager {
     this.listenAbortController = listenAbortController;
     this.state = "starting";
 
-    const attempt = this.listen(server, listenAbortController, host, port);
+    const attempt = this.listen(server, listenAbortController, host, port, {
+      authToken:
+        typeof config.authToken === "string" && config.authToken.trim()
+          ? config.authToken
+          : null,
+      routes: config.models.map((model) => ({
+        modelId: model.id,
+        authMode:
+          model.authMode === "codex_openai" ? "codex_openai" : "api_key",
+      })),
+    });
     this.startPromise = attempt;
     try {
       return await attempt;
@@ -105,6 +137,8 @@ export class EmbeddedRouterManager {
     this.server = null;
     this.listenAbortController = null;
     this.lastAddress = null;
+    this.ownedAuthToken = null;
+    this.ownedRoutes = [];
 
     const stop = (async () => {
       listenAbortController?.abort();
@@ -127,6 +161,10 @@ export class EmbeddedRouterManager {
     listenAbortController: AbortController,
     host: string,
     port: number,
+    ownedRuntime: {
+      authToken: string | null;
+      routes: EmbeddedRouterOwnedConnection["routes"];
+    },
   ): Promise<RouterStartResult> {
     return new Promise<RouterStartResult>((resolve, reject) => {
       let startupSettled = false;
@@ -137,6 +175,8 @@ export class EmbeddedRouterManager {
           this.listenAbortController = null;
         }
         this.lastAddress = null;
+        this.ownedAuthToken = null;
+        this.ownedRoutes = [];
         if (this.state !== "stopping") this.state = "idle";
       };
       const cleanupStartupListeners = () => {
@@ -165,6 +205,8 @@ export class EmbeddedRouterManager {
           this.listenAbortController = null;
         }
         this.lastAddress = { host, port: listeningPort };
+        this.ownedAuthToken = ownedRuntime.authToken;
+        this.ownedRoutes = ownedRuntime.routes;
         this.state = "running";
         this.log(
           "info",

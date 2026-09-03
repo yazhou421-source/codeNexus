@@ -5,6 +5,7 @@ import { existsSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { app } from "electron";
 import { discoverExistingCodexPaths } from "./codexNativeDiscovery";
+import { applyCodexRouterModelProvider, type CodexAppServerRuntimeConfig } from "./codexRouterRuntime";
 import { logger } from "./utils/logger";
 import type {
   CodexIncomingMessage,
@@ -44,6 +45,65 @@ type Pending = {
   timeout?: NodeJS.Timeout;
 };
 
+export type NativeCodexCommand =
+  | { kind: "direct"; path: string }
+  | { kind: "node"; nodeExe: string; script: string }
+  | { kind: "cmd"; path: string };
+
+export type CodexSpawnCommand = {
+  command: string;
+  args: string[];
+  spawnCwd?: string;
+};
+
+function configArgs(overrides: readonly string[]): string[] {
+  return overrides.flatMap((override) => ["-c", override]);
+}
+
+export function buildCodexAppServerSpawnCommand(args: {
+  nativeCodex?: NativeCodexCommand;
+  cwd?: string;
+  globalConfigOverrides?: readonly string[];
+}): CodexSpawnCommand {
+  const appServerArgs = [...configArgs(args.globalConfigOverrides ?? []), "app-server", "--listen", "stdio://"];
+  if (args.nativeCodex?.kind === "cmd") {
+    const joined = appServerArgs.join(" ");
+    const cmdline = `""${args.nativeCodex.path}"${joined ? " " : ""}${joined}"`;
+    return { command: "cmd.exe", args: ["/d", "/s", "/c", cmdline], spawnCwd: args.cwd };
+  }
+  if (args.nativeCodex?.kind === "node") {
+    return {
+      command: args.nativeCodex.nodeExe,
+      args: [args.nativeCodex.script, ...appServerArgs],
+      spawnCwd: args.cwd,
+    };
+  }
+  return {
+    command: args.nativeCodex?.path ?? "codex",
+    args: appServerArgs,
+    spawnCwd: args.cwd,
+  };
+}
+
+export function redactCodexChildValue<T>(value: T, sensitiveValues: readonly string[]): T {
+  if (typeof value === "string") {
+    let result: string = value;
+    for (const secret of sensitiveValues) {
+      if (secret) result = result.split(secret).join("[REDACTED]");
+    }
+    return result as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => redactCodexChildValue(item, sensitiveValues)) as T;
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, redactCodexChildValue(item, sensitiveValues)])
+    ) as T;
+  }
+  return value;
+}
+
 function isJsonRpcId(value: unknown): value is JsonRpcId {
   if (typeof value === "string") return value.trim().length > 0;
   if (typeof value === "number") return Number.isFinite(value);
@@ -65,28 +125,28 @@ export class CodexAppServer {
   private readonly experimentalApiOptIn: boolean;
   private readonly mode: ServerMode;
   private readonly cwd?: string;
+  private readonly runtimeConfig: CodexAppServerRuntimeConfig | null;
   private proc?: ReturnType<typeof spawn>;
   private rl?: readline.Interface;
   private stopping = false;
   private nextId = 1;
   private readonly pending = new Map<JsonRpcId, Pending>();
   private onMessage?: (msg: CodexIncomingMessage) => void;
-  private nativeCodex?:
-    | { kind: "direct"; path: string }
-    | { kind: "node"; nodeExe: string; script: string }
-    | { kind: "cmd"; path: string };
+  private nativeCodex?: NativeCodexCommand;
 
   constructor(opts: {
     id: string;
     mode: ServerMode;
     cwd?: string;
     experimentalApiOptIn?: boolean;
+    runtimeConfig?: CodexAppServerRuntimeConfig | null;
     onMessage?: (msg: CodexIncomingMessage) => void;
   }) {
     this.id = opts.id;
     this.mode = opts.mode;
     this.cwd = opts.cwd;
     this.experimentalApiOptIn = Boolean(opts.experimentalApiOptIn);
+    this.runtimeConfig = opts.runtimeConfig ?? null;
     this.onMessage = opts.onMessage;
   }
 
@@ -110,6 +170,7 @@ export class CodexAppServer {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
       windowsVerbatimArguments: command.toLowerCase().endsWith("cmd.exe"),
+      env: { ...process.env, ...this.runtimeConfig?.childEnv },
     });
     this.stopping = false;
 
@@ -134,7 +195,7 @@ export class CodexAppServer {
     });
 
     this.proc.stderr?.on("data", (buf) => {
-      const text = buf.toString("utf8");
+      const text = redactCodexChildValue(buf.toString("utf8"), this.runtimeConfig?.sensitiveValues ?? []);
       this.onMessage?.({ kind: "local", method: "codex/stderr", params: { text } });
     });
 
@@ -146,9 +207,10 @@ export class CodexAppServer {
       if (!trimmed) return;
       let msg: any;
       try {
-        msg = JSON.parse(trimmed);
+        msg = redactCodexChildValue(JSON.parse(trimmed), this.runtimeConfig?.sensitiveValues ?? []);
       } catch {
-        this.onMessage?.({ kind: "local", method: "codex/parseError", params: { line: trimmed } });
+        const redactedLine = redactCodexChildValue(trimmed, this.runtimeConfig?.sensitiveValues ?? []);
+        this.onMessage?.({ kind: "local", method: "codex/parseError", params: { line: redactedLine } });
         return;
       }
       this.handleIncoming(msg);
@@ -219,7 +281,11 @@ export class CodexAppServer {
     if (!isValidMethod(method)) throw new Error("invalid json-rpc method");
     if (!isValidParams(params)) throw new Error(`invalid json-rpc params for method: ${method}`);
     const id: JsonRpcId = this.nextId++;
-    const req: JsonRpcRequest = { id, method: method.trim(), params };
+    const req: JsonRpcRequest = {
+      id,
+      method: method.trim(),
+      params: applyCodexRouterModelProvider(method, params, this.runtimeConfig),
+    };
     this.write(req);
     return await new Promise<CodexRpcResult<M>>((resolve, reject) => {
       const pending: Pending = {
@@ -326,26 +392,12 @@ export class CodexAppServer {
     }
   }
 
-  private getSpawnCommand(): { command: string; args: string[]; spawnCwd?: string } {
-    if (this.nativeCodex?.kind === "cmd") {
-      const cmdline = this.cmdlineInvoke(this.nativeCodex.path, ["app-server", "--listen", "stdio://"]);
-      return { command: "cmd.exe", args: ["/d", "/s", "/c", cmdline], spawnCwd: this.cwd };
-    }
-    if (this.nativeCodex?.kind === "node") {
-      return {
-        command: this.nativeCodex.nodeExe,
-        args: [this.nativeCodex.script, "app-server", "--listen", "stdio://"],
-        spawnCwd: this.cwd,
-      };
-    }
-    if (this.nativeCodex?.kind === "direct") {
-      return { command: this.nativeCodex.path, args: ["app-server", "--listen", "stdio://"], spawnCwd: this.cwd };
-    }
-    return {
-      command: "codex",
-      args: ["app-server", "--listen", "stdio://"],
-      spawnCwd: this.cwd,
-    };
+  private getSpawnCommand(): CodexSpawnCommand {
+    return buildCodexAppServerSpawnCommand({
+      nativeCodex: this.nativeCodex,
+      cwd: this.cwd,
+      globalConfigOverrides: this.runtimeConfig?.globalConfigOverrides,
+    });
   }
 
   private ensureSpawnCwd(spawnCwd: string): void {
@@ -367,7 +419,8 @@ export class CodexAppServer {
   }
 
   private preflightNative(): void {
-    const found = spawnSync("where.exe", ["codex"], { encoding: "utf8" });
+    const locator = process.platform === "win32" ? "where.exe" : "which";
+    const found = spawnSync(locator, ["codex"], { encoding: "utf8" });
     const paths = discoverExistingCodexPaths({
       whereStdout: found.stdout,
       appData: process.env.APPDATA,
@@ -378,6 +431,11 @@ export class CodexAppServer {
       throw new Error(
         "codex (native) was not detected. Install Node.js LTS (including npm), run: npm i -g @openai/codex, and make sure codex is available on PATH. Restart the terminal or this app if needed."
       );
+    }
+
+    if (process.platform !== "win32") {
+      this.nativeCodex = { kind: "direct", path: paths[0] };
+      return;
     }
 
     const exe = paths.find((p) => p.toLowerCase().endsWith(".exe"));
@@ -410,12 +468,6 @@ export class CodexAppServer {
       `codex was found, but no executable entry (.exe/.cmd/.bat) was found. where.exe codex returned:\n${paths.join("\n")}\n\n` +
         `Confirm that you can run this directly in PowerShell: codex --version`
     );
-  }
-
-  private cmdlineInvoke(toolPath: string, args: string[]): string {
-    // cmd.exe 引号/转义规则：使用 `cmd /d /s /c ""C:\path\tool.cmd" arg1 arg2"` 形式最稳妥。
-    const joined = args.join(" ");
-    return `""${toolPath}"${joined ? " " : ""}${joined}"`;
   }
 
   private async initializeHandshake(): Promise<void> {

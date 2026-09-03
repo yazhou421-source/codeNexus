@@ -27,6 +27,11 @@ describe("EmbeddedRouterManager", () => {
       protocolVersion: 1,
     });
     expect(manager.ownedOrigin).toBe(started.origin);
+    expect(manager.ownedConnection).toEqual({
+      origin: started.origin,
+      authToken: "router-token",
+      routes: [{ modelId: "test-model", authMode: "api_key" }],
+    });
 
     const duplicate = await manager.start(testConfig(0));
     expect(duplicate).toEqual({ ...started, status: "already-running" });
@@ -47,6 +52,7 @@ describe("EmbeddedRouterManager", () => {
       port: firstResult.port,
     });
     expect(second.ownedOrigin).toBeNull();
+    expect(second.ownedConnection).toBeNull();
 
     const response = await fetch(`${firstResult.origin}/health`);
     expect(response.ok).toBe(true);
@@ -68,6 +74,7 @@ describe("EmbeddedRouterManager", () => {
       port,
     });
     expect(manager.ownedOrigin).toBeNull();
+    expect(manager.ownedConnection).toBeNull();
   });
 
   it("rejects a fake successful health response", async () => {
@@ -123,6 +130,7 @@ describe("EmbeddedRouterManager", () => {
     const started = await manager.start(testConfig(0));
     await manager.stop();
     await manager.stop();
+    expect(manager.ownedConnection).toBeNull();
 
     const rebound = trackServer(createServer());
     await listenOnPort(rebound, started.port);
@@ -186,6 +194,97 @@ describe("EmbeddedRouterManager", () => {
     ]);
     expect(first.status).toBe("started");
     expect(second).toEqual(first);
+  });
+
+  it("isolates Codex bearer and local-token Router endpoints", async () => {
+    const upstreamAuthorizations: string[] = [];
+    const upstream = trackServer(
+      createServer(async (request, response) => {
+        upstreamAuthorizations.push(
+          String(request.headers.authorization ?? ""),
+        );
+        for await (const _chunk of request) {
+          // Drain the controlled request body.
+        }
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ id: "resp_test", output: [] }));
+      }),
+    );
+    const upstreamOrigin = await listen(upstream);
+    const router = trackServer(
+      createRouterServer({
+        host: "127.0.0.1",
+        port: 0,
+        authToken: "router-token",
+        defaultModel: "codex-model",
+        models: [
+          {
+            id: "codex-model",
+            displayName: "Codex Model",
+            api: "responses",
+            baseUrl: `${upstreamOrigin}/v1`,
+            model: "codex-upstream",
+            authMode: "codex_openai",
+          },
+          {
+            id: "api-model",
+            displayName: "API Model",
+            api: "responses",
+            baseUrl: `${upstreamOrigin}/v1`,
+            model: "api-upstream",
+            authMode: "api_key",
+            apiKey: "provider-key",
+          },
+        ],
+      }),
+    );
+    const origin = await listen(router);
+
+    const codexResponse = await fetch(`${origin}/codex-auth/v1/responses`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer user-codex-auth",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ model: "codex-model", input: "hello" }),
+    });
+    expect(codexResponse.status).toBe(200);
+    expect(upstreamAuthorizations).toEqual(["Bearer user-codex-auth"]);
+
+    const forbiddenApiRoute = await fetch(`${origin}/codex-auth/v1/responses`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer user-codex-auth",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ model: "api-model", input: "hello" }),
+    });
+    expect(forbiddenApiRoute.status).toBe(403);
+    expect(upstreamAuthorizations).toHaveLength(1);
+
+    const wrongLocalToken = await fetch(`${origin}/v1/responses`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer user-codex-auth",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ model: "api-model", input: "hello" }),
+    });
+    expect(wrongLocalToken.status).toBe(401);
+
+    const localResponse = await fetch(`${origin}/v1/responses`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer router-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ model: "api-model", input: "hello" }),
+    });
+    expect(localResponse.status).toBe(200);
+    expect(upstreamAuthorizations).toEqual([
+      "Bearer user-codex-auth",
+      "Bearer provider-key",
+    ]);
   });
 
   it("cannot start listening after stop wins a startup race", async () => {
@@ -318,6 +417,7 @@ function testConfig(port: number): RouterConfig {
   return {
     host: "127.0.0.1",
     port,
+    authToken: "router-token",
     defaultModel: "test-model",
     models: [
       {

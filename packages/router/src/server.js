@@ -35,6 +35,8 @@ export function createRouterServer(config = loadConfig()) {
     let knownSecrets = secretValuesForConfig(config);
     try {
       const url = new URL(req.url || "/", "http://127.0.0.1");
+      const codexAuthRequest = isCodexAuthPath(url.pathname);
+      const pathname = normalizedApiPath(url.pathname);
       activeConfig = currentConfig(config);
       knownSecrets = secretValuesForConfig(activeConfig);
       logAccess(req, url, knownSecrets);
@@ -55,7 +57,7 @@ export function createRouterServer(config = loadConfig()) {
 
       if (
         req.method === "GET" &&
-        ["/v1/models", "/models"].includes(url.pathname)
+        ["/v1/models", "/models"].includes(pathname)
       ) {
         jsonResponse(res, 200, openAiModelsList(activeConfig));
         return;
@@ -63,13 +65,13 @@ export function createRouterServer(config = loadConfig()) {
 
       if (
         req.method === "GET" &&
-        ["/model-catalog.json", "/v1/model-catalog.json"].includes(url.pathname)
+        ["/model-catalog.json", "/v1/model-catalog.json"].includes(pathname)
       ) {
         jsonResponse(res, 200, buildModelCatalog(activeConfig));
         return;
       }
 
-      if (req.method === "GET" && isResponsesCollection(url.pathname)) {
+      if (req.method === "GET" && isResponsesCollection(pathname)) {
         jsonResponse(res, 200, {
           object: "list",
           data: [],
@@ -78,7 +80,7 @@ export function createRouterServer(config = loadConfig()) {
         return;
       }
 
-      const responseItemId = responseIdFromItemPath(url.pathname);
+      const responseItemId = responseIdFromItemPath(pathname);
       if (req.method === "GET" && responseItemId) {
         jsonResponse(
           res,
@@ -89,7 +91,7 @@ export function createRouterServer(config = loadConfig()) {
         return;
       }
 
-      const responseCancelId = responseIdFromCancelPath(url.pathname);
+      const responseCancelId = responseIdFromCancelPath(pathname);
       if (req.method === "POST" && responseCancelId) {
         jsonResponse(
           res,
@@ -105,7 +107,7 @@ export function createRouterServer(config = loadConfig()) {
 
       if (
         ["PATCH", "PUT"].includes(req.method || "") &&
-        isModelSettingsPath(url.pathname)
+        isModelSettingsPath(pathname)
       ) {
         const body = await readJsonRequest(req);
         jsonResponse(res, 200, {
@@ -120,9 +122,11 @@ export function createRouterServer(config = loadConfig()) {
 
       if (
         req.method === "POST" &&
-        ["/v1/responses", "/responses"].includes(url.pathname)
+        ["/v1/responses", "/responses"].includes(pathname)
       ) {
-        const clientAuth = authorizeClient(req, activeConfig);
+        const clientAuth = authorizeClient(req, activeConfig, {
+          allowCodexBearer: codexAuthRequest,
+        });
         if (!clientAuth.ok) {
           res.once("finish", () => req.destroy());
           jsonResponse(
@@ -144,6 +148,18 @@ export function createRouterServer(config = loadConfig()) {
           limits.compressedBytes,
         );
         const route = routeForModel(activeConfig, body.model);
+        if (codexAuthRequest && authModeForRoute(route) !== "codex_openai") {
+          jsonResponse(
+            res,
+            403,
+            openAiError(
+              "The Codex-auth Router endpoint cannot access API-key routes.",
+              403,
+              "codex_auth_route_forbidden",
+            ),
+          );
+          return;
+        }
         const requestId = makeRequestId();
         const clientAbort = clientAbortContext(req, res);
         console.log(
@@ -231,7 +247,7 @@ function logAccess(req, url, knownSecrets = []) {
   );
 }
 
-function authorizeClient(req, config) {
+function authorizeClient(req, config, options = {}) {
   const bearerToken = bearerTokenFromHeader(req.headers.authorization);
   if (!config.authToken) {
     if (bearerToken) {
@@ -242,10 +258,23 @@ function authorizeClient(req, config) {
   if (bearerToken && bearerToken === config.authToken) {
     return { ok: true, kind: "local", bearerToken };
   }
-  if (bearerToken && config.clientAuth?.allowOpenAiBearer === true) {
+  if (
+    bearerToken &&
+    (options.allowCodexBearer || config.clientAuth?.allowOpenAiBearer === true)
+  ) {
     return { ok: true, kind: "codex_openai", bearerToken };
   }
   return { ok: false, kind: "invalid" };
+}
+
+function isCodexAuthPath(pathname) {
+  return pathname === "/codex-auth" || pathname.startsWith("/codex-auth/");
+}
+
+function normalizedApiPath(pathname) {
+  if (!isCodexAuthPath(pathname)) return pathname;
+  const normalized = pathname.slice("/codex-auth".length);
+  return normalized || "/";
 }
 
 function requestLimits(config) {
