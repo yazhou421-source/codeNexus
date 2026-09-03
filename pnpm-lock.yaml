@@ -75,6 +75,9 @@ importers:
       '@codenexus/generated':
         specifier: workspace:*
         version: link:../generated
+      '@codenexus/router':
+        specifier: workspace:*
+        version: link:../router
       '@codenexus/shared':
         specifier: workspace:*
         version: link:../shared
@@ -273,6 +276,37 @@ importers:
         version: 5.9.3
 
   packages/generated: {}
+
+  packages/router:
+    dependencies:
+      undici:
+        specifier: ^7.28.0
+        version: 7.29.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.11
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^7.18.0
+        version: 7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)
+      '@typescript-eslint/parser':
+        specifier: ^7.18.0
+        version: 7.18.0(eslint@8.57.1)(typescript@5.9.3)
+      eslint:
+        specifier: ^8.57.1
+        version: 8.57.1
+      eslint-plugin-unused-imports:
+        specifier: ^4.2.0
+        version: 4.4.1(@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)
+      prettier:
+        specifier: ^3.3.3
+        version: 3.8.2
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.8
+        version: 4.1.8(@types/node@22.19.11)(vite@7.3.3(@types/node@22.19.11)(jiti@2.6.1)(tsx@4.22.4)(yaml@2.9.0))
 
   packages/shared:
     dependencies:
@@ -3453,6 +3487,10 @@ packages:
 
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
+
+  undici@7.29.0:
+    resolution: {integrity: sha512-IDxfleLmmbSskfWSUATiN1nfn2rDuvnMOqb5CWR92iIfojA0Ud+ulOAAEQ57LPr9rWmsreUyf5lwyao+7GNNVw==}
+    engines: {node: '>=20.18.1'}
 
   unique-filename@4.0.0:
     resolution: {integrity: sha512-XSnEewXmQ+veP7xX2dS5Q4yZAvO40cBN2MWkJ7D/6sW4Dg6wYBNwM1Vrnz1FhH5AdeLIlUXRI9e28z1YZi71NQ==}
@@ -7314,6 +7352,8 @@ snapshots:
   undici-types@6.21.0: {}
 
   undici-types@7.16.0: {}
+
+  undici@7.29.0: {}
 
   unique-filename@4.0.0:
     dependencies:

@@ -21,6 +21,7 @@
   "dependencies": {
     "@codenexus/agent-core": "workspace:*",
     "@codenexus/generated": "workspace:*",
+    "@codenexus/router": "workspace:*",
     "@codenexus/feature-flowchart": "workspace:*",
     "@codenexus/feature-imagegen": "workspace:*",
     "@codenexus/feature-paper": "workspace:*",

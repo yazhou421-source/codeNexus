@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from "electron";
+import { app, autoUpdater as electronAutoUpdater, BrowserWindow, Menu } from "electron";
 import { readFile, rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -22,6 +22,12 @@ import { CodexConfigSwitcherService } from "./services/CodexConfigSwitcherServic
 import { ImageGenerationHistoryService } from "@codenexus/feature-imagegen/main/ImageGenerationHistoryService";
 import { ImageGenerationTaskService } from "@codenexus/feature-imagegen/main/ImageGenerationTaskService";
 import { FlowchartHistoryService } from "@codenexus/feature-flowchart/main/FlowchartHistoryService";
+import {
+  createDefaultRouterConfig,
+  EmbeddedRouterManager,
+  loadConfig as loadRouterConfig,
+  type RouterConfig,
+} from "@codenexus/router";
 import { LocalSettingsService } from "./services/LocalSettingsService";
 import { CacheRegistryService } from "./services/CacheRegistryService";
 import { ThreadArtifactService } from "./services/ThreadArtifactService";
@@ -32,6 +38,11 @@ import { WorkspacePatchService } from "./services/WorkspacePatchService";
 import { DeepSeekResponsesProxyService } from "./services/DeepSeekResponsesProxyService";
 import { CustomAgentService } from "./services/CustomAgentService";
 import { createMainWindow } from "./windows/mainWindow";
+import {
+  externalRouterConfigAllowed,
+  shouldStopEmbeddedRouterOnWindowClose,
+  startEmbeddedRouterFailSoft,
+} from "./embeddedRouterLifecycle";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 
@@ -43,7 +54,8 @@ if (process.platform === "win32") {
 let mainWindow: BrowserWindow | null = null;
 let appCloseFlowPromise: Promise<void> | null = null;
 let allowMainWindowClose = false;
-let closeCleanupFinished = false;
+let windowCloseCleanupFinished = false;
+let embeddedRouterStopRequested = false;
 let appCloseFlowStartedAt = 0;
 let appCloseForceExitTimer: NodeJS.Timeout | null = null;
 
@@ -52,6 +64,11 @@ const workspacePatchService = new WorkspacePatchService();
 const runtimeThreadStateTracker = new RuntimeThreadStateTracker();
 const cacheRegistryService = new CacheRegistryService();
 const deepSeekResponsesProxyService = new DeepSeekResponsesProxyService();
+const embeddedRouterManager = new EmbeddedRouterManager((level, message, error) => {
+  if (level === "error") logger.error("embedded-router", message, error);
+  else if (level === "warn") logger.warn("embedded-router", message, error);
+  else logger.info("embedded-router", message);
+});
 
 const APP_CLOSE_OVERLAY_BOOT_MS = 56;
 const APP_CLOSE_PREPARE_MS = 200;
@@ -106,19 +123,50 @@ function pushWindowClosingState(phase: AppWindowClosingState["phase"]) {
   sendToRenderer(IPC_APP_CHANNELS.appWindowClosingState, payload);
 }
 
-function stopCodexServersForClose(_reason: string) {
-  if (closeCleanupFinished) return;
-  closeCleanupFinished = true;
-  try {
-    codexServerManager.stopAll();
-  } catch (error) {
-    logger.warn("app-close", "stop codex servers failed", error);
+function stopServicesForClose(_reason: string, options: { stopProcessServices: boolean }) {
+  if (!windowCloseCleanupFinished) {
+    windowCloseCleanupFinished = true;
+    try {
+      codexServerManager.stopAll();
+    } catch (error) {
+      logger.warn("app-close", "stop codex servers failed", error);
+    }
+    try {
+      deepSeekResponsesProxyService.stop();
+    } catch (error) {
+      logger.warn("app-close", "stop DeepSeek proxy failed", error);
+    }
   }
-  try {
-    deepSeekResponsesProxyService.stop();
-  } catch (error) {
-    logger.warn("app-close", "stop DeepSeek proxy failed", error);
+  if (options.stopProcessServices && !embeddedRouterStopRequested) {
+    embeddedRouterStopRequested = true;
+    void embeddedRouterManager.stop().catch((error) => {
+      logger.warn("app-close", "stop embedded Router failed", error);
+    });
   }
+}
+
+function embeddedRouterConfig(): { config: RouterConfig; source: string } {
+  const configuredPath = String(process.env.CODENEXUS_ROUTER_CONFIG ?? "").trim();
+  if (configuredPath) {
+    if (!externalRouterConfigAllowed({ isDev, isPackaged: app.isPackaged })) {
+      logger.warn("embedded-router", "ignoring CODENEXUS_ROUTER_CONFIG outside unpackaged development");
+    } else {
+      return {
+        config: loadRouterConfig(configuredPath),
+        source: "development override",
+      };
+    }
+  }
+  return { config: createDefaultRouterConfig(), source: "built-in defaults" };
+}
+
+async function startEmbeddedRouter(): Promise<void> {
+  await startEmbeddedRouterFailSoft({
+    resolveConfig: embeddedRouterConfig,
+    start: (config) => embeddedRouterManager.start(config),
+    info: (message) => logger.info("embedded-router", message),
+    warn: (message, error) => logger.warn("embedded-router", message, error),
+  });
 }
 
 function clearAppCloseForceExitWatchdog() {
@@ -131,7 +179,7 @@ function armAppCloseForceExitWatchdog() {
   clearAppCloseForceExitWatchdog();
   appCloseForceExitTimer = setTimeout(() => {
     logger.warn("app-close", "force exiting after close watchdog timeout");
-    stopCodexServersForClose("force-exit-watchdog");
+    stopServicesForClose("force-exit-watchdog", { stopProcessServices: true });
     app.exit(0);
   }, APP_CLOSE_FORCE_EXIT_MS);
   appCloseForceExitTimer.unref?.();
@@ -151,7 +199,9 @@ async function runAppCloseFlow(win: BrowserWindow): Promise<void> {
     await wait(APP_CLOSE_PREPARE_MS);
 
     pushWindowClosingState("stopping");
-    stopCodexServersForClose("window-close");
+    stopServicesForClose("window-close", {
+      stopProcessServices: shouldStopEmbeddedRouterOnWindowClose(process.platform),
+    });
 
     const remainingVisibleMs = APP_CLOSE_MIN_VISIBLE_MS - (Date.now() - appCloseFlowStartedAt);
     if (remainingVisibleMs > 0) await wait(remainingVisibleMs);
@@ -179,13 +229,25 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-  stopCodexServersForClose("before-quit");
+  allowMainWindowClose = true;
+  stopServicesForClose("before-quit", { stopProcessServices: true });
 });
 
-(app as any).on("before-quit-for-update", () => {
+electronAutoUpdater.on("before-quit-for-update", () => {
   allowMainWindowClose = true;
-  stopCodexServersForClose("before-quit-for-update");
+  stopServicesForClose("before-quit-for-update", {
+    stopProcessServices: true,
+  });
 });
+
+if (isDev) {
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => {
+      stopServicesForClose(`signal:${signal}`, { stopProcessServices: true });
+      app.quit();
+    });
+  }
+}
 
 app
   .whenReady()
@@ -197,6 +259,8 @@ app
     if (!isDev) {
       installContentSecurityPolicy();
     }
+
+    await startEmbeddedRouter();
 
     const historyCachePath = join(app.getPath("userData"), "thread-history-cache.json");
     const historyStore = new HistoryStore(historyCachePath);
@@ -325,12 +389,15 @@ app
       clearAppCloseForceExitWatchdog();
       mainWindow = null;
       allowMainWindowClose = false;
-      closeCleanupFinished = false;
+      windowCloseCleanupFinished = false;
       appCloseFlowStartedAt = 0;
       appCloseFlowPromise = null;
     });
   })
-  .catch((error) => {
+  .catch(async (error) => {
     logger.error("main", "app bootstrap failed", error);
+    await embeddedRouterManager.stop().catch((stopError) => {
+      logger.warn("main", "embedded Router cleanup after bootstrap failure failed", stopError);
+    });
     app.exit(1);
   });

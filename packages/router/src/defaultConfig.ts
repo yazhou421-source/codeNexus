@@ -1,0 +1,105 @@
+import { randomBytes } from "node:crypto";
+import type { RouterConfig } from "./types";
+
+export function createDefaultRouterConfig(): RouterConfig {
+  return {
+    mode: "hybrid",
+    host: "127.0.0.1",
+    port: 15722,
+    authToken: `codenexus-local-${randomBytes(24).toString("hex")}`,
+    clientAuth: {
+      // API-key routes stay closed until the next phase wires an authenticated
+      // Codex client path. Subscription routes can still relay Codex auth.
+      allowOpenAiBearer: false,
+    },
+    defaultModel: "gpt-5.5",
+    catalog: {
+      contextWindow: 258400,
+      effectiveContextWindowPercent: 95,
+      autoCompactPercent: 80,
+    },
+    models: [
+      {
+        id: "gpt-5.5",
+        displayName: "GPT-5.5",
+        description: "GPT-5.5 through Codex/OpenAI authentication.",
+        api: "responses",
+        baseUrl: "https://chatgpt.com/backend-api/codex",
+        model: "gpt-5.5",
+        authMode: "codex_openai",
+        contextWindow: 258400,
+        inputModalities: ["text", "image"],
+        additionalSpeedTiers: ["fast"],
+        serviceTiers: [
+          {
+            id: "priority",
+            name: "Fast",
+            description: "1.5x speed, increased usage",
+          },
+        ],
+        priority: 0,
+      },
+      {
+        id: "gpt-5.4",
+        displayName: "GPT-5.4",
+        description: "GPT-5.4 through Codex/OpenAI authentication.",
+        api: "responses",
+        baseUrl: "https://chatgpt.com/backend-api/codex",
+        model: "gpt-5.4",
+        authMode: "codex_openai",
+        contextWindow: 258400,
+        inputModalities: ["text", "image"],
+        additionalSpeedTiers: ["fast"],
+        serviceTiers: [
+          {
+            id: "priority",
+            name: "Fast",
+            description: "1.5x speed, increased usage",
+          },
+        ],
+        priority: 1,
+      },
+      {
+        id: "gpt-5.4-mini",
+        displayName: "DeepSeek V4 Pro",
+        description: "DeepSeek V4 Pro through Chat Completions conversion.",
+        api: "chat_completions",
+        baseUrl: "https://api.deepseek.com/v1",
+        model: "deepseek-v4-pro",
+        authMode: "api_key",
+        apiKeyEnv: "DEEPSEEK_API_KEY",
+        contextWindow: 1000000,
+        priority: 2,
+        dropParams: ["response_format", "parallel_tool_calls"],
+      },
+      {
+        id: "gpt-5.3-codex",
+        displayName: "DeepSeek V4 Flash",
+        description: "DeepSeek V4 Flash through Chat Completions conversion.",
+        api: "chat_completions",
+        baseUrl: "https://api.deepseek.com/v1",
+        model: "deepseek-v4-flash",
+        authMode: "api_key",
+        apiKeyEnv: "DEEPSEEK_API_KEY",
+        contextWindow: 1000000,
+        priority: 3,
+        dropParams: ["response_format", "parallel_tool_calls"],
+      },
+      {
+        id: "gpt-5.2",
+        displayName: "Kimi K2.7 Code",
+        description: "Kimi K2.7 Code through Chat Completions conversion.",
+        api: "chat_completions",
+        baseUrl: "https://api.moonshot.cn/v1",
+        model: "kimi-k2.7-code",
+        authMode: "api_key",
+        apiKeyEnv: "MOONSHOT_API_KEY",
+        contextWindow: 258400,
+        priority: 4,
+        rpm: 12,
+        inputModalities: ["text", "image"],
+        dropParams: ["response_format", "parallel_tool_calls"],
+      },
+    ],
+  };
+}

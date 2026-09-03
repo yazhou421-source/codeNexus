@@ -25,6 +25,8 @@ files:
       - "**/*"
 
 extraResources:
+  - from: ../router/LICENSE
+    to: licenses/CodexBridge-LICENSE.txt
   - from: music
     to: music
     filter:
