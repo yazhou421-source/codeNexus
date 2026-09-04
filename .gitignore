@@ -9,6 +9,8 @@ release/
 .vite/
 coverage/
 *.tsbuildinfo
+packages/app/.cache/codex-runtime/
+packages/app/build/codex-runtime/
 
 # Logs
 *.log

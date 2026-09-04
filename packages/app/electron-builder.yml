@@ -13,6 +13,7 @@ directories:
   output: release
 
 asar: true
+beforePack: scripts/electron-builder-before-pack.mjs
 
 files:
   - from: .
@@ -25,6 +26,16 @@ files:
       - "**/*"
 
 extraResources:
+  - from: codex-runtime-manifest.json
+    to: codex/codex-runtime-manifest.json
+  - from: build/codex-runtime/${os}-${arch}
+    to: codex/${os}-${arch}
+    filter:
+      - "**/*"
+  - from: licenses/OpenAI-Codex-LICENSE.txt
+    to: licenses/OpenAI-Codex-LICENSE.txt
+  - from: licenses/OpenAI-Codex-NOTICE.txt
+    to: licenses/OpenAI-Codex-NOTICE.txt
   - from: ../router/LICENSE
     to: licenses/CodexBridge-LICENSE.txt
   - from: music
@@ -42,6 +53,15 @@ win:
     - target: nsis
       arch:
         - x64
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
 
 nsis:
   oneClick: false

@@ -36,28 +36,34 @@ export function createEnvironmentRuntime(deps: EnvironmentRuntimeDeps): Environm
     showToast({
       kind: "info",
       title: translate("runtime.checkEnvironmentTitle"),
-      message: translate("runtime.checkingCodexNodeNpm"),
+      message: translate("runtime.checkingRuntime"),
     });
 
     try {
       const res = await codexDesktop.codexServer.getDiagnostics();
-      const ready = Boolean(res.codex.ok) && Boolean(res.node.ok) && Boolean(res.npm.ok);
+      const ready = res.selfContained
+        ? Boolean(res.codex.ok)
+        : Boolean(res.codex.ok) && Boolean(res.node.ok) && Boolean(res.npm.ok);
       const details = [
         translate("runtime.diagnosticLine", {
           name: "codex",
           status: res.codex.ok ? translate("runtime.diagnosticOk") : translate("runtime.diagnosticMissing"),
         }),
         String(res.codex.details ?? "").trim(),
-        translate("runtime.diagnosticLine", {
-          name: "node",
-          status: res.node.ok ? translate("runtime.diagnosticOk") : translate("runtime.diagnosticMissing"),
-        }),
-        String(res.node.details ?? "").trim(),
-        translate("runtime.diagnosticLine", {
-          name: "npm",
-          status: res.npm.ok ? translate("runtime.diagnosticOk") : translate("runtime.diagnosticMissing"),
-        }),
-        String(res.npm.details ?? "").trim(),
+        ...(res.selfContained
+          ? []
+          : [
+              translate("runtime.diagnosticLine", {
+                name: "node",
+                status: res.node.ok ? translate("runtime.diagnosticOk") : translate("runtime.diagnosticMissing"),
+              }),
+              String(res.node.details ?? "").trim(),
+              translate("runtime.diagnosticLine", {
+                name: "npm",
+                status: res.npm.ok ? translate("runtime.diagnosticOk") : translate("runtime.diagnosticMissing"),
+              }),
+              String(res.npm.details ?? "").trim(),
+            ]),
       ]
         .filter(Boolean)
         .join("\n");
@@ -71,7 +77,7 @@ export function createEnvironmentRuntime(deps: EnvironmentRuntimeDeps): Environm
         showToast({
           kind: "success",
           title: translate("runtime.environmentReadyTitle"),
-          message: translate("runtime.codexNodeNpmReady"),
+          message: translate(res.selfContained ? "runtime.bundledRuntimeReady" : "runtime.codexNodeNpmReady"),
         });
         return;
       }
@@ -80,7 +86,7 @@ export function createEnvironmentRuntime(deps: EnvironmentRuntimeDeps): Environm
       showToast({
         kind: "warn",
         title: translate("runtime.environmentNotReadyTitle"),
-        message: translate("runtime.environmentInstallHint"),
+        message: translate(res.selfContained ? "runtime.bundledRuntimeRepairHint" : "runtime.environmentInstallHint"),
       });
     } catch (error: unknown) {
       const msg = readErrorMessage(error);

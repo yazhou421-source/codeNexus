@@ -27,6 +27,22 @@ describe("Codex app-server spawn configuration", () => {
     });
   });
 
+  it("spawns app-server from a bundled executable path containing spaces", () => {
+    const bundledPath = "/Applications/CodeNexus Preview.app/Contents/Resources/codex/mac-arm64/bin/codex";
+    const result = buildCodexAppServerSpawnCommand({
+      nativeCodex: { kind: "direct", path: bundledPath },
+      globalConfigOverrides: ['model_provider="codenexus-router-codex"'],
+    });
+    expect(result.command).toBe(bundledPath);
+    expect(result.args).toEqual([
+      "-c",
+      'model_provider="codenexus-router-codex"',
+      "app-server",
+      "--listen",
+      "stdio://",
+    ]);
+  });
+
   it("keeps the token out of direct, node, and cmd argv", () => {
     const overrides = ['model_provider="openai"'];
     const commands = [

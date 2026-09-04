@@ -6,7 +6,7 @@ import type {
   CodexRpcArgs,
   CodexServerRespondArgs,
 } from "@codenexus/shared/codex-protocol";
-import { detectCodexNative, detectNodeNative, detectNpmNative } from "../../systemChecks";
+import { detectCodexNative, getCodexDiagnostics } from "../../systemChecks";
 import { CodexServerManager } from "../../services/CodexServerManager";
 
 export function registerCodexHandlers(deps: {
@@ -16,16 +16,12 @@ export function registerCodexHandlers(deps: {
   const { serverManager, sendEvent } = deps;
 
   ipcMain.handle(IPC_CODEX_CHANNELS.codexEnsureInstalled, async () => {
-    const native = detectCodexNative();
+    const native = await detectCodexNative();
     return { native };
   });
 
   ipcMain.handle(IPC_CODEX_CHANNELS.codexDiagnostics, async () => {
-    return {
-      codex: detectCodexNative(),
-      node: detectNodeNative(),
-      npm: detectNpmNative(),
-    };
+    return await getCodexDiagnostics();
   });
 
   ipcMain.handle(

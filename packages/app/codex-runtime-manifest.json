@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "version": "0.153.2",
+  "releaseTag": "rust-v0.153.2",
+  "sourceRepository": "https://github.com/openai/codex",
+  "fileDigestStage": "official-release-before-platform-code-signing",
+  "platforms": {
+    "mac-arm64": {
+      "target": "aarch64-apple-darwin",
+      "asset": {
+        "name": "codex-package-aarch64-apple-darwin.tar.gz",
+        "url": "https://github.com/openai/codex/releases/download/rust-v0.153.2/codex-package-aarch64-apple-darwin.tar.gz",
+        "sha256": "287e2dd0a9bbfb58581b0a9150399458b4f094ea42caf02860f1e8cb5a202a0b",
+        "size": 111555208
+      },
+      "entrypoint": "bin/codex",
+      "files": [
+        {
+          "path": "bin/codex",
+          "sha256": "195ace4100a634a9df39147f493e730e666b5bd87795f3c9f3251d8542400424",
+          "size": 220551344,
+          "executable": true,
+          "purpose": "Codex CLI and app-server entrypoint"
+        },
+        {
+          "path": "bin/codex-code-mode-host",
+          "sha256": "0de7628b3578daf3b6676774ba629dbebe46b53b574c6634b2e94d68e5df7cfd",
+          "size": 62785296,
+          "executable": true,
+          "purpose": "Code-mode host used by Codex tool execution"
+        },
+        {
+          "path": "codex-package.json",
+          "sha256": "e926a248158c48bea5a6e39ba17bf41f83287bb03bc4dcccb17226675a230e30",
+          "size": 200,
+          "executable": false,
+          "purpose": "Official package layout and version metadata"
+        },
+        {
+          "path": "codex-path/rg",
+          "sha256": "1406733fe16c4ec8686ff4f60664e96cf984df2a599f58bd83ddeb72894d41cc",
+          "size": 4030432,
+          "executable": true,
+          "purpose": "Bundled ripgrep used for workspace search"
+        },
+        {
+          "path": "codex-resources/zsh/bin/zsh",
+          "sha256": "32818dee8dc7292a81208eefbc18fb362777eb402d8ff8ececb8f0b979a7fcc4",
+          "size": 754208,
+          "executable": true,
+          "purpose": "Bundled zsh used by shell snapshot and execution"
+        }
+      ]
+    },
+    "win-x64": {
+      "target": "x86_64-pc-windows-msvc",
+      "asset": {
+        "name": "codex-package-x86_64-pc-windows-msvc.tar.gz",
+        "url": "https://github.com/openai/codex/releases/download/rust-v0.153.2/codex-package-x86_64-pc-windows-msvc.tar.gz",
+        "sha256": "eaa00e30f3c1a2b5ca8263960f340a8e5d06fb705de09716f9a2bc42eceef437",
+        "size": 136067003
+      },
+      "entrypoint": "bin/codex.exe",
+      "files": [
+        {
+          "path": "bin/codex.exe",
+          "sha256": "e86ffd96751ded51f669b520d70ba3139b514eb36313a8eeeedde37baa7b58e3",
+          "size": 295447856,
+          "executable": true,
+          "purpose": "Codex CLI and app-server entrypoint"
+        },
+        {
+          "path": "bin/codex-code-mode-host.exe",
+          "sha256": "ee37f218b8052cf7c2c99fcc5414da20c07262eaab14c81870c6ed8cd522d3f0",
+          "size": 72472880,
+          "executable": true,
+          "purpose": "Code-mode host used by Codex tool execution"
+        },
+        {
+          "path": "codex-package.json",
+          "sha256": "a37bbfd7b817d39a78f685a3af358a0f7aab7dcb533b893437e1003e589ce510",
+          "size": 215,
+          "executable": false,
+          "purpose": "Official package layout and version metadata"
+        },
+        {
+          "path": "codex-path/rg.exe",
+          "sha256": "14231169855ec5205cf5a1b6f1db358ff4aed4247c86b69ce8aae647c77f6680",
+          "size": 4218880,
+          "executable": true,
+          "purpose": "Bundled ripgrep used for workspace search"
+        },
+        {
+          "path": "codex-resources/codex-command-runner.exe",
+          "sha256": "7d4e37fafc1ca073d281964f9a86f2ac9cfa588f86e63d33cc380c48658c5b76",
+          "size": 8204080,
+          "executable": true,
+          "purpose": "Windows command runner used by sandboxed execution"
+        },
+        {
+          "path": "codex-resources/codex-windows-sandbox-setup.exe",
+          "sha256": "77157133a72dd129947841587a28ab27370c1059b99de7904a35f6f9b26d3a1f",
+          "size": 15412016,
+          "executable": true,
+          "purpose": "Windows sandbox setup helper"
+        }
+      ]
+    }
+  },
+  "licenses": [
+    {
+      "name": "OpenAI-Codex-LICENSE.txt",
+      "source": "https://raw.githubusercontent.com/openai/codex/rust-v0.153.2/LICENSE",
+      "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc",
+      "size": 10926
+    },
+    {
+      "name": "OpenAI-Codex-NOTICE.txt",
+      "source": "https://raw.githubusercontent.com/openai/codex/rust-v0.153.2/NOTICE",
+      "sha256": "9d71575ecfd9a843fc1677b0efb08053c6ba9fd686a0de1a6f5382fd3c220915",
+      "size": 242
+    }
+  ]
+}

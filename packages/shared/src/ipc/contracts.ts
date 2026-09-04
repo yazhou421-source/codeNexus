@@ -33,9 +33,15 @@ export type CodexEnsureInstalledResult = {
 };
 
 export type CodexDiagnosticsResult = {
-  codex: { ok: boolean; details?: string };
-  node: { ok: boolean; details?: string };
-  npm: { ok: boolean; details?: string };
+  selfContained: boolean;
+  codex: {
+    ok: boolean;
+    details?: string;
+    source?: "bundled" | "explicit-dev" | "system-dev";
+    version?: string;
+  };
+  node: { ok: boolean; required?: boolean; details?: string };
+  npm: { ok: boolean; required?: boolean; details?: string };
 };
 
 /*

@@ -12,6 +12,8 @@
     "test": "vitest run",
     "ci": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build",
     "codex:types": "pnpm --filter @codenexus/app codex:types",
+    "codex:runtime:fetch": "pnpm --filter @codenexus/app codex:runtime:fetch",
+    "codex:runtime:verify": "pnpm --filter @codenexus/app codex:runtime:verify",
     "dist": "pnpm --filter @codenexus/app dist"
   },
   "pnpm": {

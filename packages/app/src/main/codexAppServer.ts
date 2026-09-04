@@ -1,10 +1,13 @@
 import { spawn } from "node:child_process";
 import * as readline from "node:readline";
-import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { app } from "electron";
-import { discoverExistingCodexPaths } from "./codexNativeDiscovery";
+import {
+  CodexRuntimeUnavailableError,
+  resolveCurrentCodexExecutable,
+  type CodexExecutableResolution,
+  type NativeCodexCommand,
+} from "./codexExecutableResolver";
 import {
   applyCodexRouterModelProvider,
   codexRouterModelProviderForModel,
@@ -49,10 +52,7 @@ type Pending = {
   timeout?: NodeJS.Timeout;
 };
 
-export type NativeCodexCommand =
-  | { kind: "direct"; path: string }
-  | { kind: "node"; nodeExe: string; script: string }
-  | { kind: "cmd"; path: string };
+export type { NativeCodexCommand } from "./codexExecutableResolver";
 
 export type CodexSpawnCommand = {
   command: string;
@@ -146,6 +146,7 @@ export class CodexAppServer {
   private readonly threadModelProviders = new Map<string, string>();
   private onMessage?: (msg: CodexIncomingMessage) => void;
   private nativeCodex?: NativeCodexCommand;
+  private readonly resolveExecutable: () => Promise<CodexExecutableResolution>;
 
   constructor(opts: {
     id: string;
@@ -154,6 +155,7 @@ export class CodexAppServer {
     experimentalApiOptIn?: boolean;
     runtimeConfig?: CodexAppServerRuntimeConfig | null;
     onMessage?: (msg: CodexIncomingMessage) => void;
+    resolveExecutable?: () => Promise<CodexExecutableResolution>;
   }) {
     this.id = opts.id;
     this.mode = opts.mode;
@@ -161,6 +163,7 @@ export class CodexAppServer {
     this.experimentalApiOptIn = Boolean(opts.experimentalApiOptIn);
     this.runtimeConfig = opts.runtimeConfig ?? null;
     this.onMessage = opts.onMessage;
+    this.resolveExecutable = opts.resolveExecutable ?? resolveCurrentCodexExecutable;
   }
 
   get running() {
@@ -174,7 +177,7 @@ export class CodexAppServer {
   async start(): Promise<void> {
     if (this.proc) throw new Error("server already started");
 
-    if (this.mode === "native") this.preflightNative();
+    if (this.mode === "native") await this.preflightNative();
 
     const { command, args, spawnCwd } = this.getSpawnCommand();
     if (spawnCwd) this.ensureSpawnCwd(spawnCwd);
@@ -459,56 +462,19 @@ export class CodexAppServer {
     }
   }
 
-  private preflightNative(): void {
-    const locator = process.platform === "win32" ? "where.exe" : "which";
-    const found = spawnSync(locator, ["codex"], { encoding: "utf8" });
-    const paths = discoverExistingCodexPaths({
-      whereStdout: found.stdout,
-      appData: process.env.APPDATA,
-      exists: existsSync,
-    });
-
-    if (paths.length === 0) {
-      throw new Error(
-        "codex (native) was not detected. Install Node.js LTS (including npm), run: npm i -g @openai/codex, and make sure codex is available on PATH. Restart the terminal or this app if needed."
-      );
-    }
-
-    if (process.platform !== "win32") {
-      this.nativeCodex = { kind: "direct", path: paths[0] };
-      return;
-    }
-
-    const exe = paths.find((p) => p.toLowerCase().endsWith(".exe"));
-    if (exe) {
-      this.nativeCodex = { kind: "direct", path: exe };
-      return;
-    }
-
-    const cmd = paths.find((p) => p.toLowerCase().endsWith(".cmd"));
-    if (cmd) {
-      const base = dirname(cmd);
-      const nodeExe = join(base, "node.exe");
-      const codexJs = join(base, "node_modules", "@openai", "codex", "bin", "codex.js");
-      if (existsSync(nodeExe) && existsSync(codexJs)) {
-        // 为避免 cmd.exe 转义/引号问题，直接以 node.exe 运行底层入口脚本。
-        this.nativeCodex = { kind: "node", nodeExe, script: codexJs };
-        return;
+  private async preflightNative(): Promise<void> {
+    try {
+      const resolution = await this.resolveExecutable();
+      this.nativeCodex = resolution.command;
+      logger.info("codex-runtime", `using ${resolution.source} Codex ${resolution.version} at ${resolution.path}`);
+    } catch (error) {
+      if (error instanceof CodexRuntimeUnavailableError) {
+        logger.error("codex-runtime", `${error.code}: ${error.technicalDetail}`);
+      } else {
+        logger.error("codex-runtime", "Codex runtime resolution failed", error);
       }
-      this.nativeCodex = { kind: "cmd", path: cmd };
-      return;
+      throw error;
     }
-
-    const bat = paths.find((p) => p.toLowerCase().endsWith(".bat"));
-    if (bat) {
-      this.nativeCodex = { kind: "cmd", path: bat };
-      return;
-    }
-
-    throw new Error(
-      `codex was found, but no executable entry (.exe/.cmd/.bat) was found. where.exe codex returned:\n${paths.join("\n")}\n\n` +
-        `Confirm that you can run this directly in PowerShell: codex --version`
-    );
   }
 
   private async initializeHandshake(): Promise<void> {

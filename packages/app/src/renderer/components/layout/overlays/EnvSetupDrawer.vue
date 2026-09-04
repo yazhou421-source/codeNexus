@@ -39,17 +39,24 @@
                   <div class="env-diag-key mono">codex</div>
                   <div class="env-diag-val mono">{{ diagText(diag.codex) }}</div>
                 </div>
-                <div class="env-diag-item" :class="diagItemClass(diag.node?.ok)">
+                <div v-if="!diag.selfContained" class="env-diag-item" :class="diagItemClass(diag.node?.ok)">
                   <div class="env-diag-key mono">node</div>
                   <div class="env-diag-val mono">{{ diagText(diag.node) }}</div>
                 </div>
-                <div class="env-diag-item" :class="diagItemClass(diag.npm?.ok)">
+                <div v-if="!diag.selfContained" class="env-diag-item" :class="diagItemClass(diag.npm?.ok)">
                   <div class="env-diag-key mono">npm</div>
                   <div class="env-diag-val mono">{{ diagText(diag.npm) }}</div>
                 </div>
               </div>
 
-              <div v-if="showManualGuide" class="env-guide">
+              <div v-if="showBundledRepairGuide" class="env-guide">
+                <div class="env-guide-title mono">{{ t("envSetup.bundledRepairTitle") }}</div>
+                <div class="env-guide-body">
+                  <div class="env-guide-text dim">{{ t("envSetup.bundledRepairHint") }}</div>
+                </div>
+              </div>
+
+              <div v-else-if="showManualGuide" class="env-guide">
                 <div class="env-guide-title mono">{{ t("envSetup.manualGuideTitle") }}</div>
                 <div class="env-guide-body">
                   <div class="env-guide-text dim">
@@ -66,7 +73,7 @@ codex --version</pre
                 </div>
               </div>
 
-              <div class="env-runtime-hint">
+              <div v-if="!diag.selfContained" class="env-runtime-hint">
                 <div class="env-runtime-hint-title mono">{{ t("envSetup.hintTitle") }}</div>
                 <div class="env-runtime-hint-text dim">
                   {{ t("envSetup.runtimeHint") }}
@@ -132,11 +139,17 @@ function diagItemClass(ok?: boolean) {
 }
 
 const hasDiagnostics = computed(() => Boolean(diag.value.codex || diag.value.node || diag.value.npm));
-const isReady = computed(
-  () => Boolean(diag.value.codex?.ok) && Boolean(diag.value.node?.ok) && Boolean(diag.value.npm?.ok)
-);
+const isReady = computed(() => {
+  if (diag.value.selfContained) return Boolean(diag.value.codex?.ok);
+  return Boolean(diag.value.codex?.ok) && Boolean(diag.value.node?.ok) && Boolean(diag.value.npm?.ok);
+});
 const missingNodeOrNpm = computed(() => diag.value.node?.ok === false || diag.value.npm?.ok === false);
-const showManualGuide = computed(() => !busy.value && hasDiagnostics.value && !isReady.value);
+const showBundledRepairGuide = computed(
+  () => !busy.value && Boolean(diag.value.selfContained) && diag.value.codex?.ok === false
+);
+const showManualGuide = computed(
+  () => !busy.value && !diag.value.selfContained && hasDiagnostics.value && !isReady.value
+);
 
 const statusChipText = computed(() => {
   if (busy.value) return t("envSetup.processing");
@@ -162,6 +175,7 @@ async function onRefreshDiagnostics() {
     const res = await codexDesktop.codexServer.getDiagnostics();
     diag.value = res;
     console.info("[EnvSetup] diagnostics:", {
+      selfContained: res.selfContained,
       codex: res.codex.ok,
       node: res.node.ok,
       npm: res.npm.ok,
