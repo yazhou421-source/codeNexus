@@ -67,7 +67,7 @@ export function buildCodexAppServerSpawnCommand(args: {
 }): CodexSpawnCommand {
   const appServerArgs = [...configArgs(args.globalConfigOverrides ?? []), "app-server", "--listen", "stdio://"];
   if (args.nativeCodex?.kind === "cmd") {
-    const joined = appServerArgs.join(" ");
+    const joined = appServerArgs.map(quoteWindowsCmdArgument).join(" ");
     const cmdline = `""${args.nativeCodex.path}"${joined ? " " : ""}${joined}"`;
     return { command: "cmd.exe", args: ["/d", "/s", "/c", cmdline], spawnCwd: args.cwd };
   }
@@ -83,6 +83,14 @@ export function buildCodexAppServerSpawnCommand(args: {
     args: appServerArgs,
     spawnCwd: args.cwd,
   };
+}
+
+function quoteWindowsCmdArgument(value: string): string {
+  if (!/[\s&|<>^()]/.test(value)) return value;
+  if (value.includes('"') || value.includes("%") || value.includes("!")) {
+    throw new Error("unsupported character in Windows Codex command argument");
+  }
+  return `"${value}"`;
 }
 
 export function redactCodexChildValue<T>(value: T, sensitiveValues: readonly string[]): T {

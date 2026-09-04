@@ -614,6 +614,32 @@ export type CodexProviderTestResult = {
   elapsedMs: number | null;
 };
 
+export type RouterProviderModelStatus = {
+  id: string;
+  displayName: string;
+  upstreamModel: string;
+  contextWindow: number;
+  inputModalities: ("text" | "image")[];
+  selected: boolean;
+};
+
+export type RouterProviderStatus = {
+  id: string;
+  displayName: string;
+  baseUrl: string;
+  api: "responses" | "chat_completions";
+  requiresApiKey: boolean;
+  defaultModelId: string;
+  configured: boolean;
+  enabled: boolean;
+  models: RouterProviderModelStatus[];
+};
+
+export type RouterProviderRegistrySnapshot = {
+  secureStorageAvailable: boolean;
+  providers: RouterProviderStatus[];
+};
+
 export type CodexSkillRootsSnapshot = {
   path: string;
   exists: boolean;
@@ -691,6 +717,19 @@ export type CodexDesktopAppApi = {
   prepareDeepSeekProxy(args: {
     upstreamBaseUrl: string;
   }): Promise<{ ok: true; baseUrl: string }>;
+  listRouterProviders(): Promise<RouterProviderRegistrySnapshot>;
+  saveRouterProviderApiKey(args: {
+    providerId: string;
+    apiKey: string;
+  }): Promise<RouterProviderRegistrySnapshot>;
+  deleteRouterProviderApiKey(args: {
+    providerId: string;
+  }): Promise<RouterProviderRegistrySnapshot>;
+  configureRouterProvider(args: {
+    providerId: string;
+    enabled: boolean;
+    modelIds: string[];
+  }): Promise<RouterProviderRegistrySnapshot>;
   readCodexSkillRoots(): Promise<CodexSkillRootsSnapshot>;
   setCodexSkillRootsForWorkspace(args: {
     workspacePath: string;

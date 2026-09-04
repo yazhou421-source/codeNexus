@@ -196,6 +196,44 @@ describe("EmbeddedRouterManager", () => {
     expect(second).toEqual(first);
   });
 
+  it("reloads an owned Router config without restarting the listener", async () => {
+    const manager = track(new EmbeddedRouterManager());
+    const initial = testConfig(0);
+    const started = await manager.start(initial);
+    const firstModels = await fetch(`${started.origin}/v1/models`).then(
+      (response) => response.json(),
+    );
+    expect(firstModels.data.map((model: { id: string }) => model.id)).toEqual([
+      "test-model",
+    ]);
+
+    manager.updateConfig({
+      ...initial,
+      models: [
+        ...initial.models,
+        {
+          id: "second-model",
+          displayName: "Second Model",
+          api: "responses",
+          baseUrl: "https://api.example.test/v1",
+          model: "second-model",
+        },
+      ],
+    });
+
+    const secondModels = await fetch(`${started.origin}/v1/models`).then(
+      (response) => response.json(),
+    );
+    expect(secondModels.data.map((model: { id: string }) => model.id)).toEqual([
+      "test-model",
+      "second-model",
+    ]);
+    expect(manager.ownedConnection?.origin).toBe(started.origin);
+    expect(
+      manager.ownedConnection?.routes.map((route) => route.modelId),
+    ).toEqual(["test-model", "second-model"]);
+  });
+
   it("isolates Codex bearer and local-token Router endpoints", async () => {
     const upstreamAuthorizations: string[] = [];
     const upstream = trackServer(

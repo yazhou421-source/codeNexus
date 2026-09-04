@@ -33,7 +33,8 @@ function routerCodexAuthApiBase(origin: string): string {
  * routes use a second provider whose local credential is read only from child env.
  */
 export function createCodexRouterRuntime(
-  connection: EmbeddedRouterOwnedConnection | null
+  connection: EmbeddedRouterOwnedConnection | null,
+  options: { modelCatalogPath?: string | null } = {}
 ): CodexAppServerRuntimeConfig | null {
   if (!connection?.origin || !connection.authToken) return null;
 
@@ -47,6 +48,7 @@ export function createCodexRouterRuntime(
     globalConfigOverrides: [
       `model_provider=${tomlString(CODEX_ROUTER_CODEX_AUTH_PROVIDER_ID)}`,
       `openai_base_url=${tomlString(codexAuthBaseUrl)}`,
+      ...(options.modelCatalogPath ? [`model_catalog_json=${tomlString(options.modelCatalogPath)}`] : []),
       `model_providers.${CODEX_ROUTER_CODEX_AUTH_PROVIDER_ID}.name=${tomlString("CodeNexusRouterCodexAuth")}`,
       `model_providers.${CODEX_ROUTER_CODEX_AUTH_PROVIDER_ID}.base_url=${tomlString(codexAuthBaseUrl)}`,
       `model_providers.${CODEX_ROUTER_CODEX_AUTH_PROVIDER_ID}.wire_api=${tomlString("responses")}`,

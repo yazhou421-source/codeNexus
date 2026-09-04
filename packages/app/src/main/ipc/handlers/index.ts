@@ -16,6 +16,7 @@ import type { ThreadTitleOverrideService } from "../../services/ThreadTitleOverr
 import type { UpdateService } from "../../services/UpdateService";
 import type { DeepSeekResponsesProxyService } from "../../services/DeepSeekResponsesProxyService";
 import type { CustomAgentService } from "../../services/CustomAgentService";
+import type { ProviderRuntimeService } from "../../services/ProviderRuntimeService";
 import { WorkspacePatchService } from "../../services/WorkspacePatchService";
 import { registerAppHandlers } from "./app.handlers";
 import { registerAgentHandlers } from "./agent.handlers";
@@ -26,6 +27,7 @@ import { registerHistoryHandlers } from "./history.handlers";
 import { registerImageGenerationHandlers } from "./image-generation.handlers";
 import { registerWorkspaceHandlers } from "./workspace.handlers";
 import { registerWindowHandlers } from "./window.handlers";
+import { registerProviderHandlers } from "./provider.handlers";
 import { CacheRegistryService } from "../../services/CacheRegistryService";
 import type { CustomAgentStreamEvent, HistoryThreadRunningStateResult } from "@codenexus/shared/ipc/contracts";
 
@@ -54,6 +56,7 @@ export type IpcHandlersDeps = {
   customAgentService: CustomAgentService;
   sendAgentEvent: (payload: CustomAgentStreamEvent) => void;
   cacheRegistryService: CacheRegistryService;
+  providerRuntimeService: ProviderRuntimeService;
 };
 
 export function registerAllHandlers(deps: IpcHandlersDeps) {
@@ -66,6 +69,7 @@ export function registerAllHandlers(deps: IpcHandlersDeps) {
     updateService: deps.updateService,
     deepSeekResponsesProxyService: deps.deepSeekResponsesProxyService,
   });
+  registerProviderHandlers({ providerRuntimeService: deps.providerRuntimeService });
   registerImageGenerationHandlers({
     localSettingsService: deps.localSettingsService,
     imageGenerationHistoryService: deps.imageGenerationHistoryService,

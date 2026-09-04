@@ -45,6 +45,19 @@ describe("Codex app-server spawn configuration", () => {
     expect(JSON.stringify(commands)).not.toContain("synthetic-router-token");
   });
 
+  it("keeps a model catalog path with spaces intact in the Windows cmd fallback", () => {
+    const result = buildCodexAppServerSpawnCommand({
+      nativeCodex: { kind: "cmd", path: "C:\\Users\\Test User\\codex.cmd" },
+      globalConfigOverrides: [
+        "model_catalog_json='C:\\Users\\Test User\\AppData\\Roaming\\CodeNexus\\model-catalog.json'",
+      ],
+    });
+    expect(result.command).toBe("cmd.exe");
+    expect(result.args.at(-1)).toContain(
+      "\"model_catalog_json='C:\\Users\\Test User\\AppData\\Roaming\\CodeNexus\\model-catalog.json'\""
+    );
+  });
+
   it("redacts secrets recursively before child output reaches renderer", () => {
     const secret = "synthetic-router-token";
     expect(redactCodexChildValue({ error: `Bearer ${secret}`, nested: [secret] }, [secret])).toEqual({

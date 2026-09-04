@@ -9,11 +9,18 @@ export function routeForModel(
   config: RouterConfig,
   requestedModel?: string,
 ): RouterModelRoute;
-export function apiKeyForRoute(route: RouterModelRoute): string | undefined;
+export type RouterSecretResolver = (secretRef: string) => string | undefined;
+export function apiKeyForRoute(
+  route: RouterModelRoute,
+  resolveSecret?: RouterSecretResolver,
+): string | undefined;
 export function secretValuesForConfig(config: RouterConfig): string[];
 export function authModeForRoute(
   route: RouterModelRoute,
 ): "api_key" | "codex_openai";
-export function requireApiKey(route: RouterModelRoute): string;
+export function requireApiKey(
+  route: RouterModelRoute,
+  resolveSecret?: RouterSecretResolver,
+): string;
 export function joinUpstreamUrl(baseUrl: string, endpoint: string): string;
 export function routerOrigin(config: RouterConfig): string;

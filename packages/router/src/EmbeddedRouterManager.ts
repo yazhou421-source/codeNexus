@@ -1,6 +1,10 @@
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { normalizeRouterHost, validateConfig } from "./config.js";
+import {
+  normalizeRouterHost,
+  validateConfig,
+  type RouterSecretResolver,
+} from "./config.js";
 import {
   createRouterServer,
   ROUTER_PROTOCOL_VERSION,
@@ -32,6 +36,7 @@ export type EmbeddedRouterLog = (
 
 export type EmbeddedRouterManagerOptions = {
   healthProbeTimeoutMs?: number;
+  resolveSecret?: RouterSecretResolver;
 };
 
 export type EmbeddedRouterOwnedConnection = {
@@ -55,8 +60,10 @@ export class EmbeddedRouterManager {
   private lastAddress: { host: string; port: number } | null = null;
   private ownedAuthToken: string | null = null;
   private ownedRoutes: EmbeddedRouterOwnedConnection["routes"] = [];
+  private activeConfig: RouterConfig | null = null;
   private state: LifecycleState = "idle";
   private readonly healthProbeTimeoutMs: number;
+  private readonly resolveSecret?: RouterSecretResolver;
 
   constructor(
     private readonly log: EmbeddedRouterLog = () => undefined,
@@ -66,6 +73,7 @@ export class EmbeddedRouterManager {
       options.healthProbeTimeoutMs,
       500,
     );
+    this.resolveSecret = options.resolveSecret;
   }
 
   get running(): boolean {
@@ -102,7 +110,11 @@ export class EmbeddedRouterManager {
     validateConfig(config);
     const host = normalizeRouterHost(config.host);
     const port = normalizedPort(config.port);
-    const server = createRouterServer(config);
+    this.activeConfig = config;
+    const server = createRouterServer(config, {
+      getConfig: () => this.activeConfig ?? config,
+      resolveSecret: this.resolveSecret,
+    });
     const listenAbortController = new AbortController();
     this.server = server;
     this.listenAbortController = listenAbortController;
@@ -113,11 +125,7 @@ export class EmbeddedRouterManager {
         typeof config.authToken === "string" && config.authToken.trim()
           ? config.authToken
           : null,
-      routes: config.models.map((model) => ({
-        modelId: model.id,
-        authMode:
-          model.authMode === "codex_openai" ? "codex_openai" : "api_key",
-      })),
+      routes: routeAuthMetadata(config),
     });
     this.startPromise = attempt;
     try {
@@ -139,6 +147,7 @@ export class EmbeddedRouterManager {
     this.lastAddress = null;
     this.ownedAuthToken = null;
     this.ownedRoutes = [];
+    this.activeConfig = null;
 
     const stop = (async () => {
       listenAbortController?.abort();
@@ -154,6 +163,24 @@ export class EmbeddedRouterManager {
       if (this.stopPromise === stop) this.stopPromise = null;
       this.state = "idle";
     }
+  }
+
+  updateConfig(config: RouterConfig): void {
+    validateConfig(config);
+    if (!this.running || !this.lastAddress || !this.activeConfig) {
+      throw new Error("embedded Router is not owned by this process");
+    }
+    const host = normalizeRouterHost(config.host);
+    const port = normalizedPort(config.port);
+    const activeHost = normalizeRouterHost(this.activeConfig.host);
+    const activePort = normalizedPort(this.activeConfig.port);
+    if (host !== activeHost || port !== activePort) {
+      throw new Error(
+        "dynamic Router configuration cannot change the listening address",
+      );
+    }
+    this.activeConfig = config;
+    this.ownedRoutes = routeAuthMetadata(config);
   }
 
   private listen(
@@ -177,6 +204,7 @@ export class EmbeddedRouterManager {
         this.lastAddress = null;
         this.ownedAuthToken = null;
         this.ownedRoutes = [];
+        this.activeConfig = null;
         if (this.state !== "stopping") this.state = "idle";
       };
       const cleanupStartupListeners = () => {
@@ -376,6 +404,15 @@ function positiveTimeout(value: unknown, fallback: number): number {
 function routerOrigin(host: string, port: number): string {
   const authority = host.includes(":") ? `[${host}]` : host;
   return `http://${authority}:${port}`;
+}
+
+function routeAuthMetadata(
+  config: RouterConfig,
+): EmbeddedRouterOwnedConnection["routes"] {
+  return config.models.map((model) => ({
+    modelId: model.id,
+    authMode: model.authMode === "codex_openai" ? "codex_openai" : "api_key",
+  }));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -9,6 +9,8 @@ export type RouterModelRoute = {
   baseUrl: string;
   model: string;
   authMode?: RouterAuthMode;
+  provider?: string;
+  apiKeyRef?: string;
   apiKey?: string;
   apiKeyEnv?: string;
   [key: string]: unknown;

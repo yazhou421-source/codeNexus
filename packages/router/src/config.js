@@ -148,7 +148,13 @@ function normalizeModelName(value) {
     .replace(/^-|-$/g, "");
 }
 
-export function apiKeyForRoute(route) {
+export function apiKeyForRoute(route, resolveSecret) {
+  if (route.apiKeyRef && typeof resolveSecret === "function") {
+    const resolved = resolveSecret(route.apiKeyRef);
+    if (typeof resolved === "string" && resolved.trim()) {
+      return resolved.trim();
+    }
+  }
   if (route.apiKey) {
     return route.apiKey;
   }
@@ -218,16 +224,22 @@ export function authModeForRoute(route) {
   return route.authMode || "api_key";
 }
 
-export function requireApiKey(route) {
-  const key = apiKeyForRoute(route);
+export function requireApiKey(route, resolveSecret) {
+  const key = apiKeyForRoute(route, resolveSecret);
   if (!key) {
     const label = [route.displayName, route.id].filter(Boolean).join(" / ");
     const hint = route.apiKeyEnv
       ? ` Set ${route.apiKeyEnv} in the CodeNexus Router environment.`
       : " Configure an API key for the CodeNexus Embedded Router.";
-    const error = new Error(`Missing API key for ${label || route.id}.${hint}`);
+    const error = new Error(
+      route.apiKeyRef
+        ? `Provider ${route.provider || route.apiKeyRef} is not configured.`
+        : `Missing API key for ${label || route.id}.${hint}`,
+    );
     error.statusCode = 400;
-    error.code = "missing_provider_api_key";
+    error.code = route.apiKeyRef
+      ? "provider_not_configured"
+      : "missing_provider_api_key";
     throw error;
   }
   return key;

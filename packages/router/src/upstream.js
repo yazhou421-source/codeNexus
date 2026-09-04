@@ -1166,7 +1166,7 @@ function upstreamBearerToken(route, context = {}) {
     error.statusCode = 401;
     throw error;
   }
-  return requireApiKey(route);
+  return requireApiKey(route, context.resolveSecret);
 }
 
 function filteredHeaders(headers) {

@@ -28,12 +28,19 @@ export const IPC_APP_CHANNELS = {
   appCodexProviderTest: "app:codexProvider:test",
   appDeepSeekProxyPrepare: "app:deepSeekProxy:prepare",
 
+  // Embedded Router Provider Registry。密钥只允许写入或删除，不提供明文读取频道。
+  appRouterProvidersList: "app:routerProviders:list",
+  appRouterProviderSaveApiKey: "app:routerProviders:saveApiKey",
+  appRouterProviderDeleteApiKey: "app:routerProviders:deleteApiKey",
+  appRouterProviderConfigure: "app:routerProviders:configure",
+
   // Codex 工作区附加配置：技能根目录和配置切换器都和当前机器上的文件状态有关。
   appCodexSkillRootsRead: "app:codexSkillRoots:read",
   appCodexSkillRootsSetForWorkspace: "app:codexSkillRoots:setForWorkspace",
   appCodexConfigSwitcherRead: "app:codexConfigSwitcher:read",
   appCodexConfigSwitcherSave: "app:codexConfigSwitcher:save",
-  appCodexConfigSwitcherActivateProfile: "app:codexConfigSwitcher:activateProfile",
+  appCodexConfigSwitcherActivateProfile:
+    "app:codexConfigSwitcher:activateProfile",
   appCodexConfigSwitcherImportCurrent: "app:codexConfigSwitcher:importCurrent",
   appCodexConfigSwitcherRestoreBackup: "app:codexConfigSwitcher:restoreBackup",
 

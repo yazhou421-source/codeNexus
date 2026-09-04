@@ -64,7 +64,7 @@ export async function proxyImageGenerationFallback(
     apiKeyEnv: settings.apiKeyEnv,
     apiKey: settings.apiKey,
   };
-  requireApiKey(imageRoute);
+  requireApiKey(imageRoute, context.resolveSecret);
 
   const upstreamUrl = joinUpstreamUrl(settings.baseUrl, settings.endpoint);
   const upstream = await callJsonUpstream(

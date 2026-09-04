@@ -22,12 +22,7 @@ import { CodexConfigSwitcherService } from "./services/CodexConfigSwitcherServic
 import { ImageGenerationHistoryService } from "@codenexus/feature-imagegen/main/ImageGenerationHistoryService";
 import { ImageGenerationTaskService } from "@codenexus/feature-imagegen/main/ImageGenerationTaskService";
 import { FlowchartHistoryService } from "@codenexus/feature-flowchart/main/FlowchartHistoryService";
-import {
-  createDefaultRouterConfig,
-  EmbeddedRouterManager,
-  loadConfig as loadRouterConfig,
-  type RouterConfig,
-} from "@codenexus/router";
+import { EmbeddedRouterManager, loadConfig as loadRouterConfig, type RouterConfig } from "@codenexus/router";
 import { LocalSettingsService } from "./services/LocalSettingsService";
 import { CacheRegistryService } from "./services/CacheRegistryService";
 import { ThreadArtifactService } from "./services/ThreadArtifactService";
@@ -40,10 +35,14 @@ import { CustomAgentService } from "./services/CustomAgentService";
 import { createMainWindow } from "./windows/mainWindow";
 import {
   externalRouterConfigAllowed,
+  routerStartAcquired,
   shouldStopEmbeddedRouterOnWindowClose,
   startEmbeddedRouterFailSoft,
 } from "./embeddedRouterLifecycle";
 import { createCodexRouterRuntime } from "./codexRouterRuntime";
+import { ProviderSecretStore, ElectronSafeStorageEncryption } from "./services/ProviderSecretStore";
+import { ProviderPreferencesStore } from "./services/ProviderPreferencesStore";
+import { ProviderRuntimeService } from "./services/ProviderRuntimeService";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 
@@ -59,18 +58,27 @@ let windowCloseCleanupFinished = false;
 let embeddedRouterStopRequested = false;
 let appCloseFlowStartedAt = 0;
 let appCloseForceExitTimer: NodeJS.Timeout | null = null;
+let providerRuntimeService: ProviderRuntimeService | null = null;
+let routerModelCatalogPath: string | null = null;
+let managedRouterRuntimeActive = false;
 
 const workspacePatchService = new WorkspacePatchService();
 const runtimeThreadStateTracker = new RuntimeThreadStateTracker();
 const cacheRegistryService = new CacheRegistryService();
 const deepSeekResponsesProxyService = new DeepSeekResponsesProxyService();
-const embeddedRouterManager = new EmbeddedRouterManager((level, message, error) => {
-  if (level === "error") logger.error("embedded-router", message, error);
-  else if (level === "warn") logger.warn("embedded-router", message, error);
-  else logger.info("embedded-router", message);
-});
+const embeddedRouterManager = new EmbeddedRouterManager(
+  (level, message, error) => {
+    if (level === "error") logger.error("embedded-router", message, error);
+    else if (level === "warn") logger.warn("embedded-router", message, error);
+    else logger.info("embedded-router", message);
+  },
+  { resolveSecret: (secretRef) => providerRuntimeService?.resolveSecret(secretRef) }
+);
 const codexServerManager = new CodexServerManager({
-  resolveRuntimeConfig: () => createCodexRouterRuntime(embeddedRouterManager.ownedConnection),
+  resolveRuntimeConfig: () =>
+    createCodexRouterRuntime(embeddedRouterManager.ownedConnection, {
+      modelCatalogPath: routerModelCatalogPath,
+    }),
 });
 
 const APP_CLOSE_OVERLAY_BOOT_MS = 56;
@@ -148,7 +156,7 @@ function stopServicesForClose(_reason: string, options: { stopProcessServices: b
   }
 }
 
-function embeddedRouterConfig(): { config: RouterConfig; source: string } {
+function embeddedRouterConfig(managedConfig: RouterConfig): { config: RouterConfig; source: string; managed: boolean } {
   const configuredPath = String(process.env.CODENEXUS_ROUTER_CONFIG ?? "").trim();
   if (configuredPath) {
     if (!externalRouterConfigAllowed({ isDev, isPackaged: app.isPackaged })) {
@@ -157,15 +165,16 @@ function embeddedRouterConfig(): { config: RouterConfig; source: string } {
       return {
         config: loadRouterConfig(configuredPath),
         source: "development override",
+        managed: false,
       };
     }
   }
-  return { config: createDefaultRouterConfig(), source: "built-in defaults" };
+  return { config: managedConfig, source: "provider registry", managed: true };
 }
 
-async function startEmbeddedRouter(): Promise<void> {
-  await startEmbeddedRouterFailSoft({
-    resolveConfig: embeddedRouterConfig,
+async function startEmbeddedRouter(resolved: { config: RouterConfig; source: string }) {
+  return await startEmbeddedRouterFailSoft({
+    resolveConfig: () => resolved,
     start: (config) => embeddedRouterManager.start(config),
     info: (message) => logger.info("embedded-router", message),
     warn: (message, error) => logger.warn("embedded-router", message, error),
@@ -263,12 +272,27 @@ app
       installContentSecurityPolicy();
     }
 
-    await startEmbeddedRouter();
+    const userDataPath = app.getPath("userData");
+    const providerDataPath = join(userDataPath, "embedded-router");
+    providerRuntimeService = new ProviderRuntimeService(
+      new ProviderSecretStore(join(providerDataPath, "provider-secrets.json"), new ElectronSafeStorageEncryption()),
+      new ProviderPreferencesStore(join(providerDataPath, "provider-preferences.json")),
+      embeddedRouterManager,
+      join(providerDataPath, "model-catalog.json"),
+      (message, error) => logger.warn("provider-runtime", message, error)
+    );
+    const managedConfig = await providerRuntimeService.initialize();
+    const selectedRouterConfig = embeddedRouterConfig(managedConfig);
+    const routerStartResult = await startEmbeddedRouter(selectedRouterConfig);
+    managedRouterRuntimeActive =
+      selectedRouterConfig.managed && Boolean(routerStartResult && routerStartAcquired(routerStartResult.status));
+    providerRuntimeService.setRouterUpdatesEnabled(managedRouterRuntimeActive);
+    routerModelCatalogPath = managedRouterRuntimeActive ? providerRuntimeService.modelCatalogPath : null;
 
-    const historyCachePath = join(app.getPath("userData"), "thread-history-cache.json");
+    const historyCachePath = join(userDataPath, "thread-history-cache.json");
     const historyStore = new HistoryStore(historyCachePath);
     const historyService = new HistoryService(historyStore);
-    const localSettingsService = new LocalSettingsService(join(app.getPath("userData"), "user-settings.json"));
+    const localSettingsService = new LocalSettingsService(join(userDataPath, "user-settings.json"));
     const customAgentService = new CustomAgentService(localSettingsService);
     const codexProfileService = new CodexProfileService(join(app.getPath("userData"), "codex-profiles.json"));
     const codexSkillRootsService = new CodexSkillRootsService(join(app.getPath("userData"), "codex-skill-roots.json"));
@@ -365,6 +389,7 @@ app
       customAgentService,
       sendAgentEvent: (payload) => sendToRenderer(IPC_EVENT_CHANNELS.agentEvent, payload),
       cacheRegistryService,
+      providerRuntimeService,
     });
 
     mainWindow = await createMainWindow({

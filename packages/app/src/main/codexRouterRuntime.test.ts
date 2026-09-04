@@ -83,6 +83,16 @@ describe("Codex Router process-scoped runtime", () => {
     }
   });
 
+  it("adds an app-private model catalog only when one is provided", () => {
+    const runtime = createCodexRouterRuntime(ownedConnection(), {
+      modelCatalogPath: "/Users/Test User/Library/Application Support/CodeNexus/model-catalog.json",
+    })!;
+    expect(runtime.globalConfigOverrides).toContain(
+      "model_catalog_json='/Users/Test User/Library/Application Support/CodeNexus/model-catalog.json'"
+    );
+    expect(runtime.childEnv).toEqual({ CODENEXUS_ROUTER_TOKEN: "synthetic-router-token" });
+  });
+
   it("does not write or alter a user config file", () => {
     const directory = mkdtempSync(join(tmpdir(), "codenexus-runtime-config-"));
     temporaryDirectories.push(directory);

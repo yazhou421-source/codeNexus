@@ -3,6 +3,7 @@
  */
 import http from "node:http";
 import {
+  apiKeyForRoute,
   authModeForRoute,
   loadConfig,
   routeForModel,
@@ -27,7 +28,7 @@ import {
 export const ROUTER_SERVICE_ID = "codenexus-embedded-router";
 export const ROUTER_PROTOCOL_VERSION = 1;
 
-export function createRouterServer(config = loadConfig()) {
+export function createRouterServer(config = loadConfig(), runtime = {}) {
   const history = new ResponseHistory();
 
   return http.createServer(async (req, res) => {
@@ -37,7 +38,7 @@ export function createRouterServer(config = loadConfig()) {
       const url = new URL(req.url || "/", "http://127.0.0.1");
       const codexAuthRequest = isCodexAuthPath(url.pathname);
       const pathname = normalizedApiPath(url.pathname);
-      activeConfig = currentConfig(config);
+      activeConfig = currentConfig(runtime.getConfig?.() || config);
       knownSecrets = secretValuesForConfig(activeConfig);
       logAccess(req, url, knownSecrets);
 
@@ -160,6 +161,8 @@ export function createRouterServer(config = loadConfig()) {
           );
           return;
         }
+        const runtimeSecret = apiKeyForRoute(route, runtime.resolveSecret);
+        if (runtimeSecret) knownSecrets = [...knownSecrets, runtimeSecret];
         const requestId = makeRequestId();
         const clientAbort = clientAbortContext(req, res);
         console.log(
@@ -179,6 +182,7 @@ export function createRouterServer(config = loadConfig()) {
             clientHeaders: req.headers,
             clientSignal: clientAbort.signal,
             knownSecrets,
+            resolveSecret: runtime.resolveSecret,
           });
         } catch (error) {
           if (error?.code === "client_closed_request") {
