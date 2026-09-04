@@ -566,6 +566,7 @@ import {
 } from "../../../domain/serverInterop";
 import type { GlobalConfigDraft } from "../../../domain/types";
 import { useModelCatalogStore } from "../../../stores/modelCatalog.store";
+import { useProviderRegistryStore } from "../../../stores/providerRegistry.store";
 import { type UiLanguage } from "@codenexus/shared/localSettings";
 import { DEFAULT_MODEL_NAME, buildModelPickerOptions, normalizeModelId } from "@codenexus/shared/modelCatalog";
 
@@ -577,6 +578,7 @@ const configStore = useConfigStore();
 const configRequirementsStore = useConfigRequirementsStore();
 const typographyStore = useTypographyStore();
 const modelCatalogStore = useModelCatalogStore();
+const providerRegistryStore = useProviderRegistryStore();
 
 const props = defineProps<{ mode?: "drawer" | "settings" }>();
 const isSettings = computed(() => props.mode === "settings");
@@ -1126,12 +1128,23 @@ const onResetGlobalConfig = () => {
   runtime.resetGlobalConfig();
 };
 
-const globalModelOptions = computed(() =>
-  buildModelPickerOptions({
+const globalModelOptions = computed(() => {
+  const ids = buildModelPickerOptions({
     customIds: modelCatalogStore.customIds,
+    providerIds: providerRegistryStore.availableModelIds,
     current: configStore.draft.model,
-  })
-);
+  });
+  return ids.map((id) => {
+    const knownProviderModel = providerRegistryStore.isKnownProviderModel(id);
+    const available = providerRegistryStore.isAvailableProviderModel(id);
+    const baseLabel = providerRegistryStore.modelLabels[id] || id;
+    return {
+      value: id,
+      label: knownProviderModel && !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
+      disabled: knownProviderModel && !available,
+    };
+  });
+});
 
 const onModelChanged = (nextRaw: string) => {
   const next = normalizeModelId(nextRaw);

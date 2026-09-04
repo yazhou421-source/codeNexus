@@ -637,6 +637,7 @@ export type RouterProviderStatus = {
 
 export type RouterProviderRegistrySnapshot = {
   secureStorageAvailable: boolean;
+  runtimeRevision: number;
   providers: RouterProviderStatus[];
 };
 

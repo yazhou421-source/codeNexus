@@ -21,8 +21,11 @@ export class ProviderRuntimeService {
   private readonly baseConfig: RouterConfig;
   private currentConfig: RouterConfig | null = null;
   private routerUpdatesEnabled = false;
+  private revisionValue = 0;
+  private readonly revisionListeners = new Set<(revision: number) => void>();
   private updateQueue: Promise<RouterProviderRegistrySnapshot> = Promise.resolve({
     secureStorageAvailable: false,
+    runtimeRevision: 0,
     providers: [],
   });
 
@@ -57,6 +60,15 @@ export class ProviderRuntimeService {
     return this.currentConfig;
   }
 
+  get revision(): number {
+    return this.revisionValue;
+  }
+
+  onRevisionChange(listener: (revision: number) => void): () => void {
+    this.revisionListeners.add(listener);
+    return () => this.revisionListeners.delete(listener);
+  }
+
   setRouterUpdatesEnabled(enabled: boolean): void {
     this.routerUpdatesEnabled = enabled;
   }
@@ -69,6 +81,7 @@ export class ProviderRuntimeService {
   list(): RouterProviderRegistrySnapshot {
     return {
       secureStorageAvailable: this.secretStore.encryptionAvailable,
+      runtimeRevision: this.revisionValue,
       providers: BUILTIN_PROVIDER_REGISTRY.map((provider) => {
         const configured = this.providerConfigured(provider.id);
         const preference = this.effectivePreference(provider.id, configured);
@@ -101,7 +114,7 @@ export class ProviderRuntimeService {
     if (!secret) throw providerRuntimeError("invalid_api_key", "Provider API key is required.");
     return await this.enqueueUpdate(async () => {
       await this.secretStore.save(provider.id, secret);
-    });
+    }, true);
   }
 
   async deleteApiKey(providerId: string): Promise<RouterProviderRegistrySnapshot> {
@@ -130,10 +143,24 @@ export class ProviderRuntimeService {
     });
   }
 
-  private async enqueueUpdate(mutate: () => Promise<void>): Promise<RouterProviderRegistrySnapshot> {
+  private async enqueueUpdate(
+    mutate: () => Promise<void>,
+    forceRevision = false
+  ): Promise<RouterProviderRegistrySnapshot> {
     const task = this.updateQueue.then(async () => {
+      const previousSignature = this.runtimeSignature();
       await mutate();
       await this.refreshRuntime(this.routerUpdatesEnabled);
+      if (forceRevision || previousSignature !== this.runtimeSignature()) {
+        this.revisionValue += 1;
+        for (const listener of this.revisionListeners) {
+          try {
+            listener(this.revisionValue);
+          } catch (error) {
+            this.warn("provider runtime revision listener failed", error);
+          }
+        }
+      }
       return this.list();
     });
     this.updateQueue = task.catch(() => this.list());
@@ -158,7 +185,7 @@ export class ProviderRuntimeService {
     if (!saved) {
       return {
         enabled: configured,
-        modelIds: provider.models.map((model) => model.id),
+        modelIds: [provider.defaultModelId],
       };
     }
     const knownModels = new Set(provider.models.map((model) => model.id));
@@ -170,6 +197,10 @@ export class ProviderRuntimeService {
 
   private providerConfigured(providerId: string): boolean {
     return this.secretStore.encryptionAvailable && this.secretStore.isConfigured(providerId);
+  }
+
+  private runtimeSignature(): string {
+    return JSON.stringify(this.list());
   }
 }
 

@@ -193,6 +193,7 @@ import { useMcpResourceStore } from "../../../stores/mcpResource.store";
 import { useMcpStore } from "../../../stores/mcp.store";
 import { useRuntimeStore } from "../../../stores/runtime.store";
 import { useModelCatalogStore } from "../../../stores/modelCatalog.store";
+import { useProviderRegistryStore } from "../../../stores/providerRegistry.store";
 import { useViewPrefsStore } from "../../../stores/viewPrefs.store";
 import { useAgentMarkdownRenderer } from "../../../features/timeline/useAgentMarkdownRenderer";
 import { buildMcpToolDefinitionIndex } from "../../../features/timeline/renderModel/buildTimelineNodes";
@@ -234,6 +235,7 @@ const mcpResourceStore = useMcpResourceStore();
 const runtimeStore = useRuntimeStore();
 const viewPrefs = useViewPrefsStore();
 const modelCatalogStore = useModelCatalogStore();
+const providerRegistryStore = useProviderRegistryStore();
 const localViewportAdapter = ref<TimelineViewportAdapter | null>(null);
 const pinnedUserRowId = ref("");
 const pinnedPromptTransitionDirection = ref<"up" | "down">("up");
@@ -500,7 +502,21 @@ const sandboxModeOptions = computed(
       { value: "danger-full-access", label: t("composer.dangerFullAccessShort") },
     ] as const
 );
-const modelOptions = computed(() =>
-  buildModelPickerOptions({ customIds: modelCatalogStore.customIds, current: runtimeStore.model })
-);
+const modelOptions = computed(() => {
+  const ids = buildModelPickerOptions({
+    customIds: modelCatalogStore.customIds,
+    providerIds: providerRegistryStore.availableModelIds,
+    current: runtimeStore.model,
+  });
+  return ids.map((id) => {
+    const knownProviderModel = providerRegistryStore.isKnownProviderModel(id);
+    const available = providerRegistryStore.isAvailableProviderModel(id);
+    const baseLabel = providerRegistryStore.modelLabels[id] || id;
+    return {
+      value: id,
+      label: knownProviderModel && !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
+      disabled: knownProviderModel && !available,
+    };
+  });
+});
 </script>

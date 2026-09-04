@@ -179,6 +179,7 @@ import { useThreadStore } from "../../stores/thread.store";
 import { useTimelineStore } from "../../stores/timeline.store";
 import { CENTER_TIMELINE_SOFT_MIN_WIDTH_PX } from "../../domain/layoutWidthBudget";
 import { buildModelPickerOptions } from "@codenexus/shared/modelCatalog";
+import { useProviderRegistryStore } from "../../stores/providerRegistry.store";
 import { showToast } from "../../ui/toast";
 
 const { t } = useI18n();
@@ -219,6 +220,7 @@ const appShellStore = useAppShellStore();
 const configStore = useConfigStore();
 const messageQueueStore = useMessageQueueStore();
 const modelCatalogStore = useModelCatalogStore();
+const providerRegistryStore = useProviderRegistryStore();
 const skillsUiStore = useSkillsUiStore();
 
 const centerContentRef = ref<HTMLElement | null>(null);
@@ -309,12 +311,23 @@ const emptyStateMode = computed<"default" | "pendingThread">(() => {
   if (isPendingThreadId(tid)) return "pendingThread";
   return "default";
 });
-const modelOptions = computed(() =>
-  buildModelPickerOptions({
+const modelOptions = computed(() => {
+  const ids = buildModelPickerOptions({
     customIds: modelCatalogStore.customIds,
+    providerIds: providerRegistryStore.availableModelIds,
     current: runtimeStore.model,
-  })
-);
+  });
+  return ids.map((id) => {
+    const knownProviderModel = providerRegistryStore.isKnownProviderModel(id);
+    const available = providerRegistryStore.isAvailableProviderModel(id);
+    const baseLabel = providerRegistryStore.modelLabels[id] || id;
+    return {
+      value: id,
+      label: knownProviderModel && !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
+      disabled: knownProviderModel && !available,
+    };
+  });
+});
 
 const sandboxRiskText = computed(() => {
   if (runtimeStore.sandboxMode === "danger-full-access") return t("composer.dangerFullAccessRisk");

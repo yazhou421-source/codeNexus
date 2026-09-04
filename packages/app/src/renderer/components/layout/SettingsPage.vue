@@ -29,6 +29,7 @@
         <div class="settings-stage">
           <div class="settings-tab-content" :data-tab="activeTab">
             <GlobalConfigDrawer v-if="activeTab === 'global'" mode="settings" />
+            <SettingsModelProvidersTab v-else-if="activeTab === 'models'" />
             <CodexProfilesSettingsTab v-else-if="activeTab === 'profiles'" />
             <SettingsSoundTab v-else-if="activeTab === 'sound'" />
             <component :is="activeFeatureSettingsComponent" v-else-if="activeFeatureSettingsComponent" />
@@ -46,7 +47,7 @@
 <script setup lang="ts">
 import { computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { Bell, Bot, Download, Image, PlugZap, Settings2, SlidersHorizontal, Workflow } from "lucide-vue-next";
+import { Bell, Bot, Cpu, Download, Image, PlugZap, Settings2, SlidersHorizontal, Workflow } from "lucide-vue-next";
 import { useAppShellStore } from "../../stores/appShell.store";
 import { FEATURE_SETTINGS_TABS, getFeatureSettingsByTab } from "../../features/registry";
 import GlobalConfigDrawer from "./overlays/GlobalConfigDrawer.vue";
@@ -55,6 +56,7 @@ import IntegrationsDrawer from "./overlays/IntegrationsDrawer.vue";
 import SettingsSoundTab from "./settings/SettingsSoundTab.vue";
 import SettingsUpdateTab from "./settings/SettingsUpdateTab.vue";
 import CodexProfilesSettingsTab from "./settings/CodexProfilesSettingsTab.vue";
+import SettingsModelProvidersTab from "./settings/SettingsModelProvidersTab.vue";
 
 const appShellStore = useAppShellStore();
 const { t } = useI18n();
@@ -73,6 +75,12 @@ const tabGroups = computed(() => [
         label: t("settings.tabs.global"),
         desc: t("settings.tabs.globalDesc"),
         icon: SlidersHorizontal,
+      },
+      {
+        key: "models" as const,
+        label: t("settings.tabs.models"),
+        desc: t("settings.tabs.modelsDesc"),
+        icon: Cpu,
       },
       {
         key: "profiles" as const,

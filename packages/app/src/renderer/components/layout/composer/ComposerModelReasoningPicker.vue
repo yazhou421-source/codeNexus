@@ -45,6 +45,7 @@
             class="composer-model-reasoning-option"
             :class="[option.toneClass, { 'is-selected': option.selected, 'is-active': option.active }]"
             :data-value="option.value"
+            :disabled="option.disabled"
             role="option"
             :aria-selected="option.selected ? 'true' : 'false'"
             @mouseenter="showReasoningForModel(option.value)"
@@ -107,6 +108,7 @@ import { useI18n } from "vue-i18n";
 type SelectOption = {
   value: string;
   label: string;
+  disabled?: boolean;
 };
 
 type VisibleOption = {
@@ -115,12 +117,13 @@ type VisibleOption = {
   toneClass: string;
   selected: boolean;
   active?: boolean;
+  disabled?: boolean;
 };
 
 const props = defineProps<{
   model: string;
   reasoningEffort: string;
-  modelOptions: readonly string[];
+  modelOptions: readonly (string | SelectOption)[];
   reasoningEffortOptions: readonly SelectOption[];
   preservePointerFocus?: boolean;
   interactionOwnerId?: string;
@@ -171,13 +174,17 @@ const selectedReasoningLabel = computed(() => {
 });
 
 const modelPickerOptions = computed<VisibleOption[]>(() =>
-  props.modelOptions.map((value) => ({
-    value,
-    label: value,
-    toneClass: `composer-select--model is-${normalizeToneKey(value)}`,
-    selected: value === props.model,
-    active: value === activeModel.value,
-  }))
+  props.modelOptions.map((option) => {
+    const value = typeof option === "string" ? option : option.value;
+    return {
+      value,
+      label: typeof option === "string" ? option : option.label,
+      disabled: typeof option === "string" ? false : Boolean(option.disabled),
+      toneClass: `composer-select--model is-${normalizeToneKey(value)}`,
+      selected: value === props.model,
+      active: value === activeModel.value,
+    };
+  })
 );
 
 const reasoningPickerOptions = computed<VisibleOption[]>(() =>

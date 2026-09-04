@@ -79,6 +79,7 @@ import type { ChatInlineRewriteDraft, ChatUserMessagePart } from "../layout/type
 type SelectOption = {
   value: string;
   label: string;
+  disabled?: boolean;
 };
 
 defineProps<{
@@ -90,7 +91,7 @@ defineProps<{
   showTimestamps: boolean;
   formattedTime: string;
   inlineRewriteDraft?: ChatInlineRewriteDraft | null;
-  modelOptions: readonly string[];
+  modelOptions: readonly (string | SelectOption)[];
   reasoningEffortOptions: readonly SelectOption[];
   sandboxModeOptions: readonly SelectOption[];
   sendDisabled?: boolean;

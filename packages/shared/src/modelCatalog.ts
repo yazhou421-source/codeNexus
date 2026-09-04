@@ -59,18 +59,22 @@ export function normalizeCustomModelIds(value: unknown): string[] {
 /** 可选模型列表始终以内置模型开头，再追加有效自定义模型。 */
 export function buildAvailableModelIds(
   customIds: readonly string[] | null | undefined,
+  providerIds: readonly string[] | null | undefined = [],
 ): string[] {
   const ids: string[] = [...BUILTIN_MODEL_IDS];
-  for (const item of normalizeCustomModelIds(customIds ?? [])) ids.push(item);
+  for (const item of [...normalizeModelIdList(providerIds), ...normalizeCustomModelIds(customIds ?? [])]) {
+    if (!ids.includes(item)) ids.push(item);
+  }
   return ids;
 }
 
 /** 当前模型即使不在候选列表里也会临时置顶，保证旧线程或外部模型能回显。 */
 export function buildModelPickerOptions(args?: {
   customIds?: readonly string[] | null;
+  providerIds?: readonly string[] | null;
   current?: unknown;
 }): string[] {
-  const available = buildAvailableModelIds(args?.customIds);
+  const available = buildAvailableModelIds(args?.customIds, args?.providerIds);
   const current = normalizeModelId(args?.current);
   if (!current) return available;
   if (available.includes(current)) return available;

@@ -223,6 +223,7 @@ const ApprovalDock = defineAsyncComponent(() => import("../../approval/ApprovalD
 type SelectOption = {
   value: string;
   label: string;
+  disabled?: boolean;
 };
 
 type ElementRefBinder<T extends Element> = (el: T | null) => void;
@@ -248,7 +249,7 @@ const props = defineProps<{
   model: string;
   reasoningEffort: string;
   sandboxMode: SandboxMode;
-  modelOptions: readonly string[];
+  modelOptions: readonly (string | SelectOption)[];
   reasoningEffortOptions: readonly SelectOption[];
   sandboxModeOptions: readonly SelectOption[];
   sandboxRiskText: string;

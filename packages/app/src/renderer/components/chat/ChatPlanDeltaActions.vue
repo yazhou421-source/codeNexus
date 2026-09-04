@@ -72,7 +72,15 @@ const rootClass = computed(() =>
 const optionValue = (option: OptionInput): string => (typeof option === "string" ? option : option.value);
 const optionLabel = (option: OptionInput): string => (typeof option === "string" ? option : option.label);
 
-const normalizedModelOptions = computed(() => props.modelOptions.map((option) => optionValue(option)).filter(Boolean));
+const normalizedModelOptions = computed(() =>
+  props.modelOptions
+    .map((option) =>
+      typeof option === "string"
+        ? { value: option, label: option }
+        : { value: option.value, label: option.label, disabled: option.disabled }
+    )
+    .filter((option) => option.value)
+);
 const normalizedReasoningEffortOptions = computed<SelectOption[]>(() =>
   props.reasoningEffortOptions
     .map((option) => ({ value: optionValue(option), label: optionLabel(option) }))

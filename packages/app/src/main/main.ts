@@ -79,6 +79,8 @@ const codexServerManager = new CodexServerManager({
     createCodexRouterRuntime(embeddedRouterManager.ownedConnection, {
       modelCatalogPath: routerModelCatalogPath,
     }),
+  resolveRuntimeRevision: () => providerRuntimeService?.revision ?? 0,
+  isServerBusy: (serverId) => runtimeThreadStateTracker.isServerBusy(serverId),
 });
 
 const APP_CLOSE_OVERLAY_BOOT_MS = 56;
@@ -281,6 +283,11 @@ app
       join(providerDataPath, "model-catalog.json"),
       (message, error) => logger.warn("provider-runtime", message, error)
     );
+    providerRuntimeService.onRevisionChange(() => {
+      void codexServerManager.refreshForRuntimeRevision().catch((error) => {
+        logger.warn("codex-server", "provider runtime refresh scheduling failed", error);
+      });
+    });
     const managedConfig = await providerRuntimeService.initialize();
     const selectedRouterConfig = embeddedRouterConfig(managedConfig);
     const routerStartResult = await startEmbeddedRouter(selectedRouterConfig);
