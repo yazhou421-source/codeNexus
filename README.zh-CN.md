@@ -91,20 +91,20 @@ CodeNexus 已经对 Codex 协议中的流式输出做了可视化处理，包括
 
 ## 环境要求
 
-| 依赖           | 要求                              |
-| -------------- | --------------------------------- |
-| 操作系统       | Windows 10 或 Windows 11          |
-| Node.js        | 建议使用当前 LTS 版本             |
-| 包管理器       | `pnpm@10`                         |
-| Codex CLI 基线 | `@openai/codex@0.135.0`           |
-| 配置工具       | 推荐使用 CC Switch 配置 Codex CLI |
+| 依赖          | 要求                              |
+| ------------- | --------------------------------- |
+| 操作系统      | Windows 10 或 Windows 11          |
+| Node.js       | 建议使用当前 LTS 版本             |
+| 包管理器      | `pnpm@10`                         |
+| Codex Runtime | 内置 `codex-cli 0.153.2`          |
+| 配置工具      | 推荐使用 CC Switch 配置 Codex CLI |
 
 Codex CLI 的 Provider、模型、账号和环境配置，建议使用 [CC Switch](https://github.com/farion1231/cc-switch)。它是一个面向 Claude Code、Codex、Gemini CLI、OpenCode、OpenClaw 等 agent 工具的一体化桌面管理器。
 
-配置完成后，确认 Codex CLI 可用：
+正式安装包已经包含固定版本的 Codex Runtime，用户不需要另外安装系统 Codex CLI。源码开发时请先准备内置 Runtime：
 
 ```powershell
-codex --version
+pnpm codex:runtime:fetch -- --platform win-x64
 ```
 
 ## 本地开发

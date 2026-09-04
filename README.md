@@ -91,20 +91,20 @@ This capability depends on Codex experimental protocol events. Enable the stream
 
 ## Requirements
 
-| Dependency         | Requirement                         |
-| ------------------ | ----------------------------------- |
-| Operating system   | Windows 10 or Windows 11            |
-| Node.js            | Current LTS recommended             |
-| Package manager    | `pnpm@10`                           |
-| Codex CLI baseline | `@openai/codex@0.135.0`             |
-| Configuration      | CC Switch recommended for Codex CLI |
+| Dependency       | Requirement                         |
+| ---------------- | ----------------------------------- |
+| Operating system | Windows 10 or Windows 11            |
+| Node.js          | Current LTS recommended             |
+| Package manager  | `pnpm@10`                           |
+| Codex runtime    | Bundled `codex-cli 0.153.2`         |
+| Configuration    | CC Switch recommended for Codex CLI |
 
 For Codex CLI provider, model, account, and environment configuration, use [CC Switch](https://github.com/farion1231/cc-switch), an all-in-one desktop manager for Claude Code, Codex, Gemini CLI, OpenCode, OpenClaw, and related agent tools.
 
-After configuration, make sure Codex CLI is available:
+Release builds include the pinned Codex runtime, so users do not need a system Codex CLI. For source development, prepare the bundled runtime with:
 
 ```powershell
-codex --version
+pnpm codex:runtime:fetch -- --platform win-x64
 ```
 
 ## Development

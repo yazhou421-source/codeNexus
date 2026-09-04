@@ -27,6 +27,7 @@ export const SERVER_REQUEST_METHODS: readonly ServerRequestMethod[] = [
   "item/tool/call",
   "account/chatgptAuthTokens/refresh",
   "attestation/generate",
+  "currentTime/read",
 ];
 
 export const SERVER_NOTIFICATION_METHODS: readonly ServerNotificationMethod[] = [
@@ -90,6 +91,24 @@ export const SERVER_NOTIFICATION_METHODS: readonly ServerNotificationMethod[] = 
   "windows/worldWritableWarning",
   "windowsSandbox/setupCompleted",
   "account/login/completed",
+  "autoApprovalReview/strictReviewRequired",
+  "externalAgentConfig/import/progress",
+  "mcpServer/event/stream/notification",
+  "model/safetyBuffering/updated",
+  "modelProvider/authRecoveryCompleted",
+  "modelProvider/authRecoveryStarted",
+  "project/changed",
+  "rawResponse/completed",
+  "thread/deleted",
+  "thread/environment/connected",
+  "thread/environment/disconnected",
+  "thread/project/updated",
+  "thread/queue/changed",
+  "thread/realtime/item/completed",
+  "thread/realtime/item/started",
+  "thread/realtime/item/transcript/delta",
+  "thread/reverted",
+  "turn/moderationMetadata",
 ];
 
 type MissingServerRequestMethods = Exclude<ServerRequestMethod, (typeof SERVER_REQUEST_METHODS)[number]>;

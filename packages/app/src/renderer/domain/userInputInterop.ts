@@ -67,7 +67,7 @@ export function normalizeUserInputPrompt(
   const message = normalizeText(request.params.message);
   if (!threadId || !serverName || !message) return null;
 
-  if (request.params.mode === "form") {
+  if (request.params.mode !== "url") {
     return {
       kind: "elicitationForm",
       serverId: normalizeText(serverId),

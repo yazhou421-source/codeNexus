@@ -2,6 +2,7 @@ import type { Pinia } from "pinia";
 import { codexDesktop } from "../../api/codexDesktopClient";
 import {
   buildAuthRefreshNotImplementedError,
+  buildCurrentTimeReadResponse,
   buildInvalidUserInputPayloadError,
   buildRequestMethodNotImplementedError,
   classifyServerRequest,
@@ -503,6 +504,16 @@ export function installRequestResponder(pinia: Pinia) {
         paramsText,
         params: msg.params,
         level: "error",
+      });
+      return;
+    }
+
+    if (handling.kind === "currentTime") {
+      void codexDesktop.codexServer.respond({
+        serverId: payload.serverId,
+        id: msg.id,
+        method: msg.method,
+        result: buildCurrentTimeReadResponse(),
       });
       return;
     }

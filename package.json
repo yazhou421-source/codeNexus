@@ -10,8 +10,11 @@
     "format:check": "pnpm --filter @codenexus/app --filter @codenexus/router format:check",
     "typecheck": "pnpm --filter @codenexus/app --filter @codenexus/router --filter @codenexus/feature-flowchart --filter @codenexus/feature-imagegen --filter @codenexus/feature-paper --filter @codenexus/agent-core typecheck",
     "test": "vitest run",
-    "ci": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build",
+    "ci": "pnpm run format:check && pnpm run lint && pnpm run codex:types:verify && pnpm run typecheck && pnpm run test && pnpm run build",
     "codex:types": "pnpm --filter @codenexus/app codex:types",
+    "codex:types:verify": "pnpm --filter @codenexus/app codex:types:verify",
+    "codex:types:check": "pnpm --filter @codenexus/app codex:types:check",
+    "codex:protocol:smoke": "pnpm --filter @codenexus/app codex:protocol:smoke",
     "codex:runtime:fetch": "pnpm --filter @codenexus/app codex:runtime:fetch",
     "codex:runtime:verify": "pnpm --filter @codenexus/app codex:runtime:verify",
     "dist": "pnpm --filter @codenexus/app dist"

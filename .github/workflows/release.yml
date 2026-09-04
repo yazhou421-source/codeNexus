@@ -40,6 +40,9 @@ jobs:
       - name: Verify bundled Codex runtime
         run: pnpm --filter @codenexus/app codex:runtime:verify -- --platform win-x64
 
+      - name: Verify generated Codex protocol
+        run: pnpm codex:types:check
+
       - name: Publish release artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -75,6 +78,9 @@ jobs:
 
       - name: Verify bundled Codex runtime
         run: pnpm --filter @codenexus/app codex:runtime:verify -- --platform mac-arm64
+
+      - name: Verify generated Codex protocol
+        run: pnpm codex:types:check
 
       - name: Publish release artifacts
         env:

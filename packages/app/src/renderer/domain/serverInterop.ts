@@ -46,7 +46,6 @@ export const OFFICIAL_REASONING_SUMMARY_OPTIONS = ["auto", "concise", "detailed"
 export const OFFICIAL_REASONING_EFFORT_OPTIONS = ["low", "medium", "high", "xhigh"] as const;
 export const OFFICIAL_APPROVAL_POLICY_STRING_OPTIONS = [
   "untrusted",
-  "on-failure",
   "on-request",
   "never",
 ] as const satisfies readonly Extract<AskForApproval, string>[];
@@ -118,7 +117,9 @@ export function isGranularApprovalPolicy(value: unknown): value is Extract<AskFo
 export function normalizeApprovalPolicy(value: unknown): AskForApproval {
   if (isGranularApprovalPolicy(value)) return normalizeGranularApprovalPolicy(value);
   if (String(value ?? "").trim() === "granular") return createDefaultGranularApprovalPolicy();
-  return normalizeEnumValue(value, "never", OFFICIAL_APPROVAL_POLICY_STRING_OPTIONS);
+  return normalizeEnumValue<Extract<AskForApproval, string>>(value, "never", OFFICIAL_APPROVAL_POLICY_STRING_OPTIONS, {
+    "on-failure": "on-request",
+  });
 }
 
 export function normalizeApprovalsReviewer(value: unknown): ApprovalsReviewer {

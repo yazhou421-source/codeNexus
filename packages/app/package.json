@@ -15,7 +15,10 @@
     "format:check": "pnpm exec prettier --ignore-path .prettierignore --check .",
     "typecheck": "pnpm exec tsc --noEmit",
     "ci": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run build",
-    "codex:types": "npx -y @openai/codex@0.135.0 app-server generate-ts --experimental --out .\\\\tmp\\\\codex_0.135.0_generated",
+    "codex:types": "node scripts/codex-protocol.mjs generate",
+    "codex:types:verify": "node scripts/codex-protocol.mjs verify",
+    "codex:types:check": "node scripts/codex-protocol.mjs check",
+    "codex:protocol:smoke": "node scripts/codex-protocol-smoke.mjs",
     "codex:runtime:fetch": "node scripts/codex-runtime.mjs fetch",
     "codex:runtime:verify": "node scripts/codex-runtime.mjs verify",
     "dist": "pnpm run codex:runtime:fetch && pnpm run codex:runtime:verify && pnpm run build && pnpm exec electron-builder --config electron-builder.yml"

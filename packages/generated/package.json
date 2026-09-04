@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "sideEffects": false,
+  "codexProtocolMetadata": "./codex-protocol-metadata.json",
   "exports": {
     "./codex-app-server": "./src/codex-app-server/index.ts",
     "./codex-app-server/*": "./src/codex-app-server/*.ts",

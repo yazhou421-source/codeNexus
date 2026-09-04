@@ -64,7 +64,6 @@ export function createThreadStartParamsRuntime(deps: ThreadStartParamsRuntimeDep
         ...(dynamicTools && dynamicTools.length > 0 ? { dynamicTools } : {}),
         ...(developerInstructions ? { developerInstructions } : {}),
         experimentalRawEvents: false,
-        persistExtendedHistory: true,
       },
     };
   };

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "codexVersion": "0.153.2",
+  "releaseTag": "rust-v0.153.2",
+  "sourceManifest": "packages/app/codex-runtime-manifest.json",
+  "generator": "bundled Codex app-server",
+  "experimental": true,
+  "outputs": {
+    "types": {
+      "directory": "packages/generated/src/codex-app-server",
+      "fileCount": 827,
+      "sha256": "55c31c1c40c351ba2b46095ed25e97c31ec5dc42088b805a430eba204862cb27"
+    },
+    "jsonSchema": {
+      "directory": "packages/generated/schema/codex-app-server",
+      "fileCount": 416,
+      "sha256": "a4e7ee85a1237179f0f8cec1e69dc7085e05e038416f7d8f2a2ccbd780ef2a79"
+    }
+  }
+}
