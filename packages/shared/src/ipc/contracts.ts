@@ -647,6 +647,17 @@ export type RouterProviderRegistrySnapshot = {
   providers: RouterProviderStatus[];
 };
 
+export type SafeAccountStatus = {
+  state: "logged_in" | "logged_out";
+  email: string | null;
+  planType: string | null;
+  requiresOpenaiAuth: boolean;
+};
+
+export type SafeAccountLoginCompleted = {
+  success: boolean;
+};
+
 export type CodexSkillRootsSnapshot = {
   path: string;
   exists: boolean;
@@ -661,6 +672,12 @@ export type CodexSkillRootsMutationResult = {
 
 export type CodexDesktopAppApi = {
   openExternal(args: { url: string }): Promise<{ ok: true }>;
+  readAccount(): Promise<SafeAccountStatus>;
+  startChatGptLogin(): Promise<{ ok: true }>;
+  cancelChatGptLogin(): Promise<{ ok: true }>;
+  onAccountLoginCompleted(
+    cb: (payload: SafeAccountLoginCompleted) => void,
+  ): () => void;
   readTextFile(args: { path: string }): Promise<{
     ok: true;
     content: string;

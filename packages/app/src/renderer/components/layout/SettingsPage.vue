@@ -34,6 +34,7 @@
             <SettingsSoundTab v-else-if="activeTab === 'sound'" />
             <component :is="activeFeatureSettingsComponent" v-else-if="activeFeatureSettingsComponent" />
             <SettingsUpdateTab v-else-if="activeTab === 'update'" />
+            <SettingsAdvancedTab v-else-if="activeTab === 'advanced'" />
             <EnvSetupDrawer v-else-if="activeTab === 'env'" mode="settings" />
             <IntegrationsDrawer v-else-if="activeTab === 'integrations'" mode="settings" />
             <GlobalConfigDrawer v-else mode="settings" />
@@ -47,7 +48,18 @@
 <script setup lang="ts">
 import { computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { Bell, Bot, Cpu, Download, Image, PlugZap, Settings2, SlidersHorizontal, Workflow } from "lucide-vue-next";
+import {
+  Bell,
+  Bot,
+  Cpu,
+  Download,
+  FlaskConical,
+  Image,
+  PlugZap,
+  Settings2,
+  SlidersHorizontal,
+  Workflow,
+} from "lucide-vue-next";
 import { useAppShellStore } from "../../stores/appShell.store";
 import { FEATURE_SETTINGS_TABS, getFeatureSettingsByTab } from "../../features/registry";
 import GlobalConfigDrawer from "./overlays/GlobalConfigDrawer.vue";
@@ -57,6 +69,7 @@ import SettingsSoundTab from "./settings/SettingsSoundTab.vue";
 import SettingsUpdateTab from "./settings/SettingsUpdateTab.vue";
 import CodexProfilesSettingsTab from "./settings/CodexProfilesSettingsTab.vue";
 import SettingsModelProvidersTab from "./settings/SettingsModelProvidersTab.vue";
+import SettingsAdvancedTab from "./settings/SettingsAdvancedTab.vue";
 
 const appShellStore = useAppShellStore();
 const { t } = useI18n();
@@ -127,6 +140,12 @@ const tabGroups = computed(() => [
         label: t("settings.tabs.env"),
         desc: t("settings.tabs.envDesc"),
         icon: Settings2,
+      },
+      {
+        key: "advanced" as const,
+        label: t("settings.tabs.advanced"),
+        desc: t("settings.tabs.advancedDesc"),
+        icon: FlaskConical,
       },
     ],
   },

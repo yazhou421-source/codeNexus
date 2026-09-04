@@ -26,7 +26,8 @@ export type SettingsTab =
   | "flowchart"
   | "env"
   | "integrations"
-  | "update";
+  | "update"
+  | "advanced";
 export type SettingsIntegrationsTab = "skills" | "mcp";
 
 const DEFAULT_LEFT_SIDEBAR_WIDTH_PX = 300;
@@ -69,9 +70,9 @@ export const useAppShellStore = defineStore("appShell", {
     serverError: "" as string,
     language: "zh-CN" as UiLanguage,
     mainView: DEFAULT_MAIN_VIEW as MainView,
-    // 运行时模式：null=尚未选择（启动显示选择页）；codex=旧版；custom=新版自定义 provider。
+    // 主产品默认使用 Codex Agent；custom 仅从高级实验设置进入，null 只兼容历史异常数据。
     runtimeMode: null as RuntimeMode | null,
-    // 瞬时标记：用于在已选择模式后重新打开选择页进行切换，不清空已存偏好。
+    // 保留旧选择器状态以兼容历史代码；普通界面不再提供入口。
     modeChooserOpen: false,
     globalConfigDrawerOpen: false,
     envSetupDrawerOpen: false,
@@ -125,6 +126,7 @@ export const useAppShellStore = defineStore("appShell", {
           ui: {
             mainView: this.mainView,
             language: this.language,
+            runtimeMode: this.runtimeMode,
             leftSidebarVisible: this.leftSidebarVisible,
             leftSidebarWidthPx: this.leftSidebarWidthPx,
             filesSidebarVisible: this.filesSidebarVisible,

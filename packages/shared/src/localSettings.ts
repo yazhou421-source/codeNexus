@@ -67,8 +67,29 @@ export type LocalGoalAutomationSettings = {
 };
 
 export type MainView = "chat" | "image" | "flowchart" | "paper";
-/** 应用运行时模式：codex=旧版 codex-app-server；custom=新版自定义 provider；null=尚未选择（显示选择页）。 */
+/** 应用运行时模式：codex=完整 Agent 体验；custom=保留的实验兼容模式。null 补丁会回落到 codex。 */
 export type RuntimeMode = "codex" | "custom";
+export const ONBOARDING_VERSION = 1 as const;
+export type OnboardingService =
+  | "chatgpt"
+  | "deepseek"
+  | "kimi"
+  | "qwen"
+  | "zhipu";
+export type OnboardingStep =
+  | "welcome"
+  | "service"
+  | "account"
+  | "project"
+  | "complete";
+export type LocalOnboardingSettings = {
+  version: number;
+  step: OnboardingStep;
+  completedAt: string | null;
+  selectedService: OnboardingService | null;
+  projectSelected: boolean;
+  projectPath: string | null;
+};
 export type UiLanguage = "zh-CN" | "en-US";
 export type UiFontFamilyPreset = "alibaba-puhuiti" | "source-han-sans-sc";
 export type UiFontSizePreset = "small" | "medium" | "large";
@@ -77,6 +98,7 @@ export type UiWorkspaceFileIconTheme = "vscode-icons";
 /** UI 和主进程共同消费的完整本地设置结构。 */
 export type UserLocalSettings = {
   version: 1;
+  onboarding: LocalOnboardingSettings;
   ui: {
     theme: string | null;
     language: UiLanguage;
@@ -116,6 +138,14 @@ export type UserLocalSettings = {
  * undefined 表示不修改；部分字段允许 null，代表清空或回落到对应默认值。
  */
 export type UserLocalSettingsPatch = {
+  onboarding?: Partial<{
+    version: number;
+    step: OnboardingStep;
+    completedAt: string | null;
+    selectedService: OnboardingService | null;
+    projectSelected: boolean;
+    projectPath: string | null;
+  }>;
   ui?: Partial<{
     theme: string | null;
     language: UiLanguage | null;
@@ -272,11 +302,19 @@ export function resolveUiFontSizeZoomFactor(value: UiFontSizePreset): number {
  */
 export const DEFAULT_USER_LOCAL_SETTINGS: UserLocalSettings = {
   version: 1,
+  onboarding: {
+    version: ONBOARDING_VERSION,
+    step: "welcome",
+    completedAt: null,
+    selectedService: null,
+    projectSelected: false,
+    projectPath: null,
+  },
   ui: {
     theme: null,
     language: DEFAULT_UI_LANGUAGE,
     mainView: "chat",
-    runtimeMode: null,
+    runtimeMode: "codex",
     leftSidebarVisible: true,
     leftSidebarWidthPx: 320,
     filesSidebarVisible: true,
@@ -398,11 +436,58 @@ function normalizeMainView(value: unknown, fallback: MainView): MainView {
   return fallback;
 }
 
-/** 运行时模式只接受 codex/custom；其余（含 undefined）一律视为「未选择」→ null，触发启动选择页。 */
+/** 运行时模式只接受 codex/custom；其余值先归一化为 null，再由完整设置回落到产品默认 codex。 */
 export function normalizeRuntimeMode(value: unknown): RuntimeMode | null {
   if (value === "codex") return "codex";
   if (value === "custom") return "custom";
   return null;
+}
+
+function normalizeOnboardingService(value: unknown): OnboardingService | null {
+  if (
+    value === "chatgpt" ||
+    value === "deepseek" ||
+    value === "kimi" ||
+    value === "qwen" ||
+    value === "zhipu"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function normalizeOnboardingStep(value: unknown): OnboardingStep {
+  if (
+    value === "service" ||
+    value === "account" ||
+    value === "project" ||
+    value === "complete"
+  )
+    return value;
+  return "welcome";
+}
+
+function normalizeCompletedAt(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
+}
+
+function normalizeOnboardingSettings(value: unknown): LocalOnboardingSettings {
+  const record = toRecord(value);
+  const completedAt = normalizeCompletedAt(record?.completedAt);
+  const projectPath = toNullableString(record?.projectPath, null);
+  return {
+    version: Math.max(
+      ONBOARDING_VERSION,
+      toPositiveInteger(record?.version, ONBOARDING_VERSION),
+    ),
+    step: completedAt ? "complete" : normalizeOnboardingStep(record?.step),
+    completedAt,
+    selectedService: normalizeOnboardingService(record?.selectedService),
+    projectSelected: toBoolean(record?.projectSelected, Boolean(projectPath)),
+    projectPath,
+  };
 }
 
 function normalizeCustomProviderKind(value: unknown): CustomProviderKind {
@@ -663,6 +748,7 @@ function mergeGoalShutdownByThreadId(
  */
 export function normalizeUserLocalSettings(value: unknown): UserLocalSettings {
   const root = toRecord(value);
+  const onboarding = toRecord(root?.onboarding);
   const ui = toRecord(root?.ui);
   const notification = toRecord(root?.notification);
   const models = toRecord(root?.models);
@@ -677,11 +763,14 @@ export function normalizeUserLocalSettings(value: unknown): UserLocalSettings {
 
   return {
     version: 1,
+    onboarding: normalizeOnboardingSettings(onboarding),
     ui: {
       theme: toNullableString(ui?.theme, DEFAULT_USER_LOCAL_SETTINGS.ui.theme),
       language: normalizeUiLanguage(ui?.language),
       mainView: normalizeMainView(ui?.mainView, inferredMainViewFallback),
-      runtimeMode: normalizeRuntimeMode(ui?.runtimeMode),
+      runtimeMode:
+        normalizeRuntimeMode(ui?.runtimeMode) ??
+        DEFAULT_USER_LOCAL_SETTINGS.ui.runtimeMode,
       leftSidebarVisible: toBoolean(
         ui?.leftSidebarVisible,
         DEFAULT_USER_LOCAL_SETTINGS.ui.leftSidebarVisible,
@@ -745,6 +834,40 @@ export function normalizeUserLocalSettings(value: unknown): UserLocalSettings {
   };
 }
 
+export function migrateUserLocalSettingsForOnboarding(
+  value: unknown,
+  options: {
+    settingsFileExists: boolean;
+    legacyUserDataExists: boolean;
+    now?: string;
+  },
+): { settings: UserLocalSettings; migrated: boolean } {
+  const root = toRecord(value);
+  const hasVersionedOnboarding = Boolean(toRecord(root?.onboarding));
+  const settings = normalizeUserLocalSettings(value);
+  if (
+    hasVersionedOnboarding ||
+    (!options.settingsFileExists && !options.legacyUserDataExists)
+  ) {
+    return { settings, migrated: false };
+  }
+  const completedAt =
+    normalizeCompletedAt(options.now) ?? new Date().toISOString();
+  return {
+    settings: {
+      ...settings,
+      onboarding: {
+        ...settings.onboarding,
+        step: "complete",
+        completedAt,
+        projectSelected: Boolean(settings.customProviders.workspaceRoot),
+        projectPath: settings.customProviders.workspaceRoot,
+      },
+    },
+    migrated: true,
+  };
+}
+
 /**
  * 将局部 patch 合并到当前设置。
  *
@@ -755,6 +878,7 @@ export function mergeUserLocalSettings(
   patch: UserLocalSettingsPatch | null | undefined,
 ): UserLocalSettings {
   const current = normalizeUserLocalSettings(base);
+  const patchOnboarding = toRecord(patch?.onboarding);
   const patchUi = toRecord(patch?.ui);
   const patchNotification = toRecord(patch?.notification);
   const patchModels = toRecord(patch?.models);
@@ -767,6 +891,32 @@ export function mergeUserLocalSettings(
 
   return normalizeUserLocalSettings({
     version: 1,
+    onboarding: {
+      version:
+        patchOnboarding && "version" in patchOnboarding
+          ? patchOnboarding.version
+          : current.onboarding.version,
+      step:
+        patchOnboarding && "step" in patchOnboarding
+          ? patchOnboarding.step
+          : current.onboarding.step,
+      completedAt:
+        patchOnboarding && "completedAt" in patchOnboarding
+          ? patchOnboarding.completedAt
+          : current.onboarding.completedAt,
+      selectedService:
+        patchOnboarding && "selectedService" in patchOnboarding
+          ? patchOnboarding.selectedService
+          : current.onboarding.selectedService,
+      projectSelected:
+        patchOnboarding && "projectSelected" in patchOnboarding
+          ? patchOnboarding.projectSelected
+          : current.onboarding.projectSelected,
+      projectPath:
+        patchOnboarding && "projectPath" in patchOnboarding
+          ? patchOnboarding.projectPath
+          : current.onboarding.projectPath,
+    },
     ui: {
       theme: patchUi && "theme" in patchUi ? patchUi.theme : current.ui.theme,
       language:

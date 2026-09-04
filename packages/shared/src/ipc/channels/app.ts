@@ -34,6 +34,12 @@ export const IPC_APP_CHANNELS = {
   appRouterProviderDeleteApiKey: "app:routerProviders:deleteApiKey",
   appRouterProviderConfigure: "app:routerProviders:configure",
 
+  // 首次启动账号流程。主进程只返回去敏后的账号状态，并代为打开 OAuth 页面。
+  appAccountRead: "app:account:read",
+  appAccountLoginStart: "app:account:loginStart",
+  appAccountLoginCancel: "app:account:loginCancel",
+  appAccountLoginCompleted: "app:account:loginCompleted",
+
   // Codex 工作区附加配置：技能根目录和配置切换器都和当前机器上的文件状态有关。
   appCodexSkillRootsRead: "app:codexSkillRoots:read",
   appCodexSkillRootsSetForWorkspace: "app:codexSkillRoots:setForWorkspace",

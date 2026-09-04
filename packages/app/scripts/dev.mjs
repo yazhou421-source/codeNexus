@@ -15,6 +15,7 @@ const npmExecPath = process.env.npm_execpath ? String(process.env.npm_execpath).
 const viteHost = "127.0.0.1";
 const defaultVitePort = 5173;
 const smokeMode = process.argv.includes("--smoke");
+const userDataArg = process.argv.find((arg) => arg.startsWith("--user-data-dir="));
 
 const children = [];
 let shuttingDown = false;
@@ -196,7 +197,9 @@ function bindShutdownSignals() {
 }
 
 function launchElectron(viteUrl) {
-  const child = spawnByPlatform(["exec", "electron", "."], {
+  const electronArgs = ["exec", "electron", "."];
+  if (userDataArg) electronArgs.push(userDataArg);
+  const child = spawnByPlatform(electronArgs, {
     env: { VITE_DEV_SERVER_URL: viteUrl },
   });
   electronChild = child;

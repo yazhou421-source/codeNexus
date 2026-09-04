@@ -1,4 +1,5 @@
 import { BrowserWindow } from "electron";
+import { IPC_APP_CHANNELS } from "@codenexus/shared/ipc/channels";
 import type { CodexIncomingMessage } from "@codenexus/shared/codex-protocol";
 import { CodexServerManager } from "../../services/CodexServerManager";
 import { type HistoryThread } from "../../historyStore";
@@ -17,9 +18,11 @@ import type { UpdateService } from "../../services/UpdateService";
 import type { DeepSeekResponsesProxyService } from "../../services/DeepSeekResponsesProxyService";
 import type { CustomAgentService } from "../../services/CustomAgentService";
 import type { ProviderRuntimeService } from "../../services/ProviderRuntimeService";
+import type { CodexAccountService } from "../../services/CodexAccountService";
 import { WorkspacePatchService } from "../../services/WorkspacePatchService";
 import { registerAppHandlers } from "./app.handlers";
 import { registerAgentHandlers } from "./agent.handlers";
+import { registerAccountHandlers } from "./account.handlers";
 import { registerCacheHandlers } from "./cache.handlers";
 import { registerCodexHandlers } from "./codex.handlers";
 import { registerFlowchartHandlers } from "./flowchart.handlers";
@@ -57,6 +60,7 @@ export type IpcHandlersDeps = {
   sendAgentEvent: (payload: CustomAgentStreamEvent) => void;
   cacheRegistryService: CacheRegistryService;
   providerRuntimeService: ProviderRuntimeService;
+  accountService: CodexAccountService;
 };
 
 export function registerAllHandlers(deps: IpcHandlersDeps) {
@@ -70,6 +74,14 @@ export function registerAllHandlers(deps: IpcHandlersDeps) {
     deepSeekResponsesProxyService: deps.deepSeekResponsesProxyService,
   });
   registerProviderHandlers({ providerRuntimeService: deps.providerRuntimeService });
+  registerAccountHandlers({
+    accountService: deps.accountService,
+    sendLoginCompleted: (payload) => {
+      const win = deps.getMainWindow();
+      if (!win || win.isDestroyed()) return;
+      win.webContents.send(IPC_APP_CHANNELS.appAccountLoginCompleted, payload);
+    },
+  });
   registerImageGenerationHandlers({
     localSettingsService: deps.localSettingsService,
     imageGenerationHistoryService: deps.imageGenerationHistoryService,

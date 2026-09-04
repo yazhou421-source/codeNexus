@@ -6,6 +6,14 @@ export function createAppApi(ipcRenderer: IpcRenderer): CodexDesktopApi["app"] {
   return {
     // 打开外部链接：交给系统浏览器处理。
     openExternal: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appOpenExternal, args),
+    readAccount: () => ipcRenderer.invoke(IPC_APP_CHANNELS.appAccountRead),
+    startChatGptLogin: () => ipcRenderer.invoke(IPC_APP_CHANNELS.appAccountLoginStart),
+    cancelChatGptLogin: () => ipcRenderer.invoke(IPC_APP_CHANNELS.appAccountLoginCancel),
+    onAccountLoginCompleted: (cb) => {
+      const listener = (_evt: unknown, payload: any) => cb(payload);
+      ipcRenderer.on(IPC_APP_CHANNELS.appAccountLoginCompleted, listener);
+      return () => ipcRenderer.off(IPC_APP_CHANNELS.appAccountLoginCompleted, listener);
+    },
     // 读取文本文件：由主进程统一访问磁盘。
     readTextFile: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appReadTextFile, args),
     // 写入文本文件：用于工作区编辑与本地持久化。

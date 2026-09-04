@@ -1,8 +1,10 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import {
   DEFAULT_USER_LOCAL_SETTINGS,
   mergeUserLocalSettings,
+  migrateUserLocalSettingsForOnboarding,
   normalizeUserLocalSettings,
   type UserLocalSettings,
   type UserLocalSettingsPatch,
@@ -24,7 +26,10 @@ export class LocalSettingsService {
   );
   private readonly secureStorage = new SecureStorageService();
 
-  constructor(private readonly filePath: string) {}
+  constructor(
+    private readonly filePath: string,
+    private readonly options: { legacyUserDataExists?: boolean; now?: () => string } = {}
+  ) {}
 
   get path(): string {
     return this.filePath;
@@ -75,13 +80,30 @@ export class LocalSettingsService {
   private async readFromDisk(): Promise<{ exists: boolean; settings: UserLocalSettings }> {
     try {
       const raw = await readFile(this.filePath, "utf8");
-      const settings = normalizeUserLocalSettings(tryParseJson(raw));
+      const parsed = tryParseJson(raw);
+      const migration = migrateUserLocalSettingsForOnboarding(parsed, {
+        settingsFileExists: true,
+        legacyUserDataExists: true,
+        now: this.options.now?.(),
+      });
+      const settings = migration.settings;
       const decrypted = this.decryptApiKeys(settings);
       if (this.secureStorage.needsMigration) {
         this.migrateEncryption(decrypted);
+      } else if (migration.migrated) {
+        await writeSettingsFile(this.filePath, this.encryptApiKeys(decrypted));
       }
       return { exists: true, settings: decrypted };
     } catch (error) {
+      if (isMissingFileError(error) && this.options.legacyUserDataExists) {
+        const migration = migrateUserLocalSettingsForOnboarding(null, {
+          settingsFileExists: false,
+          legacyUserDataExists: true,
+          now: this.options.now?.(),
+        });
+        await writeSettingsFile(this.filePath, this.encryptApiKeys(migration.settings));
+        return { exists: true, settings: migration.settings };
+      }
       logger.info("settings", `settings file not available, using defaults (${this.filePath})`);
       return { exists: false, settings: normalizeUserLocalSettings(DEFAULT_USER_LOCAL_SETTINGS) };
     }
@@ -90,9 +112,9 @@ export class LocalSettingsService {
   private migrateEncryption(settings: UserLocalSettings): void {
     logger.info("settings", "auto-migrating plaintext API keys to encrypted storage");
     const toWrite = this.encryptApiKeys(settings);
-    mkdir(dirname(this.filePath), { recursive: true })
-      .then(() => writeFile(this.filePath, `${JSON.stringify(toWrite, null, 2)}\n`, "utf8"))
-      .catch((error) => logger.warn("settings", "failed to migrate API key encryption", error));
+    writeSettingsFile(this.filePath, toWrite).catch((error) =>
+      logger.warn("settings", "failed to migrate API key encryption", error)
+    );
   }
 
   async read(): Promise<{ exists: boolean; settings: UserLocalSettings }> {
@@ -107,11 +129,26 @@ export class LocalSettingsService {
         const current = await this.readFromDisk();
         const next = mergeUserLocalSettings(current.settings, patch ?? {});
         const toWrite = this.encryptApiKeys(next);
-        await mkdir(dirname(this.filePath), { recursive: true });
-        await writeFile(this.filePath, `${JSON.stringify(toWrite, null, 2)}\n`, "utf8");
+        await writeSettingsFile(this.filePath, toWrite);
         return next;
       });
     this.writeQueue = task;
     return task;
+  }
+}
+
+function isMissingFileError(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && "code" in error && error.code === "ENOENT");
+}
+
+async function writeSettingsFile(filePath: string, settings: UserLocalSettings): Promise<void> {
+  const temporaryPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
+  await mkdir(dirname(filePath), { recursive: true });
+  try {
+    await writeFile(temporaryPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+    await rename(temporaryPath, filePath);
+  } catch (error) {
+    await unlink(temporaryPath).catch(() => undefined);
+    throw error;
   }
 }

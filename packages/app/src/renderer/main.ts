@@ -20,6 +20,7 @@ import { useMessageQueueStore } from "./stores/messageQueue.store";
 import { useCodexProfilesStore } from "./stores/codexProfiles.store";
 import { useCodexSkillRootsStore } from "./stores/codexSkillRoots.store";
 import { useProviderRegistryStore } from "./stores/providerRegistry.store";
+import { useOnboardingStore } from "./stores/onboarding.store";
 import { installTooltipDirective } from "./directives/tooltip";
 import { showToast, type ToastKind } from "./ui/toast";
 
@@ -55,6 +56,8 @@ async function bootstrap() {
   void useCodexProfilesStore(pinia).refresh();
   void useCodexSkillRootsStore(pinia).refresh();
   void useProviderRegistryStore(pinia).refresh();
+  const onboardingStore = useOnboardingStore(pinia);
+  onboardingStore.initialize();
 
   const runtime = initRuntimeOrchestrator(pinia);
   const app = createApp(App);
@@ -78,6 +81,7 @@ async function bootstrap() {
     "env",
     "integrations",
     "update",
+    "advanced",
     ...FEATURE_SETTINGS_TAB_KEYS,
   ]);
   const toOpenSettingsTab = (value: unknown): AppSettingsTab | undefined => {
@@ -89,6 +93,9 @@ async function bootstrap() {
     appShellStore.openSettings(tab);
   };
   window.addEventListener("codenexus:open-settings", handleFeatureOpenSettings);
+  const disposeAccountLoginCompleted = window.codexDesktop.app.onAccountLoginCompleted((payload) => {
+    void onboardingStore.handleLoginCompleted(payload);
+  });
   const disposeDomI18nFallback = installDomI18nFallback(() => appShellStore.language);
 
   const windowControlsOverlay = (navigator as any).windowControlsOverlay as
@@ -144,6 +151,7 @@ async function bootstrap() {
     () => {
       window.removeEventListener("codenexus:toast", handleFeatureToast);
       window.removeEventListener("codenexus:open-settings", handleFeatureOpenSettings);
+      disposeAccountLoginCompleted();
       disposeFeatureRuntimeBridges();
       runtime.dispose();
       disposeDomI18nFallback();

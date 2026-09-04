@@ -43,6 +43,8 @@ import { createCodexRouterRuntime } from "./codexRouterRuntime";
 import { ProviderSecretStore, ElectronSafeStorageEncryption } from "./services/ProviderSecretStore";
 import { ProviderPreferencesStore } from "./services/ProviderPreferencesStore";
 import { ProviderRuntimeService } from "./services/ProviderRuntimeService";
+import { CodexAccountService } from "./services/CodexAccountService";
+import { detectLegacyUserData } from "./services/OnboardingMigrationService";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 
@@ -275,6 +277,7 @@ app
     }
 
     const userDataPath = app.getPath("userData");
+    const legacyUserDataExists = await detectLegacyUserData(userDataPath);
     const providerDataPath = join(userDataPath, "embedded-router");
     providerRuntimeService = new ProviderRuntimeService(
       new ProviderSecretStore(join(providerDataPath, "provider-secrets.json"), new ElectronSafeStorageEncryption()),
@@ -299,7 +302,10 @@ app
     const historyCachePath = join(userDataPath, "thread-history-cache.json");
     const historyStore = new HistoryStore(historyCachePath);
     const historyService = new HistoryService(historyStore);
-    const localSettingsService = new LocalSettingsService(join(userDataPath, "user-settings.json"));
+    const localSettingsService = new LocalSettingsService(join(userDataPath, "user-settings.json"), {
+      legacyUserDataExists,
+    });
+    const accountService = new CodexAccountService(codexServerManager, userDataPath);
     const customAgentService = new CustomAgentService(localSettingsService);
     const codexProfileService = new CodexProfileService(join(app.getPath("userData"), "codex-profiles.json"));
     const codexSkillRootsService = new CodexSkillRootsService(join(app.getPath("userData"), "codex-skill-roots.json"));
@@ -397,6 +403,7 @@ app
       sendAgentEvent: (payload) => sendToRenderer(IPC_EVENT_CHANNELS.agentEvent, payload),
       cacheRegistryService,
       providerRuntimeService,
+      accountService,
     });
 
     mainWindow = await createMainWindow({

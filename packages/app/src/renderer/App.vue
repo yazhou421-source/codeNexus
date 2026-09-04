@@ -57,7 +57,7 @@
     <div class="app-overlays">
       <AppClosingOverlay v-if="showAppClosingOverlay" />
       <GoalShutdownCountdownOverlay v-if="showGoalShutdownOverlay" />
-      <RuntimeModeChooser v-if="showModeChooser" />
+      <OnboardingFlow v-if="onboardingStore.visible" />
     </div>
   </div>
 </template>
@@ -68,7 +68,7 @@ import { useI18n } from "vue-i18n";
 import TopBar from "./components/layout/TopBar.vue";
 import CenterPane from "./components/layout/CenterPane.vue";
 import BottomBar from "./components/layout/BottomBar.vue";
-import RuntimeModeChooser from "./components/custom/RuntimeModeChooser.vue";
+import OnboardingFlow from "./components/onboarding/OnboardingFlow.vue";
 import CustomWorkbench from "./components/custom/CustomWorkbench.vue";
 import {
   AppClosingOverlay,
@@ -92,6 +92,7 @@ import { useGoalShutdownStore } from "./stores/goalShutdown.store";
 import { useNotificationSoundStore } from "./stores/notificationSound.store";
 import { useRuntimeStore } from "./stores/runtime.store";
 import { useModelCatalogStore } from "./stores/modelCatalog.store";
+import { useOnboardingStore } from "./stores/onboarding.store";
 import { useWorkspaceFilesStore } from "./stores/workspaceFiles.store";
 import type { AppWindowState } from "@codenexus/shared/ipc/contracts";
 import {
@@ -113,6 +114,7 @@ const runtimeStore = useRuntimeStore();
 const notificationSoundStore = useNotificationSoundStore();
 const modelCatalogStore = useModelCatalogStore();
 const workspaceFilesStore = useWorkspaceFilesStore();
+const onboardingStore = useOnboardingStore();
 appShellStore.initLocalSettings();
 runtimeStore.initLocalDraftState();
 notificationSoundStore.initLocalSettings();
@@ -126,7 +128,6 @@ const showAppClosingOverlay = computed(() => appClosingStore.visible);
 const showGoalShutdownOverlay = computed(() => goalShutdownStore.visible);
 const mainView = computed(() => appShellStore.mainView);
 const isCustomMode = computed(() => appShellStore.runtimeMode === "custom");
-const showModeChooser = computed(() => appShellStore.runtimeMode === null || appShellStore.modeChooserOpen);
 const activeFeature = computed(() => getFeatureByMainView(mainView.value));
 const featureWorkspaceSidebar = computed(() => {
   if (isCustomMode.value || settingsOpen.value || !appShellStore.leftSidebarVisible) return null;

@@ -10,11 +10,13 @@ import {
   DEFAULT_USER_LOCAL_SETTINGS as SHARED_DEFAULT_USER_LOCAL_SETTINGS,
   mergeUserLocalSettings as mergeSharedUserLocalSettings,
   normalizeUserLocalSettings as normalizeSharedUserLocalSettings,
+  migrateUserLocalSettingsForOnboarding,
   type UserLocalSettings,
   type UserLocalSettingsPatch,
 } from "@codenexus/shared/localSettings";
 
 export type { UserLocalSettings, UserLocalSettingsPatch };
+export { migrateUserLocalSettingsForOnboarding };
 
 function toRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
