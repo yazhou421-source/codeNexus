@@ -157,6 +157,57 @@ describe("Embedded Router API", () => {
     );
   });
 
+  it("does not count tool outputs from earlier user turns toward the loop guard", async () => {
+    const { origin } = await stackWithUpstream(toolCallUpstream);
+    const response = await postJson(origin, {
+      model: "test-model",
+      input: [
+        userMessage("old request"),
+        toolCall("old_call_1"),
+        toolOutput("old_call_1"),
+        toolCall("old_call_2"),
+        toolOutput("old_call_2"),
+        toolCall("old_call_3"),
+        toolOutput("old_call_3"),
+        userMessage("new request"),
+      ],
+      tools: [readFileTool()],
+    });
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.output).toContainEqual(
+      expect.objectContaining({
+        type: "function_call",
+        call_id: "call_test",
+        name: "read_file",
+      }),
+    );
+    expect(JSON.stringify(body)).not.toContain("stopped repeated tool loop");
+  });
+
+  it("still stops repeated tool continuations within the latest user turn", async () => {
+    const { origin } = await stackWithUpstream(toolCallUpstream);
+    const response = await postJson(origin, {
+      model: "test-model",
+      input: [
+        userMessage("current request"),
+        toolCall("current_call_1"),
+        toolOutput("current_call_1"),
+        toolCall("current_call_2"),
+        toolOutput("current_call_2"),
+        toolCall("current_call_3"),
+        toolOutput("current_call_3"),
+      ],
+      tools: [readFileTool()],
+    });
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(JSON.stringify(body)).toContain("stopped repeated tool loop");
+    expect(body.output).not.toContainEqual(
+      expect.objectContaining({ type: "function_call" }),
+    );
+  });
+
   it("returns a local cooldown response after a provider 429", async () => {
     let calls = 0;
     const { origin } = await stackWithUpstream((_request, response) => {
@@ -247,6 +298,66 @@ async function stackWithUpstream(
   const upstreamOrigin = await listen(upstream);
   const router = track(createRouterServer(testConfig(upstreamOrigin)));
   return { origin: await listen(router) };
+}
+
+function toolCallUpstream(
+  _request: http.IncomingMessage,
+  response: http.ServerResponse,
+): void {
+  response.writeHead(200, { "content-type": "application/json" });
+  response.end(
+    JSON.stringify({
+      id: "chatcmpl_tool",
+      choices: [
+        {
+          message: {
+            role: "assistant",
+            content: null,
+            tool_calls: [
+              {
+                id: "call_test",
+                type: "function",
+                function: {
+                  name: "read_file",
+                  arguments: '{"path":"README.md"}',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+}
+
+function userMessage(text: string): Record<string, unknown> {
+  return { type: "message", role: "user", content: text };
+}
+
+function toolCall(callId: string): Record<string, unknown> {
+  return {
+    type: "function_call",
+    call_id: callId,
+    name: "read_file",
+    arguments: '{"path":"README.md"}',
+  };
+}
+
+function toolOutput(callId: string): Record<string, unknown> {
+  return {
+    type: "function_call_output",
+    call_id: callId,
+    output: "file contents",
+  };
+}
+
+function readFileTool(): Record<string, unknown> {
+  return {
+    type: "function",
+    name: "read_file",
+    description: "Read a file",
+    parameters: { type: "object" },
+  };
 }
 
 function testConfig(

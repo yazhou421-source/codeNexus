@@ -86,8 +86,15 @@ export function applyCodexRouterModelProvider(
 
   return {
     ...record,
-    modelProvider: runtime.localTokenModelIds.has(model)
-      ? CODEX_ROUTER_PROVIDER_ID
-      : CODEX_ROUTER_CODEX_AUTH_PROVIDER_ID,
+    modelProvider: codexRouterModelProviderForModel(model, runtime),
   };
+}
+
+export function codexRouterModelProviderForModel(
+  model: unknown,
+  runtime: CodexAppServerRuntimeConfig | null
+): string | null {
+  const modelId = typeof model === "string" ? model.trim() : "";
+  if (!runtime || !modelId) return null;
+  return runtime.localTokenModelIds.has(modelId) ? CODEX_ROUTER_PROVIDER_ID : CODEX_ROUTER_CODEX_AUTH_PROVIDER_ID;
 }

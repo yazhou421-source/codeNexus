@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({ app: { getVersion: () => "test" } }));
 
-import { buildCodexAppServerSpawnCommand, redactCodexChildValue } from "./codexAppServer";
+import { CodexAppServer, buildCodexAppServerSpawnCommand, redactCodexChildValue } from "./codexAppServer";
+import type { CodexAppServerRuntimeConfig } from "./codexRouterRuntime";
 
 describe("Codex app-server spawn configuration", () => {
   it("puts every global -c before the app-server subcommand", () => {
@@ -65,5 +66,48 @@ describe("Codex app-server spawn configuration", () => {
       nested: ["[REDACTED]"],
     });
     expect(redactCodexChildValue(`not-json ${secret}`, [secret])).toBe("not-json [REDACTED]");
+  });
+
+  it("rebinds an existing thread before switching between Codex-auth and API-key models", async () => {
+    const runtimeConfig: CodexAppServerRuntimeConfig = {
+      globalConfigOverrides: [],
+      childEnv: {},
+      sensitiveValues: [],
+      localTokenModelIds: new Set(["deepseek-v4-flash"]),
+    };
+    const server = new CodexAppServer({ id: "test", mode: "native", runtimeConfig });
+    const requests: Array<{ id: number; method: string; params?: Record<string, unknown> }> = [];
+    (server as any).proc = {
+      stdin: {
+        write(line: string) {
+          const request = JSON.parse(line);
+          requests.push(request);
+          const modelProvider = String(request.params?.modelProvider ?? "");
+          queueMicrotask(() =>
+            (server as any).handleIncoming({
+              id: request.id,
+              result:
+                request.method === "turn/start"
+                  ? { turn: { id: "turn-1" } }
+                  : {
+                      thread: { id: request.params?.threadId ?? "thread-1" },
+                      modelProvider,
+                    },
+            })
+          );
+          return true;
+        },
+      },
+    };
+
+    await server.request("thread/start", { model: "gpt-5.5" } as any);
+    await server.request("turn/start", { threadId: "thread-1", model: "deepseek-v4-flash", input: [] } as any, 1_000);
+
+    expect(requests.map(({ method }) => method)).toEqual(["thread/start", "thread/resume", "turn/start"]);
+    expect(requests[1]?.params).toMatchObject({
+      threadId: "thread-1",
+      model: "deepseek-v4-flash",
+      modelProvider: "codenexus-router",
+    });
   });
 });

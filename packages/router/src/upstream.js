@@ -569,6 +569,11 @@ function responseToolOutputContinuationGroups(input) {
   let groups = 0;
   let inOutputGroup = false;
   for (const item of responseInputItems(input)) {
+    if (isResponseUserMessage(item)) {
+      groups = 0;
+      inOutputGroup = false;
+      continue;
+    }
     if (isResponseToolOutputItem(item)) {
       if (!inOutputGroup) {
         groups += 1;
@@ -579,6 +584,15 @@ function responseToolOutputContinuationGroups(input) {
     inOutputGroup = false;
   }
   return groups;
+}
+
+function isResponseUserMessage(item) {
+  return Boolean(
+    item &&
+    typeof item === "object" &&
+    item.role === "user" &&
+    !isResponseToolOutputItem(item),
+  );
 }
 
 function responseInputItems(input) {

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   applyCodexRouterModelProvider,
+  codexRouterModelProviderForModel,
   CODEX_ROUTER_CODEX_AUTH_PROVIDER_ID,
   CODEX_ROUTER_PROVIDER_ID,
   CODEX_ROUTER_TOKEN_ENV,
@@ -119,6 +120,13 @@ describe("Codex Router process-scoped runtime", () => {
       createCodexRouterRuntime(ownedConnection())
     );
     expect(params).toMatchObject({ modelProvider: CODEX_ROUTER_CODEX_AUTH_PROVIDER_ID });
+  });
+
+  it("resolves the provider required by a turn model", () => {
+    const runtime = createCodexRouterRuntime(ownedConnection());
+    expect(codexRouterModelProviderForModel("gpt-5.4-mini", runtime)).toBe(CODEX_ROUTER_PROVIDER_ID);
+    expect(codexRouterModelProviderForModel("gpt-5.5", runtime)).toBe(CODEX_ROUTER_CODEX_AUTH_PROVIDER_ID);
+    expect(codexRouterModelProviderForModel("", runtime)).toBeNull();
   });
 
   it("leaves requests unchanged without an owned Router", () => {

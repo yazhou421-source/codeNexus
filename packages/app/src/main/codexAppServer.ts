@@ -5,7 +5,11 @@ import { existsSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { app } from "electron";
 import { discoverExistingCodexPaths } from "./codexNativeDiscovery";
-import { applyCodexRouterModelProvider, type CodexAppServerRuntimeConfig } from "./codexRouterRuntime";
+import {
+  applyCodexRouterModelProvider,
+  codexRouterModelProviderForModel,
+  type CodexAppServerRuntimeConfig,
+} from "./codexRouterRuntime";
 import { logger } from "./utils/logger";
 import type {
   CodexIncomingMessage,
@@ -139,6 +143,7 @@ export class CodexAppServer {
   private stopping = false;
   private nextId = 1;
   private readonly pending = new Map<JsonRpcId, Pending>();
+  private readonly threadModelProviders = new Map<string, string>();
   private onMessage?: (msg: CodexIncomingMessage) => void;
   private nativeCodex?: NativeCodexCommand;
 
@@ -288,14 +293,16 @@ export class CodexAppServer {
   ): Promise<CodexRpcResult<M>> {
     if (!isValidMethod(method)) throw new Error("invalid json-rpc method");
     if (!isValidParams(params)) throw new Error(`invalid json-rpc params for method: ${method}`);
+    await this.ensureRouterProviderForTurn(method, params, timeoutMs);
     const id: JsonRpcId = this.nextId++;
+    const routedParams = applyCodexRouterModelProvider(method, params, this.runtimeConfig);
     const req: JsonRpcRequest = {
       id,
       method: method.trim(),
-      params: applyCodexRouterModelProvider(method, params, this.runtimeConfig),
+      params: routedParams,
     };
     this.write(req);
-    return await new Promise<CodexRpcResult<M>>((resolve, reject) => {
+    const result = await new Promise<CodexRpcResult<M>>((resolve, reject) => {
       const pending: Pending = {
         resolve: (value) => resolve(value as CodexRpcResult<M>),
         reject,
@@ -306,6 +313,32 @@ export class CodexAppServer {
       };
       this.pending.set(id, pending);
     });
+    this.rememberThreadModelProvider(method, routedParams, result);
+    return result;
+  }
+
+  private async ensureRouterProviderForTurn(method: string, params: unknown, timeoutMs: number): Promise<void> {
+    if (method !== "turn/start" || !params || typeof params !== "object" || Array.isArray(params)) return;
+    const record = params as Record<string, unknown>;
+    const threadId = typeof record.threadId === "string" ? record.threadId.trim() : "";
+    const model = typeof record.model === "string" ? record.model.trim() : "";
+    const desiredProvider = codexRouterModelProviderForModel(model, this.runtimeConfig);
+    if (!threadId || !model || !desiredProvider || this.threadModelProviders.get(threadId) === desiredProvider) return;
+
+    await this.request("thread/resume", { threadId, model }, timeoutMs);
+  }
+
+  private rememberThreadModelProvider(method: string, params: unknown, result: unknown): void {
+    if (!["thread/start", "thread/resume", "thread/fork"].includes(method)) return;
+    const paramsRecord = params && typeof params === "object" ? (params as Record<string, unknown>) : {};
+    const resultRecord = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
+    const thread =
+      resultRecord.thread && typeof resultRecord.thread === "object"
+        ? (resultRecord.thread as Record<string, unknown>)
+        : {};
+    const threadId = String(thread.id ?? paramsRecord.threadId ?? "").trim();
+    const modelProvider = String(resultRecord.modelProvider ?? paramsRecord.modelProvider ?? "").trim();
+    if (threadId && modelProvider) this.threadModelProviders.set(threadId, modelProvider);
   }
 
   notify<M extends string>(method: M, params?: CodexNotifyParams<M>): void {
