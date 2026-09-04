@@ -17,6 +17,7 @@
     "codex:types:verify": "pnpm --filter @codenexus/app codex:types:verify",
     "codex:types:check": "pnpm --filter @codenexus/app codex:types:check",
     "codex:protocol:smoke": "pnpm --filter @codenexus/app codex:protocol:smoke",
+    "codex:prompt:diagnostics": "pnpm --filter @codenexus/app codex:prompt:diagnostics",
     "codex:runtime:fetch": "pnpm --filter @codenexus/app codex:runtime:fetch",
     "codex:runtime:verify": "pnpm --filter @codenexus/app codex:runtime:verify",
     "dist": "pnpm --filter @codenexus/app dist"

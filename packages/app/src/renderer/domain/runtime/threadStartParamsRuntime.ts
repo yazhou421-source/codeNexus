@@ -8,7 +8,6 @@ import {
 } from "@codenexus/shared/modelToolFeatureOverrides";
 import { buildBuiltinDynamicToolSpecs } from "@codenexus/shared/dynamicTools";
 import {
-  buildDeveloperInstructionsForProfile,
   buildDynamicToolNamesForInstructionProfile,
   type CodexInstructionProfile,
 } from "@codenexus/shared/codexInstructionProfiles";
@@ -50,7 +49,6 @@ export function createThreadStartParamsRuntime(deps: ThreadStartParamsRuntimeDep
     const dynamicTools = buildBuiltinDynamicToolSpecs(
       buildDynamicToolNamesForInstructionProfile(instructionProfile)
     ) as ThreadStartParams["dynamicTools"];
-    const developerInstructions = buildDeveloperInstructionsForProfile(instructionProfile);
 
     return {
       configOverrides,
@@ -62,7 +60,6 @@ export function createThreadStartParamsRuntime(deps: ThreadStartParamsRuntimeDep
         sandbox: sandboxKebabFromUi(normalizeSandboxMode(args.sandboxMode)),
         ...(configOverrides ? { config: configOverrides } : {}),
         ...(dynamicTools && dynamicTools.length > 0 ? { dynamicTools } : {}),
-        ...(developerInstructions ? { developerInstructions } : {}),
         experimentalRawEvents: false,
       },
     };

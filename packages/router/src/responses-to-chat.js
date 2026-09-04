@@ -447,9 +447,27 @@ function toolGuidanceFromContext(toolContext, request = {}) {
 }
 
 function requestHasResponseToolOutput(request = {}) {
-  return chatRequestInputItems(request.messages ?? request.input).some(
-    isResponseToolOutputItem,
-  );
+  let hasToolOutputInLatestUserTurn = false;
+  for (const item of chatRequestInputItems(request.messages ?? request.input)) {
+    if (isChatUserMessage(item)) {
+      hasToolOutputInLatestUserTurn = false;
+      continue;
+    }
+    if (isResponseToolOutputItem(item)) {
+      hasToolOutputInLatestUserTurn = true;
+    }
+  }
+  return hasToolOutputInLatestUserTurn;
+}
+
+function isChatUserMessage(item) {
+  if (typeof item === "string") {
+    return true;
+  }
+  if (!item || typeof item !== "object" || isResponseToolOutputItem(item)) {
+    return false;
+  }
+  return normalizeRole(item.role || roleFromType(item.type)) === "user";
 }
 
 function chatRequestInputItems(input) {

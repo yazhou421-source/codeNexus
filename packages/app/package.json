@@ -21,6 +21,7 @@
     "codex:types:verify": "node scripts/codex-protocol.mjs verify",
     "codex:types:check": "node scripts/codex-protocol.mjs check",
     "codex:protocol:smoke": "node scripts/codex-protocol-smoke.mjs",
+    "codex:prompt:diagnostics": "node scripts/codex-prompt-diagnostics.mjs",
     "codex:runtime:fetch": "node scripts/codex-runtime.mjs fetch",
     "codex:runtime:verify": "node scripts/codex-runtime.mjs verify",
     "dist": "pnpm run codex:runtime:fetch && pnpm run codex:runtime:verify && pnpm run build && pnpm exec electron-builder --config electron-builder.yml"
