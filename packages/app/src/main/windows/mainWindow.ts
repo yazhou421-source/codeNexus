@@ -18,7 +18,7 @@ function resolveWindowIconPath(): string | undefined {
 
   const candidates = app.isPackaged
     ? [join(process.resourcesPath, "icon.ico")]
-    : [resolve(app.getAppPath(), "build", "icon.ico"), resolve(app.getAppPath(), "CodeNexus.png")];
+    : [resolve(app.getAppPath(), "build", "icon.ico")];
 
   return candidates.find((candidate) => existsSync(candidate));
 }
@@ -40,6 +40,7 @@ export async function createMainWindow(opts: MainWindowOptions): Promise<Browser
     : "right";
 
   const win = new BrowserWindow({
+    title: "Calmnova Code",
     width: 1200,
     minWidth: 950,
     height: 780,

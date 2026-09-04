@@ -6,6 +6,22 @@ import { CodexAppServer, buildCodexAppServerSpawnCommand, redactCodexChildValue 
 import type { CodexAppServerRuntimeConfig } from "./codexRouterRuntime";
 
 describe("Codex app-server spawn configuration", () => {
+  it("identifies the desktop client as Calmnova Code during initialize", async () => {
+    const server = new CodexAppServer({ id: "identity", mode: "native" });
+    const request = vi.fn(async () => ({}));
+    const notify = vi.fn();
+    (server as any).request = request;
+    (server as any).notify = notify;
+
+    await (server as any).initializeHandshake();
+
+    expect(request).toHaveBeenCalledWith("initialize", {
+      clientInfo: { name: "calmnova-code", title: "Calmnova Code", version: "test" },
+      capabilities: null,
+    });
+    expect(notify).toHaveBeenCalledWith("initialized");
+  });
+
   it("puts every global -c before the app-server subcommand", () => {
     const result = buildCodexAppServerSpawnCommand({
       nativeCodex: { kind: "direct", path: "/opt/codex" },

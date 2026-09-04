@@ -3,15 +3,15 @@
 </p>
 
 <p align="center">
-  <img src="./CodeNexus.png" width="112" alt="CodeNexus logo" />
+  <img src="./CodeNexus.png" width="112" alt="Calmnova Code placeholder logo" />
 </p>
 
-<h1 align="center">CodeNexus</h1>
+<h1 align="center">Calmnova Code</h1>
 
-<h3 align="center">Desktop workspace for Codex on Windows — built on the shoulders of giants.</h3>
+<h3 align="center">AI Coding Workspace</h3>
 
 <p align="center">
-  CodeNexus brings Codex sessions, approvals, file changes, workspace context, and configuration into a focused desktop client.
+  Calmnova Code brings AI agent sessions, approvals, file changes, workspace context, and model services into one desktop client.
 </p>
 
 <p align="center">
@@ -44,13 +44,13 @@
 
 ## Overview
 
-CodeNexus was built to make Codex app-server practical as a self-managed desktop workspace, rather than keeping the entire workflow inside a terminal. It focuses on the parts that matter during real agent work: understanding what happened, reviewing what changed, and keeping the local workspace under the user's control.
+Calmnova Code makes agentic coding practical as a self-managed desktop workspace, rather than keeping the entire workflow inside a terminal. It focuses on the parts that matter during real agent work: understanding what happened, reviewing what changed, and keeping the local workspace under the user's control.
 
 The app handles Codex app-server notifications directly and turns them into a desktop experience with timeline review, approval handling, custom themes, custom notification sounds, workspace file browsing, and a drag-friendly editor for local files.
 
-CodeNexus also supports extending the agent runtime by injecting dynamic tools. The built-in `codenexus.image_generate` tool is wired into that path, so image generation can appear as a native part of the conversation and timeline instead of a separate external workflow.
+Calmnova Code also supports extending the agent runtime by injecting dynamic tools. The internal `codenexus.image_generate` protocol identifier is retained for backward compatibility, so image generation can appear as a native part of the conversation and timeline instead of a separate external workflow.
 
-CodeNexus is not an official OpenAI product. It is an independent desktop interface for Codex-oriented workflows.
+Calmnova Code is an independent product and is not affiliated with or endorsed by OpenAI. It is based on CodeNexus and includes an embedded router derived from CodexBridge; their MIT notices and the bundled OpenAI Codex notices are shipped with the application.
 
 ## Screenshots
 
@@ -58,29 +58,29 @@ Project screenshots are stored under `docs/screenshots/`.
 
 ### Chat timeline
 
-<img src="./docs/screenshots/chat-timeline.png" alt="CodeNexus chat timeline with planning prompt" />
+<img src="./docs/screenshots/chat-timeline.png" alt="Calmnova Code chat timeline with planning prompt" />
 
 ### Workspace and file changes
 
-<img src="./docs/screenshots/workspace-editor.png" alt="CodeNexus workspace file browser and file change review" />
+<img src="./docs/screenshots/workspace-editor.png" alt="Calmnova Code workspace file browser and file change review" />
 
 ### Image generation workspace
 
-<img src="./docs/screenshots/image-generation.png" alt="CodeNexus image generation workspace" />
+<img src="./docs/screenshots/image-generation.png" alt="Calmnova Code image generation workspace" />
 
 ### Settings
 
-<img src="./docs/screenshots/settings.png" alt="CodeNexus global settings" />
+<img src="./docs/screenshots/settings.png" alt="Calmnova Code global settings" />
 
 ## Recent Updates
 
-CodeNexus now visualizes streaming output from the Codex protocol, including command/process output deltas and streaming file-change updates. This makes long-running tool calls and patch activity easier to follow while a turn is still in progress.
+Calmnova Code visualizes streaming output from the Codex protocol, including command/process output deltas and streaming file-change updates. This makes long-running tool calls and patch activity easier to follow while a turn is still in progress.
 
 This capability depends on Codex experimental protocol events. Enable the streaming output experimental feature in Settings before using it.
 
 ## Highlights
 
-| Area               | What CodeNexus Provides                                                                                      |
+| Area               | What Calmnova Code Provides                                                                                  |
 | ------------------ | ------------------------------------------------------------------------------------------------------------ |
 | Sessions           | Start and continue Codex threads in a persistent desktop workspace.                                          |
 | Timeline           | Review protocol events, command activity, approvals, diffs, MCP calls, and system messages in context.       |
@@ -146,10 +146,12 @@ For local community discussion, a QQ group QR code can be added to the Chinese R
 
 ## Boundaries
 
-- CodeNexus does not provide an OpenAI account, API token, hosted service, or model access.
+- Calmnova Code does not provide an OpenAI account, API token, hosted service, or model access.
 - Model usage costs, workspace data handling, and local security remain the responsibility of the user.
 - Third-party dependencies and bundled assets follow their respective upstream licenses.
 
-## License
+## License and attribution
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). Calmnova Code is based on CodeNexus and includes code derived from CodexBridge, both under the MIT License. Bundled OpenAI Codex license and notice files, along with the product's third-party notice, are included in every packaged application.
+
+The logo image currently shown in this repository is an inherited placeholder and is not the final Calmnova brand artwork.

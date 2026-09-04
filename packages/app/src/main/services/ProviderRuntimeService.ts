@@ -43,8 +43,9 @@ export class ProviderRuntimeService {
   async initialize(): Promise<RouterConfig> {
     try {
       await this.secretStore.load();
+      this.secretStore.validateAll();
     } catch (error) {
-      this.warn("provider credential store could not be loaded; third-party providers remain disabled", error);
+      this.warn("provider credential store could not be fully loaded; affected providers remain disabled", error);
     }
     try {
       await this.preferencesStore.load();

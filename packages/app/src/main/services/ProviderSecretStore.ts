@@ -60,6 +60,34 @@ export class ProviderSecretStore {
     this.loaded = true;
   }
 
+  /**
+   * Verifies that every stored ciphertext can still be decrypted by the current
+   * OS credential identity. Plaintext is intentionally discarded immediately.
+   */
+  validateAll(): void {
+    this.assertLoaded();
+    if (!this.encryptedByProvider.size) return;
+    if (!this.encryptionAvailable) {
+      throw providerSecretError("secure_storage_unavailable", "Secure credential storage is unavailable.");
+    }
+    let invalidCredentialFound = false;
+    for (const [providerId, encrypted] of this.encryptedByProvider) {
+      try {
+        const plaintext = this.encryption.decrypt(decodeCiphertext(encrypted)).trim();
+        if (!plaintext) throw new Error("empty credential");
+      } catch {
+        this.encryptedByProvider.delete(providerId);
+        invalidCredentialFound = true;
+      }
+    }
+    if (invalidCredentialFound) {
+      throw providerSecretError(
+        "credential_decryption_failed",
+        "One or more provider credentials cannot be decrypted."
+      );
+    }
+  }
+
   isConfigured(providerId: string): boolean {
     this.assertLoaded();
     return this.encryptedByProvider.has(normalizeProviderId(providerId));

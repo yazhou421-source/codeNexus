@@ -1,7 +1,10 @@
 <template>
   <div class="onboarding" role="dialog" aria-modal="true" :aria-label="t('onboarding.aria')">
     <section class="onboarding-panel" :data-step="store.step">
-      <div class="onboarding-brand">CodeNexus</div>
+      <div class="onboarding-brand">
+        <strong>Calmnova Code</strong>
+        <span>{{ t("onboarding.brandSubtitle") }}</span>
+      </div>
 
       <template v-if="store.step === 'welcome'">
         <div class="onboarding-copy onboarding-copy--center">
@@ -302,13 +305,25 @@ onMounted(() => {
   box-shadow: var(--ui-shadow-md, 0 24px 64px rgb(0 0 0 / 0.28));
 }
 
-.onboarding-brand,
 .onboarding-kicker {
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.onboarding-brand {
+  display: grid;
+  gap: 3px;
+}
+.onboarding-brand strong {
+  font-size: 14px;
+  letter-spacing: 0.03em;
+}
+.onboarding-brand span {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .onboarding-copy {

@@ -109,7 +109,7 @@ export function routeForModel(config, requestedModel) {
     .filter(Boolean)
     .join(", ");
   const error = new Error(
-    `Model is not configured in CodeNexus Embedded Router: ${requested}. Available models: ${available}`,
+    `Model is not configured in the Calmnova Code embedded model service: ${requested}. Available models: ${available}`,
   );
   error.statusCode = 404;
   error.code = "model_not_configured";
@@ -229,8 +229,8 @@ export function requireApiKey(route, resolveSecret) {
   if (!key) {
     const label = [route.displayName, route.id].filter(Boolean).join(" / ");
     const hint = route.apiKeyEnv
-      ? ` Set ${route.apiKeyEnv} in the CodeNexus Router environment.`
-      : " Configure an API key for the CodeNexus Embedded Router.";
+      ? ` Set ${route.apiKeyEnv} in the embedded model service environment.`
+      : " Configure an API key for the Calmnova Code embedded model service.";
     const error = new Error(
       route.apiKeyRef
         ? `Provider ${route.provider || route.apiKeyRef} is not configured.`

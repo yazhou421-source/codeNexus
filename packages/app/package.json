@@ -1,10 +1,10 @@
 {
   "name": "@codenexus/app",
-  "productName": "CodeNexus",
+  "productName": "Calmnova Code",
   "version": "1.0.3",
   "private": true,
-  "description": "Unofficial Codex desktop GUI for Windows",
-  "author": "CodeNexus contributors",
+  "description": "Calmnova Code — AI Coding Workspace",
+  "author": "Calmnova contributors",
   "license": "MIT",
   "main": "dist/main.cjs",
   "scripts": {

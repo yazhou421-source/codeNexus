@@ -85,6 +85,45 @@ describe("ProviderSecretStore", () => {
     expect(value.resolve("kimi")).toBe("kimi-secret");
   });
 
+  it("validates migrated ciphertext against the current OS credential identity and fails closed", async () => {
+    const writable = encryption();
+    const { path, value } = await store(writable);
+    await value.save("deepseek", "synthetic-migrated-secret");
+
+    const incompatible: ProviderSecretEncryption = {
+      isAvailable: () => true,
+      encrypt: writable.encrypt,
+      decrypt: () => {
+        throw new Error("different application identity");
+      },
+    };
+    const migrated = new ProviderSecretStore(path, incompatible);
+    await migrated.load();
+    expect(() => migrated.validateAll()).toThrow(expect.objectContaining({ code: "credential_decryption_failed" }));
+    expect(migrated.isConfigured("deepseek")).toBe(false);
+  });
+
+  it("keeps independently valid providers enabled when another migrated credential fails validation", async () => {
+    const { path, value } = await store();
+    await value.save("deepseek", "deepseek-valid");
+    await value.save("kimi", "kimi-invalid-after-migration");
+    const selective: ProviderSecretEncryption = {
+      isAvailable: () => true,
+      encrypt: encryption().encrypt,
+      decrypt: (ciphertext) => {
+        const value = encryption().decrypt(ciphertext);
+        if (value.includes("kimi-invalid")) throw new Error("identity mismatch");
+        return value;
+      },
+    };
+    const migrated = new ProviderSecretStore(path, selective);
+    await migrated.load();
+
+    expect(() => migrated.validateAll()).toThrow(expect.objectContaining({ code: "credential_decryption_failed" }));
+    expect(migrated.isConfigured("deepseek")).toBe(true);
+    expect(migrated.isConfigured("kimi")).toBe(false);
+  });
+
   it("deletes credentials without requiring decryption", async () => {
     const { value } = await store();
     await value.save("deepseek", "deepseek-secret");

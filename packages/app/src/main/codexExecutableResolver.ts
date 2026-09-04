@@ -79,7 +79,7 @@ export class CodexRuntimeUnavailableError extends Error {
   constructor(code: string, technicalDetail: string, isPackaged: boolean) {
     super(
       isPackaged
-        ? "内置 Codex 运行时不可用。请重新安装 CodeNexus；如果问题仍然存在，请联系支持。"
+        ? "内置 Codex 运行时不可用。请重新安装 Calmnova Code；如果问题仍然存在，请联系支持。"
         : "Codex 开发运行时不可用。请准备已校验的 bundled runtime，或配置开发专用 Codex executable。"
     );
     this.name = "CodexRuntimeUnavailableError";

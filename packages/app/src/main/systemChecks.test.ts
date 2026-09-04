@@ -39,11 +39,11 @@ describe("Codex runtime diagnostics", () => {
 
   it("returns only the product-safe runtime error to diagnostics", async () => {
     resolveCurrentCodexExecutable.mockRejectedValue(
-      new Error("内置 Codex 运行时不可用。请重新安装 CodeNexus；如果问题仍然存在，请联系支持。")
+      new Error("内置 Codex 运行时不可用。请重新安装 Calmnova Code；如果问题仍然存在，请联系支持。")
     );
     await expect(detectCodexNative()).resolves.toEqual({
       ok: false,
-      details: "内置 Codex 运行时不可用。请重新安装 CodeNexus；如果问题仍然存在，请联系支持。",
+      details: "内置 Codex 运行时不可用。请重新安装 Calmnova Code；如果问题仍然存在，请联系支持。",
     });
   });
 });

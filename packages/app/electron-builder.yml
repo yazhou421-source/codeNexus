@@ -1,5 +1,6 @@
-appId: com.codenexus.desktop
-productName: CodeNexus
+appId: com.calmnova.code
+productName: Calmnova Code
+executableName: Calmnova Code
 
 publish:
   provider: github
@@ -38,6 +39,10 @@ extraResources:
     to: licenses/OpenAI-Codex-NOTICE.txt
   - from: ../router/LICENSE
     to: licenses/CodexBridge-LICENSE.txt
+  - from: ../../LICENSE
+    to: licenses/CodeNexus-LICENSE.txt
+  - from: licenses/Calmnova-Code-THIRD-PARTY-NOTICES.txt
+    to: licenses/Calmnova-Code-THIRD-PARTY-NOTICES.txt
   - from: music
     to: music
     filter:
@@ -47,7 +52,7 @@ extraResources:
 
 win:
   icon: build/icon.ico
-  artifactName: "${productName}-Setup-${version}.${ext}"
+  artifactName: "Calmnova-Code-Setup-${version}.${ext}"
   signAndEditExecutable: true
   target:
     - target: nsis
@@ -55,6 +60,9 @@ win:
         - x64
 
 mac:
+  # Inherited placeholder only; replace with build/icon.icns before public release.
+  icon: ../../CodeNexus.png
+  artifactName: "Calmnova-Code-${version}-${arch}.${ext}"
   target:
     - target: dmg
       arch:

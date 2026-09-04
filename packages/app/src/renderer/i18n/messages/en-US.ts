@@ -83,10 +83,11 @@ export default {
   },
   onboarding: {
     aria: "First-time setup",
+    brandSubtitle: "AI Coding Workspace",
     step: "Step {current} of {total}",
     welcome: {
       kicker: "Welcome",
-      title: "Get started with CodeNexus",
+      title: "Get started with Calmnova Code",
       description: "Let AI understand, modify, and run your project within the permissions you grant.",
       files: "AI can view and modify files in the project you select.",
       commands: "AI can run local commands; sensitive actions still follow your approval settings.",
@@ -123,7 +124,7 @@ export default {
     },
     project: {
       title: "Choose a project folder",
-      description: "CodeNexus opens only the folder you choose and does not copy its contents.",
+      description: "Calmnova Code opens only the folder you choose and does not copy its contents.",
       choose: "Choose project folder",
       later: "Choose later",
       openFailed: "The project folder could not be opened. Try again or choose it later.",
@@ -361,7 +362,7 @@ export default {
     afterInstallHint:
       "If it still shows as missing after installation, restart your terminal or this app, then click Check again.",
     bundledRepairTitle: "Built-in runtime unavailable",
-    bundledRepairHint: "Reinstall CodeNexus. If the problem continues, contact support.",
+    bundledRepairHint: "Reinstall Calmnova Code. If the problem continues, contact support.",
     hintTitle: "Note",
     runtimeHint:
       "Environment checks only verify that codex/node/npm can be found locally. They do not guarantee codex can start inside the app. If it still does not work, run this self-check in CMD:",
@@ -674,7 +675,7 @@ export default {
     switcherEmpty: "Not managed yet; target: {target}",
     switcherActive: "Active: {name}; {count} profiles; target: {target}",
     ccswitchDetected:
-      "ccswitch was detected ({path}). Keep managing Codex config through ccswitch, or remove/disable ccswitch before enabling the CodeNexus global switcher.",
+      "ccswitch was detected ({path}). Keep managing Codex config through ccswitch, or remove/disable ccswitch before enabling the Calmnova Code global switcher.",
     mcpJsonImport: "MCP JSON import",
     mcpJsonImportDesc: "Supports {schema} or a single server JSON.",
     import: "Import",
@@ -1593,7 +1594,7 @@ export default {
     skillRootAddFailedTitle: "Failed to add skill directory",
     skillRootRemoveFailedTitle: "Failed to remove skill directory",
     ccswitchDetected:
-      "ccswitch was detected ({reason}). CodeNexus global config switcher writes are disabled to avoid overwriting ~/.codex/config.toml.",
+      "ccswitch was detected ({reason}). Calmnova Code global config switcher writes are disabled to avoid overwriting ~/.codex/config.toml.",
     codexConfigSwitchedTitle: "Codex config switched",
     importCodexConfigFirst: "Import the current Codex config first to create a managed profile.",
     codexConfigImportFailedTitle: "Codex config import failed",
@@ -1637,7 +1638,7 @@ export default {
     bundledRuntimeReady: "The built-in AI runtime is ready",
     environmentNotReadyTitle: "Environment not ready",
     environmentInstallHint: "Use the Environment checks instructions to install the required tools manually.",
-    bundledRuntimeRepairHint: "The built-in runtime is unavailable. Reinstall CodeNexus or contact support.",
+    bundledRuntimeRepairHint: "The built-in runtime is unavailable. Reinstall Calmnova Code or contact support.",
     checkFailedTitle: "Check failed",
     creating: "Creating",
     threadCreateFailedTitle: "Thread creation failed",

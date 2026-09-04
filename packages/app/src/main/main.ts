@@ -45,12 +45,33 @@ import { ProviderPreferencesStore } from "./services/ProviderPreferencesStore";
 import { ProviderRuntimeService } from "./services/ProviderRuntimeService";
 import { CodexAccountService } from "./services/CodexAccountService";
 import { detectLegacyUserData } from "./services/OnboardingMigrationService";
+import { migrateProductUserDataFailSoft } from "./services/ProductUserDataMigrationService";
+import {
+  PRODUCT_BRAND,
+  PRODUCT_NAME,
+  configureLegacyProductIdentity,
+  configureProductIdentity,
+} from "./productIdentity";
+import {
+  decryptLegacyProviderSecretsWithHelper,
+  isLegacyProviderSecretHelper,
+  reencryptLegacyProviderSecrets,
+  runLegacyProviderSecretHelper,
+} from "./services/LegacyProviderSecretMigrationService";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
+const legacyProviderSecretHelper = isLegacyProviderSecretHelper(process.argv);
 
-app.setName("CodeNexus");
-if (process.platform === "win32") {
-  app.setAppUserModelId("com.codenexus.desktop");
+const productUserDataPaths = legacyProviderSecretHelper ? null : configureProductIdentity(app, process.argv);
+if (legacyProviderSecretHelper) {
+  configureLegacyProductIdentity(app, process.argv);
+} else {
+  app.setAboutPanelOptions({
+    applicationName: PRODUCT_NAME,
+    applicationVersion: app.getVersion(),
+    copyright: `Copyright © ${new Date().getFullYear()} ${PRODUCT_BRAND}`,
+    credits: "Includes software from CodeNexus, CodexBridge, and OpenAI Codex under their respective licenses.",
+  });
 }
 
 let mainWindow: BrowserWindow | null = null;
@@ -268,6 +289,12 @@ if (isDev) {
 app
   .whenReady()
   .then(async () => {
+    if (legacyProviderSecretHelper) {
+      await runLegacyProviderSecretHelper();
+      app.exit(0);
+      return;
+    }
+    if (!productUserDataPaths) throw new Error("product userData paths are unavailable");
     if (process.platform !== "darwin") {
       Menu.setApplicationMenu(null);
     }
@@ -277,6 +304,33 @@ app
     }
 
     const userDataPath = app.getPath("userData");
+    const migration = await migrateProductUserDataFailSoft(
+      {
+        legacyPath: productUserDataPaths.legacyPath,
+        currentPath: productUserDataPaths.currentPath,
+        migrateProviderSecrets: async (legacyFilePath, currentFilePath) => {
+          await reencryptLegacyProviderSecrets({
+            currentFilePath,
+            encryption: new ElectronSafeStorageEncryption(),
+            decryptLegacySecrets: () =>
+              decryptLegacyProviderSecretsWithHelper({
+                sourcePath: legacyFilePath,
+                legacyUserDataPath: productUserDataPaths.legacyPath,
+                executablePath: process.execPath,
+                applicationPath: app.getAppPath(),
+                defaultApp: Boolean(process.defaultApp),
+              }),
+          });
+        },
+      },
+      (message, error) => logger.warn("user-data-migration", message, error)
+    );
+    if (migration.status === "complete" || migration.status === "partial") {
+      logger.info(
+        "user-data-migration",
+        `CodeNexus profile migration ${migration.status}: copied=${migration.marker.copiedFiles}, merged=${migration.marker.mergedFiles}, preserved=${migration.marker.preservedFiles}, failures=${migration.marker.failures.length}`
+      );
+    }
     const legacyUserDataExists = await detectLegacyUserData(userDataPath);
     const providerDataPath = join(userDataPath, "embedded-router");
     providerRuntimeService = new ProviderRuntimeService(
@@ -437,6 +491,11 @@ app
     });
   })
   .catch(async (error) => {
+    if (legacyProviderSecretHelper) {
+      process.stderr.write("Calmnova Code legacy credential migration helper failed.\n");
+      app.exit(2);
+      return;
+    }
     logger.error("main", "app bootstrap failed", error);
     await embeddedRouterManager.stop().catch((stopError) => {
       logger.warn("main", "embedded Router cleanup after bootstrap failure failed", stopError);

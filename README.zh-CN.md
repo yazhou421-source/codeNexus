@@ -3,15 +3,15 @@
 </p>
 
 <p align="center">
-  <img src="./CodeNexus.png" width="112" alt="CodeNexus 图标" />
+  <img src="./CodeNexus.png" width="112" alt="Calmnova Code 临时占位图标" />
 </p>
 
-<h1 align="center">CodeNexus</h1>
+<h1 align="center">Calmnova Code</h1>
 
-<h3 align="center">面向 Windows 的 Codex 桌面工作台 —— 站在巨人的肩膀上开发。</h3>
+<h3 align="center">AI 编程工作台</h3>
 
 <p align="center">
-  CodeNexus 将 Codex 会话、审批、文件变更、工作区上下文和配置管理整合到一个专注的桌面客户端中。
+  Calmnova Code 将 AI Agent 会话、审批、文件变更、工作区上下文和模型服务整合到一个桌面客户端中。
 </p>
 
 <p align="center">
@@ -44,13 +44,13 @@
 
 ## 概览
 
-CodeNexus 的出发点，是把 Codex app-server 从终端里的协议能力，整理成一个可自己掌控的桌面工作台。实际使用 agent 时，真正需要被看清楚的是：发生了什么、改了哪些文件、哪些操作需要审批，以及当前工作区是否仍在自己的控制之下。
+Calmnova Code 的出发点，是把 Agent 编程能力整理成一个可自己掌控的桌面工作台。实际使用 Agent 时，真正需要被看清楚的是：发生了什么、改了哪些文件、哪些操作需要审批，以及当前工作区是否仍在自己的控制之下。
 
 因此，当前项目可以理解为一个基于 Codex app-server 的自处理通知桌面端：它直接消费 app-server 通知，并把会话时间线、审批、文件变更、自定义主题、自定义通知音、工作区文件查看，以及支持拖动操作的本地文件编辑器整合到同一个界面中。
 
-CodeNexus 还支持通过注入动态工具的方式扩展 agent 能力。内置的 `codenexus.image_generate` 工具已经接入这条路径，因此图片生成可以作为对话和时间线中的原生能力使用，而不是依赖额外的外部流程。
+Calmnova Code 还支持通过注入动态工具的方式扩展 Agent 能力。为保持向后兼容，内部继续使用 `codenexus.image_generate` 协议标识；图片生成可以作为对话和时间线中的原生能力使用，而不是依赖额外的外部流程。
 
-CodeNexus 不是 OpenAI 官方产品。它是围绕 Codex 工作流构建的独立桌面界面。
+Calmnova Code 是独立产品，与 OpenAI 不存在隶属或背书关系。本项目基于 CodeNexus，并包含源自 CodexBridge 的内置 Router；应用安装包会随附其 MIT 许可证和 OpenAI Codex 的许可证/NOTICE。
 
 ## 运行效果
 
@@ -58,29 +58,29 @@ CodeNexus 不是 OpenAI 官方产品。它是围绕 Codex 工作流构建的独�
 
 ### 对话时间线
 
-<img src="./docs/screenshots/chat-timeline.png" alt="CodeNexus 对话时间线与计划问答" />
+<img src="./docs/screenshots/chat-timeline.png" alt="Calmnova Code 对话时间线与计划问答" />
 
 ### 工作区与文件变更
 
-<img src="./docs/screenshots/workspace-editor.png" alt="CodeNexus 工作区文件浏览与文件变更审阅" />
+<img src="./docs/screenshots/workspace-editor.png" alt="Calmnova Code 工作区文件浏览与文件变更审阅" />
 
 ### 图片生成工作区
 
-<img src="./docs/screenshots/image-generation.png" alt="CodeNexus 图片生成工作区" />
+<img src="./docs/screenshots/image-generation.png" alt="Calmnova Code 图片生成工作区" />
 
 ### 设置
 
-<img src="./docs/screenshots/settings.png" alt="CodeNexus 全局设置" />
+<img src="./docs/screenshots/settings.png" alt="Calmnova Code 全局设置" />
 
 ## 最近更新
 
-CodeNexus 已经对 Codex 协议中的流式输出做了可视化处理，包括命令/进程输出增量和流式文件变更更新。长时间运行的工具调用、命令输出和 patch 过程可以在回合执行中持续展示，不需要等到最终结果返回后再查看。
+Calmnova Code 已经对 Codex 协议中的流式输出做了可视化处理，包括命令/进程输出增量和流式文件变更更新。长时间运行的工具调用、命令输出和 patch 过程可以在回合执行中持续展示，不需要等到最终结果返回后再查看。
 
 该能力依赖 Codex 的实验性协议事件。使用前需要在设置中开启流式输出实验性功能。
 
 ## 亮点
 
-| 领域         | CodeNexus 提供的能力                                                  |
+| 领域         | Calmnova Code 提供的能力                                              |
 | ------------ | --------------------------------------------------------------------- |
 | 会话         | 在持久化桌面工作台中启动和继续 Codex 线程。                           |
 | 时间线       | 按上下文查看协议事件、命令活动、审批、diff、MCP 调用和系统消息。      |
@@ -135,7 +135,7 @@ Release 发布由项目维护者通过 GitHub Actions 处理。普通贡献不�
 可以扫码加入 QQ 群，交流使用体验、问题反馈和本地贡献协作。
 
 <p align="left">
-  <img src="./docs/qq-group.jpg" width="240" alt="CodeNexus QQ 群二维码" />
+  <img src="./docs/qq-group.jpg" width="240" alt="Calmnova Code QQ 群二维码" />
 </p>
 
 ## 项目结构
@@ -152,10 +152,12 @@ Release 发布由项目维护者通过 GitHub Actions 处理。普通贡献不�
 
 ## 边界说明
 
-- CodeNexus 不提供 OpenAI 账号、API Token、托管服务或模型访问能力。
+- Calmnova Code 不提供 OpenAI 账号、API Token、托管服务或模型访问能力。
 - 模型使用成本、工作区数据处理和本地安全由使用者自行负责。
 - 第三方依赖和内置资源遵循各自的上游许可证。
 
-## License
+## 许可证与来源说明
 
-MIT. See [LICENSE](LICENSE).
+MIT，详见 [LICENSE](LICENSE)。Calmnova Code 基于 MIT 许可的 CodeNexus，并包含源自 MIT 许可 CodexBridge 的代码。安装包会同时包含 OpenAI Codex 许可证/NOTICE 与本产品第三方声明。
+
+仓库当前展示的图标为继承的临时占位资源，不是最终 Calmnova 品牌图稿。

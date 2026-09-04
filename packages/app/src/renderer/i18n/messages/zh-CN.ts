@@ -83,10 +83,11 @@ export default {
   },
   onboarding: {
     aria: "首次使用引导",
+    brandSubtitle: "AI 编程工作台",
     step: "第 {current} 步，共 {total} 步",
     welcome: {
       kicker: "欢迎使用",
-      title: "开始使用 CodeNexus",
+      title: "开始使用 Calmnova Code",
       description: "让 AI 在你的授权范围内协助理解、修改和运行项目。",
       files: "AI 可以查看并修改你选择的项目文件。",
       commands: "AI 可以运行本机命令；敏感操作仍会遵循权限与确认设置。",
@@ -123,7 +124,7 @@ export default {
     },
     project: {
       title: "选择项目文件夹",
-      description: "CodeNexus 只会打开你选择的文件夹，不会复制项目内容。",
+      description: "Calmnova Code 只会打开你选择的文件夹，不会复制项目内容。",
       choose: "选择项目文件夹",
       later: "稍后选择",
       openFailed: "无法打开该项目文件夹，请重试或稍后选择。",
@@ -357,7 +358,7 @@ export default {
     missingCodex: "未检测到 codex。请使用 npm 全局安装 @openai/codex。",
     afterInstallHint: "安装后如仍显示“缺失”，建议重启终端或重启本应用，再点击“检测”。",
     bundledRepairTitle: "内置运行时不可用",
-    bundledRepairHint: "请重新安装 CodeNexus；如果问题仍然存在，请联系支持。",
+    bundledRepairHint: "请重新安装 Calmnova Code；如果问题仍然存在，请联系支持。",
     hintTitle: "提示",
     runtimeHint:
       "当前环境检测只保证环境齐全（能在本机找到 codex/node/npm），不保证 codex 一定能在应用内正常启动。如果仍然无法使用，请在 CMD 中使用 codex 自检是否可以正常运行：",
@@ -668,7 +669,7 @@ export default {
     switcherEmpty: "未接管配置；目标：{target}",
     switcherActive: "当前：{name}；配置集 {count} 个；目标：{target}",
     ccswitchDetected:
-      "检测到 ccswitch（{path}）。建议继续通过 ccswitch 管理 Codex 配置；如需改用 CodeNexus，请先删除或停用 ccswitch 后再启用全局切换器。",
+      "检测到 ccswitch（{path}）。建议继续通过 ccswitch 管理 Codex 配置；如需改用 Calmnova Code，请先删除或停用 ccswitch 后再启用全局切换器。",
     mcpJsonImport: "MCP JSON 导入",
     mcpJsonImportDesc: "支持 {schema} 或单个 server JSON。",
     import: "导入",
@@ -1580,7 +1581,7 @@ export default {
     skillRootAddFailedTitle: "技能目录添加失败",
     skillRootRemoveFailedTitle: "技能目录移除失败",
     ccswitchDetected:
-      "检测到 ccswitch（{reason}），已禁用 CodeNexus 全局配置切换器写入，避免覆盖 ~/.codex/config.toml。",
+      "检测到 ccswitch（{reason}），已禁用 Calmnova Code 全局配置切换器写入，避免覆盖 ~/.codex/config.toml。",
     codexConfigSwitchedTitle: "Codex 配置已切换",
     importCodexConfigFirst: "请先导入当前 Codex 配置，创建受管配置集。",
     codexConfigImportFailedTitle: "Codex 配置导入失败",
@@ -1623,7 +1624,7 @@ export default {
     bundledRuntimeReady: "内置 AI 运行环境已就绪",
     environmentNotReadyTitle: "环境未就绪",
     environmentInstallHint: "请按“环境检测”中的指引手动安装所需环境。",
-    bundledRuntimeRepairHint: "内置运行时不可用，请重新安装 CodeNexus 或联系支持。",
+    bundledRuntimeRepairHint: "内置运行时不可用，请重新安装 Calmnova Code 或联系支持。",
     checkFailedTitle: "检查失败",
     creating: "创建中",
     threadCreateFailedTitle: "线程创建失败",

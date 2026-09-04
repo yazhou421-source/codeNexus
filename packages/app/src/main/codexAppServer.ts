@@ -480,8 +480,8 @@ export class CodexAppServer {
   private async initializeHandshake(): Promise<void> {
     const initializeParams = {
       clientInfo: {
-        name: "codex-electron-win",
-        title: null,
+        name: "calmnova-code",
+        title: "Calmnova Code",
         version: app.getVersion(),
       },
       capabilities: this.experimentalApiOptIn ? { experimentalApi: true, requestAttestation: false } : null,

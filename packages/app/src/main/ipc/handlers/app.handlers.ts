@@ -483,7 +483,7 @@ export function registerAppHandlers(deps: {
       if (!Notification.isSupported()) return { ok: false as const, reason: "unsupported" as const };
       try {
         const notification = new Notification({
-          title: String(args?.title ?? "").trim() || app.getName() || "CodeNexus",
+          title: String(args?.title ?? "").trim() || app.getName() || "Calmnova Code",
           body: String(args?.body ?? "").trim(),
           silent: Boolean(args?.silent),
         });

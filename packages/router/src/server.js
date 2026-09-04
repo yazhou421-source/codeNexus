@@ -134,7 +134,7 @@ export function createRouterServer(config = loadConfig(), runtime = {}) {
             res,
             401,
             openAiError(
-              "CodeNexus Embedded Router token mismatch. Check the configured local Router credentials and retry.",
+              "Calmnova Code embedded model service credentials do not match. Restart the app and retry.",
               401,
               "invalid_router_token",
             ),
