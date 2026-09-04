@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="./CodeNexus.png" width="112" alt="Calmnova Code placeholder logo" />
+  <img src="./packages/app/build/branding/app-icon-1024.png" width="112" alt="Calmnova Code app icon" />
 </p>
 
 <h1 align="center">Calmnova Code</h1>

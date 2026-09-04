@@ -49,6 +49,8 @@ extraResources:
       - "**/*"
   - from: build/icon.ico
     to: icon.ico
+  - from: build/branding/app-icon-1024.png
+    to: branding/app-icon.png
 
 win:
   icon: build/icon.ico
@@ -60,8 +62,7 @@ win:
         - x64
 
 mac:
-  # Inherited placeholder only; replace with build/icon.icns before public release.
-  icon: ../../CodeNexus.png
+  icon: build/icon.icns
   artifactName: "Calmnova-Code-${version}-${arch}.${ext}"
   target:
     - target: dmg
@@ -71,7 +72,25 @@ mac:
       arch:
         - arm64
 
+dmg:
+  title: "Calmnova Code ${version}"
+  icon: build/icon.icns
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 140
+      y: 190
+      type: file
+    - x: 400
+      y: 190
+      type: link
+      path: /Applications
+
 nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico

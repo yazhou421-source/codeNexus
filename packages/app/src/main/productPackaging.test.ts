@@ -16,6 +16,8 @@ describe("Calmnova Code packaging identity", () => {
     expect(builder).toContain("productName: Calmnova Code");
     expect(builder).toContain('artifactName: "Calmnova-Code-Setup-${version}.${ext}"');
     expect(builder).toContain('artifactName: "Calmnova-Code-${version}-${arch}.${ext}"');
+    expect(builder).toContain("icon: build/icon.icns");
+    expect(builder).toContain("icon: build/icon.ico");
     expect(builder).toContain("owner: QinQinChina");
     expect(builder).toContain("repo: codeNexus");
     expect(builder).toContain("licenses/CodeNexus-LICENSE.txt");

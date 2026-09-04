@@ -1,6 +1,8 @@
 import { runtimeKeyForBuilder, verifyRuntime } from "./codex-runtime-lib.mjs";
+import { verifyBrandingAssets } from "./branding-assets.mjs";
 
 export default async function beforePack(context) {
+  await verifyBrandingAssets();
   const runtimeKey = runtimeKeyForBuilder(context.electronPlatformName, context.arch);
   if (!runtimeKey) {
     throw new Error(

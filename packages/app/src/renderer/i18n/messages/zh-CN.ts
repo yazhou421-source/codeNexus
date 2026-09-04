@@ -87,7 +87,8 @@ export default {
     step: "第 {current} 步，共 {total} 步",
     welcome: {
       kicker: "欢迎使用",
-      title: "开始使用 Calmnova Code",
+      title: "Calmnova Code",
+      tagline: "强大的 AI，从容的创造。",
       description: "让 AI 在你的授权范围内协助理解、修改和运行项目。",
       files: "AI 可以查看并修改你选择的项目文件。",
       commands: "AI 可以运行本机命令；敏感操作仍会遵循权限与确认设置。",

@@ -87,7 +87,8 @@ export default {
     step: "Step {current} of {total}",
     welcome: {
       kicker: "Welcome",
-      title: "Get started with Calmnova Code",
+      title: "Calmnova Code",
+      tagline: "Powerful AI, calm experience.",
       description: "Let AI understand, modify, and run your project within the permissions you grant.",
       files: "AI can view and modify files in the project you select.",
       commands: "AI can run local commands; sensitive actions still follow your approval settings.",

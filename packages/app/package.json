@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "node scripts/build.mjs",
+    "branding:generate": "node scripts/branding-assets.mjs generate",
+    "branding:verify": "node scripts/branding-assets.mjs verify",
     "lint": "pnpm exec eslint . --ext .ts,.vue,.mjs --max-warnings=0",
     "format": "pnpm exec prettier --ignore-path .prettierignore --write .",
     "format:check": "pnpm exec prettier --ignore-path .prettierignore --check .",

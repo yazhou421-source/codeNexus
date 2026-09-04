@@ -2,7 +2,7 @@
   <div class="onboarding" role="dialog" aria-modal="true" :aria-label="t('onboarding.aria')">
     <section class="onboarding-panel" :data-step="store.step">
       <div class="onboarding-brand">
-        <strong>Calmnova Code</strong>
+        <BrandLogo class="onboarding-brand-logo" />
         <span>{{ t("onboarding.brandSubtitle") }}</span>
       </div>
 
@@ -10,6 +10,7 @@
         <div class="onboarding-copy onboarding-copy--center">
           <span class="onboarding-kicker">{{ t("onboarding.welcome.kicker") }}</span>
           <h1>{{ t("onboarding.welcome.title") }}</h1>
+          <p class="onboarding-tagline">{{ t("onboarding.welcome.tagline") }}</p>
           <p>{{ t("onboarding.welcome.description") }}</p>
         </div>
         <ul class="onboarding-points">
@@ -214,6 +215,7 @@
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { OnboardingService } from "@codenexus/shared/localSettings";
+import BrandLogo from "../brand/BrandLogo.vue";
 import { useOnboardingStore } from "../../stores/onboarding.store";
 import { useProviderRegistryStore } from "../../stores/providerRegistry.store";
 
@@ -315,11 +317,14 @@ onMounted(() => {
 
 .onboarding-brand {
   display: grid;
-  gap: 3px;
+  justify-items: center;
+  gap: 7px;
+  text-align: center;
 }
-.onboarding-brand strong {
-  font-size: 14px;
-  letter-spacing: 0.03em;
+.onboarding-brand-logo {
+  width: min(300px, 72vw);
+  height: auto;
+  aspect-ratio: 1024 / 243;
 }
 .onboarding-brand span {
   color: var(--text-muted);
@@ -343,6 +348,11 @@ onMounted(() => {
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.65;
+}
+.onboarding-copy .onboarding-tagline {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
 }
 .onboarding-points {
   display: grid;

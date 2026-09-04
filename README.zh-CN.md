@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="./CodeNexus.png" width="112" alt="Calmnova Code 临时占位图标" />
+  <img src="./packages/app/build/branding/app-icon-1024.png" width="112" alt="Calmnova Code 应用图标" />
 </p>
 
 <h1 align="center">Calmnova Code</h1>

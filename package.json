@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "pnpm --filter @codenexus/app dev",
     "build": "pnpm --filter @codenexus/app build",
+    "branding:generate": "pnpm --filter @codenexus/app branding:generate",
+    "branding:verify": "pnpm --filter @codenexus/app branding:verify",
     "lint": "pnpm --filter @codenexus/app --filter @codenexus/router lint",
     "format": "pnpm --filter @codenexus/app --filter @codenexus/router format",
     "format:check": "pnpm --filter @codenexus/app --filter @codenexus/router format:check",

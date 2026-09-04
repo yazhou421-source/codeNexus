@@ -66,11 +66,16 @@ const productUserDataPaths = legacyProviderSecretHelper ? null : configureProduc
 if (legacyProviderSecretHelper) {
   configureLegacyProductIdentity(app, process.argv);
 } else {
+  const aboutIconPath = app.isPackaged
+    ? join(process.resourcesPath, "branding", "app-icon.png")
+    : join(app.getAppPath(), "build", "branding", "app-icon-1024.png");
   app.setAboutPanelOptions({
     applicationName: PRODUCT_NAME,
     applicationVersion: app.getVersion(),
+    version: "AI Coding Workspace",
     copyright: `Copyright © ${new Date().getFullYear()} ${PRODUCT_BRAND}`,
     credits: "Includes software from CodeNexus, CodexBridge, and OpenAI Codex under their respective licenses.",
+    iconPath: aboutIconPath,
   });
 }
 
