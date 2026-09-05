@@ -9,8 +9,14 @@ export function streamChatCompletionToResponses(
 }>;
 export function consumeSse(
   body: ReadableStream<Uint8Array>,
-  onData: (data: string) => void,
+  onData: (data: string) => void | Promise<void>,
   options?: { signal?: AbortSignal; timeoutMs?: number },
+): Promise<void>;
+export function writeSse(
+  res: ServerResponse,
+  event: string,
+  payload: unknown,
+  signal?: AbortSignal,
 ): Promise<void>;
 export function consumeSseBuffer(
   buffer: string,

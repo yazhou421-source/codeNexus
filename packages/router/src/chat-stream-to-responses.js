@@ -39,22 +39,16 @@ export async function streamChatCompletionToResponses(
     "in_progress",
     [],
   );
-  writeSse(res, "response.created", {
-    type: "response.created",
-    response: inProgress,
-  });
-  writeSse(res, "response.in_progress", {
-    type: "response.in_progress",
-    response: inProgress,
-  });
+  const write = (event, payload) =>
+    writeSse(res, event, payload, context.clientSignal);
 
-  const ensureText = () => {
+  const ensureText = async () => {
     if (textState) return textState;
     const outputIndex = output.length;
     const itemId = `msg_${randomUUID()}`;
     textState = { outputIndex, itemId, text: "" };
     output.push(null);
-    writeSse(res, "response.output_item.added", {
+    await write("response.output_item.added", {
       type: "response.output_item.added",
       output_index: outputIndex,
       item: {
@@ -65,7 +59,7 @@ export async function streamChatCompletionToResponses(
         content: [],
       },
     });
-    writeSse(res, "response.content_part.added", {
+    await write("response.content_part.added", {
       type: "response.content_part.added",
       item_id: itemId,
       output_index: outputIndex,
@@ -98,21 +92,21 @@ export async function streamChatCompletionToResponses(
     return state;
   };
 
-  const addToolIfReady = (state, force = false) => {
+  const addToolIfReady = async (state, force = false) => {
     if (state.added || !state.name || (!state.callId && !force)) return;
     state.added = true;
     state.callId ||= `call_${randomUUID()}`;
     state.outputIndex = output.length;
     const item = responseToolItem(state, converted.toolContext, "in_progress");
     output.push(null);
-    writeSse(res, "response.output_item.added", {
+    await write("response.output_item.added", {
       type: "response.output_item.added",
       output_index: state.outputIndex,
       item,
     });
   };
 
-  const processData = (data) => {
+  const processData = async (data) => {
     if (!data) return;
     if (data === "[DONE]") {
       sawDone = true;
@@ -126,7 +120,8 @@ export async function streamChatCompletionToResponses(
         providerId: providerId(route),
       });
     }
-    usage = mapUsage(parsed?.usage) || usage;
+    if (parsed?.usage && typeof parsed.usage === "object")
+      usage = mapUsage(parsed.usage);
     const choices = Array.isArray(parsed?.choices) ? parsed.choices : [];
     for (const choice of choices) {
       if (choice?.finish_reason) sawFinish = true;
@@ -136,9 +131,9 @@ export async function streamChatCompletionToResponses(
       const content = typeof delta.content === "string" ? delta.content : "";
       if (content) {
         firstUpstreamDeltaAt ||= Date.now();
-        const text = ensureText();
+        const text = await ensureText();
         text.text += content;
-        writeSse(res, "response.output_text.delta", {
+        await write("response.output_text.delta", {
           type: "response.output_text.delta",
           item_id: text.itemId,
           output_index: text.outputIndex,
@@ -156,7 +151,7 @@ export async function streamChatCompletionToResponses(
             : fallbackIndex,
           value,
         );
-        addToolIfReady(state);
+        await addToolIfReady(state);
         const argumentDelta =
           typeof value.function?.arguments === "string"
             ? value.function.arguments
@@ -164,9 +159,14 @@ export async function streamChatCompletionToResponses(
         if (!argumentDelta) continue;
         firstUpstreamDeltaAt ||= Date.now();
         state.arguments += argumentDelta;
-        addToolIfReady(state);
+        await addToolIfReady(state);
         if (state.added) {
-          writeToolDelta(res, state, converted.toolContext, argumentDelta);
+          await writeToolDelta(
+            write,
+            state,
+            converted.toolContext,
+            argumentDelta,
+          );
           firstDownstreamDeltaAt ||= Date.now();
         }
       }
@@ -174,6 +174,14 @@ export async function streamChatCompletionToResponses(
   };
 
   try {
+    await write("response.created", {
+      type: "response.created",
+      response: inProgress,
+    });
+    await write("response.in_progress", {
+      type: "response.in_progress",
+      response: inProgress,
+    });
     await consumeSse(upstream.body, processData, {
       signal: context.clientSignal,
       timeoutMs: streamTimeoutMs(route),
@@ -183,17 +191,17 @@ export async function streamChatCompletionToResponses(
         providerId: providerId(route),
       });
     }
-    if (textState) finishText(res, textState, output);
+    if (textState) await finishText(write, textState, output);
     for (const state of [...toolCalls.values()].sort(
       (left, right) => left.outputIndex - right.outputIndex,
     )) {
-      addToolIfReady(state, true);
+      await addToolIfReady(state, true);
       if (!state.added) {
         throw new ProductError(ProductErrorCode.INVALID_RESPONSE, {
           providerId: providerId(route),
         });
       }
-      finishTool(res, state, converted.toolContext, output);
+      await finishTool(write, state, converted.toolContext, output);
     }
     const response = responseObject(
       responseId,
@@ -203,7 +211,7 @@ export async function streamChatCompletionToResponses(
       output,
       usage,
     );
-    writeSse(res, "response.completed", {
+    await write("response.completed", {
       type: "response.completed",
       response,
     });
@@ -243,6 +251,8 @@ export async function streamChatCompletionToResponses(
       },
     };
   } catch (error) {
+    await upstream.body.cancel().catch(() => undefined);
+    if (context.clientSignal?.aborted) throw error;
     if (!res.destroyed && !res.writableEnded) {
       const failure =
         error instanceof ProductError
@@ -259,7 +269,7 @@ export async function streamChatCompletionToResponses(
         output.filter(Boolean),
       );
       failed.error = { code: failure.code, message: failure.message };
-      writeSse(res, "response.failed", {
+      await write("response.failed", {
         type: "response.failed",
         response: failed,
       });
@@ -276,35 +286,53 @@ export async function consumeSse(body, onData, options = {}) {
   let buffer = "";
   let timeout;
   let timedOut = false;
-  const resetTimeout = () => {
-    if (!options.timeoutMs) return;
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      timedOut = true;
-      void reader.cancel("stream timeout");
-    }, options.timeoutMs);
+  let finished = false;
+  const cancelReader = () => {
+    void reader.cancel().catch(() => undefined);
   };
-  const onAbort = () => void reader.cancel("client closed");
-  options.signal?.addEventListener("abort", onAbort, { once: true });
+  options.signal?.addEventListener("abort", cancelReader, { once: true });
+  const consume = async () => {
+    let boundary;
+    while ((boundary = buffer.search(/\r?\n\r?\n/)) >= 0) {
+      options.signal?.throwIfAborted();
+      const separator = buffer.slice(boundary).match(/^\r?\n\r?\n/)[0];
+      const block = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + separator.length);
+      const data = block
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trimStart())
+        .join("\n");
+      if (data) await onData(data);
+    }
+    if (buffer.length > 8_000_000)
+      throw new ProductError(ProductErrorCode.INVALID_RESPONSE);
+  };
   try {
-    resetTimeout();
-    let reading = true;
-    while (reading) {
+    while (!finished) {
+      options.signal?.throwIfAborted();
+      if (options.timeoutMs)
+        timeout = setTimeout(() => {
+          timedOut = true;
+          cancelReader();
+        }, options.timeoutMs);
       const { done, value } = await reader.read();
-      resetTimeout();
+      clearTimeout(timeout);
+      if (timedOut) throw new ProductError(ProductErrorCode.TIMEOUT);
+      options.signal?.throwIfAborted();
       if (done) {
-        reading = false;
-        continue;
+        finished = true;
+        break;
       }
       buffer += decoder.decode(value, { stream: true });
-      buffer = consumeSseBuffer(buffer, onData);
+      await consume();
     }
-    buffer += decoder.decode();
-    consumeSseBuffer(`${buffer}\n\n`, onData);
-    if (timedOut) throw new ProductError(ProductErrorCode.TIMEOUT);
+    buffer += decoder.decode() + "\n\n";
+    await consume();
   } finally {
     clearTimeout(timeout);
-    options.signal?.removeEventListener("abort", onAbort);
+    options.signal?.removeEventListener("abort", cancelReader);
+    if (!finished) await reader.cancel().catch(() => undefined);
     reader.releaseLock();
   }
 }
@@ -326,16 +354,16 @@ export function consumeSseBuffer(buffer, onData) {
   return buffer;
 }
 
-function finishText(res, state, output) {
+async function finishText(write, state, output) {
   const part = { type: "output_text", text: state.text, annotations: [] };
-  writeSse(res, "response.output_text.done", {
+  await write("response.output_text.done", {
     type: "response.output_text.done",
     item_id: state.itemId,
     output_index: state.outputIndex,
     content_index: 0,
     text: state.text,
   });
-  writeSse(res, "response.content_part.done", {
+  await write("response.content_part.done", {
     type: "response.content_part.done",
     item_id: state.itemId,
     output_index: state.outputIndex,
@@ -350,7 +378,7 @@ function finishText(res, state, output) {
     content: [part],
   };
   output[state.outputIndex] = item;
-  writeSse(res, "response.output_item.done", {
+  await write("response.output_item.done", {
     type: "response.output_item.done",
     output_index: state.outputIndex,
     item,
@@ -375,17 +403,17 @@ function responseToolItem(state, toolContext, status) {
   return item;
 }
 
-function writeToolDelta(res, state, toolContext, delta) {
+async function writeToolDelta(write, state, toolContext, delta) {
   const item = responseToolItem(state, toolContext, "in_progress");
   if (item.type === "custom_tool_call") {
-    writeSse(res, "response.custom_tool_call_input.delta", {
+    await write("response.custom_tool_call_input.delta", {
       type: "response.custom_tool_call_input.delta",
       item_id: state.itemId,
       output_index: state.outputIndex,
       delta,
     });
   } else if (item.type === "function_call") {
-    writeSse(res, "response.function_call_arguments.delta", {
+    await write("response.function_call_arguments.delta", {
       type: "response.function_call_arguments.delta",
       item_id: state.itemId,
       output_index: state.outputIndex,
@@ -394,25 +422,25 @@ function writeToolDelta(res, state, toolContext, delta) {
   }
 }
 
-function finishTool(res, state, toolContext, output) {
+async function finishTool(write, state, toolContext, output) {
   const item = responseToolItem(state, toolContext, "completed");
   output[state.outputIndex] = item;
   if (item.type === "custom_tool_call") {
-    writeSse(res, "response.custom_tool_call_input.done", {
+    await write("response.custom_tool_call_input.done", {
       type: "response.custom_tool_call_input.done",
       item_id: state.itemId,
       output_index: state.outputIndex,
       input: item.input,
     });
   } else if (item.type === "function_call") {
-    writeSse(res, "response.function_call_arguments.done", {
+    await write("response.function_call_arguments.done", {
       type: "response.function_call_arguments.done",
       item_id: state.itemId,
       output_index: state.outputIndex,
       arguments: item.arguments,
     });
   }
-  writeSse(res, "response.output_item.done", {
+  await write("response.output_item.done", {
     type: "response.output_item.done",
     output_index: state.outputIndex,
     item,
@@ -450,11 +478,18 @@ function mapUsage(value = {}) {
     output_tokens: Number.isFinite(outputTokens) ? outputTokens : 0,
     total_tokens: Number(value.total_tokens) || inputTokens + outputTokens || 0,
     input_tokens_details: {
-      cached_tokens: Number(value.prompt_tokens_details?.cached_tokens || 0),
+      cached_tokens: Number(
+        value.prompt_tokens_details?.cached_tokens ??
+          value.input_tokens_details?.cached_tokens ??
+          value.prompt_cache_hit_tokens ??
+          0,
+      ),
     },
     output_tokens_details: {
       reasoning_tokens: Number(
-        value.completion_tokens_details?.reasoning_tokens || 0,
+        value.completion_tokens_details?.reasoning_tokens ??
+          value.output_tokens_details?.reasoning_tokens ??
+          0,
       ),
     },
   };
@@ -471,8 +506,34 @@ function providerId(route) {
   return route.provider || route.providerId || route.id || "";
 }
 
-function writeSse(res, event, payload) {
-  res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+export async function writeSse(res, event, payload, signal) {
+  signal?.throwIfAborted();
+  if (res.destroyed || res.writableEnded)
+    throw new ProductError(ProductErrorCode.STREAM_INTERRUPTED);
+  if (res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`))
+    return;
+  await new Promise((resolve, reject) => {
+    const cleanup = () => {
+      res.off("drain", drained);
+      res.off("close", closed);
+      res.off("error", closed);
+      signal?.removeEventListener("abort", closed);
+    };
+    const drained = () => {
+      cleanup();
+      resolve();
+    };
+    const closed = () => {
+      cleanup();
+      reject(new ProductError(ProductErrorCode.STREAM_INTERRUPTED));
+    };
+    res.once("drain", drained);
+    res.once("close", closed);
+    res.once("error", closed);
+    signal?.addEventListener("abort", closed, { once: true });
+    if (signal?.aborted || res.destroyed || res.writableEnded) closed();
+    else if (!res.writableNeedDrain) drained();
+  });
 }
 
 function logStreamMetrics(context, route, times) {
