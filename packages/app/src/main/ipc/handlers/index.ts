@@ -1,4 +1,5 @@
-import { BrowserWindow } from "electron";
+import { app, BrowserWindow, dialog } from "electron";
+import { WorkspaceAccessService } from "../../services/WorkspaceAccessService";
 import { IPC_APP_CHANNELS } from "@codenexus/shared/ipc/channels";
 import type { CodexIncomingMessage } from "@codenexus/shared/codex-protocol";
 import { CodexServerManager } from "../../services/CodexServerManager";
@@ -64,7 +65,27 @@ export type IpcHandlersDeps = {
 };
 
 export function registerAllHandlers(deps: IpcHandlersDeps) {
+  const workspaceAccess = new WorkspaceAccessService(
+    () => deps.getMainWindow()?.webContents ?? null,
+    async (root) => {
+      const win = deps.getMainWindow();
+      if (!win || win.isDestroyed()) return false;
+      const zh = app.getLocale().startsWith("zh");
+      const result = await dialog.showMessageBox(win, {
+        type: "question",
+        title: zh ? "打开工作区" : "Open workspace",
+        message: zh ? "允许访问此项目文件夹？" : "Allow access to this project folder?",
+        detail: root,
+        buttons: zh ? ["取消", "打开"] : ["Cancel", "Open"],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+      });
+      return result.response === 1;
+    }
+  );
   registerAppHandlers({
+    workspaceAccess,
     getMainWindow: deps.getMainWindow,
     localSettingsService: deps.localSettingsService,
     codexProfileService: deps.codexProfileService,
@@ -104,5 +125,5 @@ export function registerAllHandlers(deps: IpcHandlersDeps) {
     decorateItems: deps.decorateHistoryItems,
     onThreadDeleted: deps.onHistoryThreadDeleted,
   });
-  registerWorkspaceHandlers({ workspacePatchService: deps.workspacePatchService });
+  registerWorkspaceHandlers({ workspacePatchService: deps.workspacePatchService, workspaceAccess });
 }

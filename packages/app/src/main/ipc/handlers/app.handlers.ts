@@ -1,6 +1,6 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, Notification, shell } from "electron";
 import { execFile } from "node:child_process";
-import { appendFile, mkdir, readFile, readdir, stat, unlink, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, readdir, realpath, stat, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { IPC_APP_CHANNELS } from "@codenexus/shared/ipc/channels";
@@ -8,6 +8,7 @@ import { resolveUiFontSizeZoomFactor, type UserLocalSettingsPatch } from "@coden
 import { normalizeSafeExternalUrl } from "../../utils/externalUrl";
 import type { AppTextEncoding } from "@codenexus/shared/ipc/contracts";
 import type { LocalSettingsService } from "../../services/LocalSettingsService";
+import type { WorkspaceAccessService } from "../../services/WorkspaceAccessService";
 import type { CodexProfileService } from "../../services/CodexProfileService";
 import type { CodexSkillRootsService } from "../../services/CodexSkillRootsService";
 import type { CodexConfigSwitcherService } from "../../services/CodexConfigSwitcherService";
@@ -157,6 +158,7 @@ function resolveSoundPathOrThrow(musicDir: string, id: string): string {
 }
 
 export function registerAppHandlers(deps: {
+  workspaceAccess: WorkspaceAccessService;
   getMainWindow: () => BrowserWindow | null;
   localSettingsService: LocalSettingsService;
   codexProfileService: CodexProfileService;
@@ -179,7 +181,8 @@ export function registerAppHandlers(deps: {
     return win;
   };
 
-  ipcMain.handle(IPC_APP_CHANNELS.appSelectWorkspace, async () => {
+  ipcMain.handle(IPC_APP_CHANNELS.appSelectWorkspace, async (evt) => {
+    deps.workspaceAccess.assertSender(evt);
     const mainWindow = deps.getMainWindow();
     if (!mainWindow) return null;
 
@@ -187,7 +190,8 @@ export function registerAppHandlers(deps: {
       properties: ["openDirectory", "createDirectory"],
     });
     if (res.canceled) return null;
-    return res.filePaths[0] ?? null;
+    const selected = res.filePaths[0];
+    return selected ? await deps.workspaceAccess.grantSelection(evt, selected) : null;
   });
 
   ipcMain.handle(IPC_APP_CHANNELS.appOpenExternal, async (_evt, args: { url: string }) => {
@@ -197,16 +201,29 @@ export function registerAppHandlers(deps: {
     return { ok: true };
   });
 
-  ipcMain.handle(IPC_APP_CHANNELS.appReadTextFile, async (_evt, args: { path: string }) => {
-    const filePath = resolveLocalFilePath(args?.path ?? "");
+  ipcMain.handle(IPC_APP_CHANNELS.appReadTextFile, async (evt, args: { path: string }) => {
+    deps.workspaceAccess.assertSender(evt);
+    let filePath = resolveLocalFilePath(args?.path ?? "");
     if (!filePath) throw new Error("app:readTextFile requires path");
+    // Exact renderer-owned state files, not a blanket userData/secret exemption.
+    const stateDirectory = dirname(localSettingsService.path);
+    const isAppState = ["draft-state.json", "message-outbox.json"].some(
+      (name) => filePath === resolve(stateDirectory, name)
+    );
+    const lease = isAppState ? null : await deps.workspaceAccess.path(evt, filePath);
+    if (lease) filePath = lease.path;
     try {
+      if (isAppState && (await realpath(filePath)) !== resolve(await realpath(stateDirectory), basename(filePath))) {
+        throw new Error("Workspace access denied");
+      }
       const raw = await readFile(filePath);
+      lease?.assertCurrent();
+      if (lease && !isPathWithinDir(await realpath(filePath), lease.root)) throw new Error("Workspace access denied");
       const encoding = detectTextEncoding(raw);
       const content = stripUtf8Bom(raw).toString("utf8");
       return { ok: true, content, encoding, lineEnding: detectLineEnding(content) };
     } catch (error: any) {
-      if (String(error?.code ?? "") === "ENOENT" && isPathWithinDir(filePath, app.getPath("userData"))) {
+      if (String(error?.code ?? "") === "ENOENT" && isAppState) {
         return { ok: true, content: "", encoding: "UTF-8" as const, lineEnding: null };
       }
       throw error;
@@ -235,12 +252,17 @@ export function registerAppHandlers(deps: {
     return { ok: true as const };
   });
 
-  ipcMain.handle(IPC_APP_CHANNELS.appReadDirectory, async (_evt, args: { path: string }) => {
-    const dirPath = resolveLocalFilePath(args?.path ?? "");
-    if (!dirPath) throw new Error("app:readDirectory requires path");
+  ipcMain.handle(IPC_APP_CHANNELS.appReadDirectory, async (evt, args: { path: string; workspaceRoot?: string }) => {
+    // workspaceRoot is only a compatibility hint. Authority belongs to main.
+    const lease = await deps.workspaceAccess.path(evt, args?.path);
+    const dirPath = lease.path;
     const info = await stat(dirPath);
     if (!info.isDirectory()) throw new Error("app:readDirectory path is not a directory");
     const entries = await readdir(dirPath, { withFileTypes: true });
+    lease.assertCurrent();
+    if (!isPathWithinDir(await realpath(dirPath), lease.root)) {
+      throw new Error("Directory outside workspace");
+    }
     return {
       ok: true as const,
       entries: entries
@@ -256,10 +278,11 @@ export function registerAppHandlers(deps: {
     };
   });
 
-  ipcMain.handle(IPC_APP_CHANNELS.appGetFileMetadata, async (_evt, args: { path: string }) => {
-    const filePath = resolveLocalFilePath(args?.path ?? "");
-    if (!filePath) throw new Error("app:getFileMetadata requires path");
+  ipcMain.handle(IPC_APP_CHANNELS.appGetFileMetadata, async (evt, args: { path: string }) => {
+    const lease = await deps.workspaceAccess.path(evt, args?.path);
+    const filePath = lease.path;
     const info = await stat(filePath);
+    lease.assertCurrent();
     return {
       ok: true as const,
       metadata: {

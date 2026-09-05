@@ -53,6 +53,15 @@ export function createCodexServerEventRuntime(deps: CodexServerEventRuntimeDeps)
   const subscribeCodexServerEvents = () => {
     return codexDesktop.codexServer.onEvent((payload) => {
       const msg = payload?.msg;
+      const eventWorkspace = deps.getWorkspaceForServerId(payload?.serverId ?? "");
+      if (
+        isCodexServerNotificationMessage(msg) &&
+        eventWorkspace &&
+        (msg.method === "turn/completed" ||
+          msg.method === "turn/diff/updated" ||
+          (msg.method === "item/completed" && ["commandExecution", "fileChange"].includes(msg.params.item.type)))
+      )
+        deps.workspaceFilesStore.scheduleWorkspaceRefresh(eventWorkspace);
       if (isCodexServerNotificationMessage(msg)) {
         if (msg.method === "serverRequest/resolved") {
           const resolvedThreadId = String(msg.params?.threadId ?? "").trim();
@@ -68,7 +77,6 @@ export function createCodexServerEventRuntime(deps: CodexServerEventRuntimeDeps)
           if (threadId) {
             void deps.hydrateThreadHandoffDiagnostics(threadId, { force: true });
             void deps.notifyCompletedTurnIfBackground(threadId);
-            deps.workspaceFilesStore.scheduleGitStatusRefresh(500);
             setTimeout(() => {
               if (!deps.threadStore.runningThreadIds.has(threadId)) void deps.flushQueueForThread(threadId);
             }, 120);
@@ -129,6 +137,7 @@ export function createCodexServerEventRuntime(deps: CodexServerEventRuntimeDeps)
         const serverId = deps.normalizeWorkspacePath(payload?.serverId ?? "");
         const expected = Boolean(msg?.params?.expected);
         const stoppedWorkspace = deps.clearServerById(serverId);
+        if (stoppedWorkspace) deps.workspaceFilesStore.scheduleWorkspaceRefresh(stoppedWorkspace);
         if (stoppedWorkspace) {
           for (const [threadId, workspace] of deps.getThreadWorkspaceEntries()) {
             if (workspace !== stoppedWorkspace) continue;

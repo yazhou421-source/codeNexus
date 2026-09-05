@@ -266,6 +266,12 @@ export function createWorkspaceSessionRuntime(deps: WorkspaceSessionRuntimeDeps)
       const confirmed = await workspaceFilesStore.confirmResetDirtyTabsForWorkspaceChange(selected);
       if (!confirmed) return false;
     }
+    try {
+      if (!(await codexDesktop.workspace.activate({ cwd: selected })).ok) return false;
+    } catch {
+      showToast({ kind: "warn", message: translate("runtime.workspaceAccessDenied") });
+      return false;
+    }
     runtimeStore.setWorkspace(selected);
     threadStore.setWorkspace(selected);
     pushEvent("workspace", selected, { threadId: appTimelineId });

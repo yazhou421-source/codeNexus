@@ -63,6 +63,13 @@
 
       <div ref="rightStackRef" class="topbar-right-stack">
         <div class="row topbar-controls topbar-controls--sleek">
+          <div
+            v-if="hasWorkspace && !appShellStore.settingsOpen && appShellStore.mainView === 'chat'"
+            ref="diffMenuRef"
+            class="relative"
+          >
+            <TopBarTurnDiffMenu :open="diffOpen" @toggle="diffOpen = !diffOpen" @close="diffOpen = false" />
+          </div>
           <div class="control-group control-group-panes" :aria-label="t('topbar.panels')">
             <button
               id="btn-toggle-thread-pane"
@@ -118,7 +125,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import {
   Image as ImageIcon,
@@ -137,6 +144,7 @@ import TopBarPlanSummary from "./topbar/TopBarPlanSummary.vue";
 import TopBarThemeSwitch from "./topbar/TopBarThemeSwitch.vue";
 import TopBarUpdateNotice from "./topbar/TopBarUpdateNotice.vue";
 import TopBarWindowControls from "./topbar/TopBarWindowControls.vue";
+import TopBarTurnDiffMenu from "./topbar/TopBarTurnDiffMenu.vue";
 import { useAppShellStore } from "../../stores/appShell.store";
 import { useRuntimeStore } from "../../stores/runtime.store";
 import { useWorkspaceFilesStore } from "../../stores/workspaceFiles.store";
@@ -149,6 +157,24 @@ const { t } = useI18n();
 const runtimeStore = useRuntimeStore();
 const workspaceFilesStore = useWorkspaceFilesStore();
 const rightStackRef = ref<HTMLElement | null>(null);
+const diffMenuRef = ref<HTMLElement | null>(null);
+const diffOpen = ref(false);
+function closeDiffOutside(event: PointerEvent) {
+  if (!diffMenuRef.value?.contains(event.target as Node)) diffOpen.value = false;
+}
+function closeDiffOnEscape(event: KeyboardEvent) {
+  if (event.key === "Escape") diffOpen.value = false;
+}
+onMounted(() => {
+  document.addEventListener("pointerdown", closeDiffOutside);
+  document.addEventListener("keydown", closeDiffOnEscape);
+});
+watch(
+  () => [runtimeStore.workspacePath, appShellStore.settingsOpen, appShellStore.mainView],
+  () => {
+    diffOpen.value = false;
+  }
+);
 
 const reducedMotionQuery = typeof window !== "undefined" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
 let rightStackAnimationFrame = 0;
@@ -246,6 +272,8 @@ watch(
 
 onBeforeUnmount(() => {
   clearRightStackLayoutAnimation();
+  document.removeEventListener("pointerdown", closeDiffOutside);
+  document.removeEventListener("keydown", closeDiffOnEscape);
 });
 
 function onSetMainView(next: MainView) {

@@ -117,11 +117,11 @@ async function writeTextFileViaLocalIpc(path: string, content: string): Promise<
   }
 }
 
-async function readDirectoryViaLocalIpc(path: string): Promise<WorkspaceDirectoryReadResult> {
+async function readDirectoryViaLocalIpc(path: string, workspaceRoot: string): Promise<WorkspaceDirectoryReadResult> {
   const dirPath = String(path ?? "").trim();
   if (!dirPath) throw new Error("missing directory path");
   try {
-    const res = await codexDesktop.app.readDirectory({ path: dirPath });
+    const res = await codexDesktop.app.readDirectory({ path: dirPath, workspaceRoot });
     const entries = (Array.isArray(res?.entries) ? res.entries : [])
       .map((entry) => ({
         path: resolveWorkspaceFsPath(dirPath, String(entry.fileName ?? "")),
@@ -188,7 +188,7 @@ async function deleteFileViaLocalIpc(path: string): Promise<void> {
 export function createWorkspaceFileRuntime(resolveWorkspacePath: WorkspacePathResolver): WorkspaceFileRuntime {
   const readWorkspaceDirectory = async (path = ""): Promise<WorkspaceDirectoryReadResult> => {
     const resolved = resolveWorkspacePath(path);
-    return await readDirectoryViaLocalIpc(resolved.path);
+    return await readDirectoryViaLocalIpc(resolved.path, resolved.workspace);
   };
 
   const getWorkspaceMetadata = async (path: string): Promise<WorkspaceFileMetadataState> => {

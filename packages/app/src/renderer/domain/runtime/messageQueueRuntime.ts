@@ -27,6 +27,7 @@ type TurnStart = (params: {
   threadWorkspace: string;
   threadServerId: string;
   input: UserTurnInput[];
+  model?: string;
 }) => Promise<{ ok: true } | { ok: false; error: string }>;
 
 type EnsureThreadModelToolCompatibility = (args: {
@@ -110,12 +111,35 @@ export function createMessageQueueRuntime(deps: MessageQueueRuntimeDeps): Messag
     return translate("runtime.emptyMessage");
   };
 
-  const flushQueueForThread = async (threadIdValue: string) => {
+  const flushes = new Map<string, Promise<void>>();
+  const messageFlushes = new Map<string, Promise<void>>();
+  const flushQueueForThread = (threadIdValue: string): Promise<void> => {
+    const id = String(threadIdValue ?? "").trim();
+    const messageId = messageQueueStore.peekNextQueued(id)?.id;
+    // Queue identity survives replacing the empty server thread. Watchers can
+    // observe that move before the compatibility promise resolves.
+    const existing = flushes.get(id) || (messageId ? messageFlushes.get(messageId) : undefined);
+    if (existing) return existing;
+    const task = Promise.resolve()
+      .then(() => flushQueueOnce(id))
+      .finally(() => {
+        for (const [key, value] of flushes) if (value === task) flushes.delete(key);
+        if (messageId && messageFlushes.get(messageId) === task) messageFlushes.delete(messageId);
+      });
+    flushes.set(id, task);
+    if (messageId) messageFlushes.set(messageId, task);
+    return task;
+  };
+  const flushQueueOnce = async (threadIdValue: string) => {
     let threadId = String(threadIdValue ?? "").trim();
     if (!threadId) return;
     if (threadStore.runningThreadIds.has(threadId)) return;
     const next = messageQueueStore.peekNextQueued(threadId);
     if (!next) return;
+    const selectedModel =
+      runtimeStore.currentThreadId === threadId
+        ? runtimeStore.model
+        : (runtimeStore.composeStateByThreadId[threadId]?.model ?? runtimeStore.model);
 
     const previewText = summarizeQueuedMessagePreview(next);
     const previewPayload = buildTimelineUserMessagePayload(Array.isArray(next.inputs) ? next.inputs : []);
@@ -157,7 +181,7 @@ export function createMessageQueueRuntime(deps: MessageQueueRuntimeDeps): Messag
       threadId,
       threadWorkspace,
       threadServerId,
-      model: runtimeStore.model,
+      model: selectedModel,
     });
     if (!compatibility.ok) {
       messageQueueStore.markStatus(threadId, next.id, "failed");
@@ -167,6 +191,8 @@ export function createMessageQueueRuntime(deps: MessageQueueRuntimeDeps): Messag
       return;
     }
     if (compatibility.threadId !== threadId) {
+      const activeFlush = flushes.get(threadId);
+      if (activeFlush) flushes.set(compatibility.threadId, activeFlush);
       threadId = compatibility.threadId;
       threadWorkspace = normalizeWorkspacePath(getWorkspaceForThread(threadId) || threadWorkspace);
       threadServerId = await ensureServerForWorkspace(threadWorkspace);
@@ -199,7 +225,13 @@ export function createMessageQueueRuntime(deps: MessageQueueRuntimeDeps): Messag
     if (threadStore.hasLocalThread(threadId)) {
       upsertThreadPreparingEvent(threadId);
     }
-    const started = await startTurnWithInput({ threadId, threadWorkspace, threadServerId, input: queueInput });
+    const started = await startTurnWithInput({
+      threadId,
+      threadWorkspace,
+      threadServerId,
+      input: queueInput,
+      model: selectedModel,
+    });
     if (started.ok) {
       messageQueueStore.remove(threadId, next.id);
       patchLocalEvent({ localState: "sent", level: "info" });

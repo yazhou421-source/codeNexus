@@ -59,7 +59,8 @@ export type ThreadModelCompatibilityRuntimeDeps = {
 export type ThreadModelCompatibilityRuntime = {
   rememberThreadStartConfigOverrides: (
     threadId: string,
-    overrides: ThreadStartConfigOverrides | null | undefined
+    overrides: ThreadStartConfigOverrides | null | undefined,
+    model?: string
   ) => void;
   clearThreadStartConfigOverrides: (threadId: string) => void;
   ensureThreadModelToolCompatibility: (args: {
@@ -77,14 +78,6 @@ function perfNow() {
 
 function elapsedMs(startedAt: number) {
   return Number((perfNow() - startedAt).toFixed(1));
-}
-
-function readErrorMessage(error: unknown): string {
-  if (error && typeof error === "object" && "message" in error) {
-    const message = (error as { message?: unknown }).message;
-    if (message) return String(message);
-  }
-  return String(error);
 }
 
 export function createThreadModelCompatibilityRuntime(
@@ -108,13 +101,16 @@ export function createThreadModelCompatibilityRuntime(
   } = deps;
 
   const threadStartConfigOverridesByThreadId = new Map<string, ThreadStartConfigOverrides>();
+  const startedModelByThreadId = new Map<string, string>();
 
   const rememberThreadStartConfigOverrides = (
     threadIdValue: string,
-    overrides: ThreadStartConfigOverrides | null | undefined
+    overrides: ThreadStartConfigOverrides | null | undefined,
+    model?: string
   ) => {
     const threadId = String(threadIdValue ?? "").trim();
     if (!threadId) return;
+    if (model) startedModelByThreadId.set(threadId, normalizeModelName(model));
     if (overrides) threadStartConfigOverridesByThreadId.set(threadId, { ...overrides });
     else threadStartConfigOverridesByThreadId.delete(threadId);
   };
@@ -123,6 +119,7 @@ export function createThreadModelCompatibilityRuntime(
     const threadId = String(threadIdValue ?? "").trim();
     if (!threadId) return;
     threadStartConfigOverridesByThreadId.delete(threadId);
+    startedModelByThreadId.delete(threadId);
   };
 
   const hasThreadModelToolConfigForModel = (threadIdValue: string, modelValue: string): boolean => {
@@ -136,13 +133,10 @@ export function createThreadModelCompatibilityRuntime(
     if (!threadId) return false;
     return timelineStore.eventsForThread(threadId).some((event) => {
       const method = String(event.method ?? "").trim();
-      return (
-        event.localKind === "user" ||
-        method === "user" ||
-        method.startsWith("turn/") ||
-        method.startsWith("item/") ||
-        method.startsWith("local/")
-      );
+      // Queued input/preparing UI is not evidence that Codex has a rollout.
+      if (event.turnId) return true;
+      if (event.localKind === "user" || method === "user") return event.localState === "sent";
+      return method.startsWith("turn/") || method.startsWith("item/");
     });
   };
 
@@ -206,6 +200,7 @@ export function createThreadModelCompatibilityRuntime(
       status: "ready",
     };
 
+    const wasCurrent = runtimeStore.currentThreadId === oldThreadId;
     runtimeStore.moveThreadComposeState(oldThreadId, newThreadId);
     runtimeStore.movePendingThreadInitSendCount(oldThreadId, newThreadId);
     timelineStore.moveThread(oldThreadId, newThreadId);
@@ -216,12 +211,14 @@ export function createThreadModelCompatibilityRuntime(
     resumedThreadIds.add(newThreadId);
     resumePromisesByThread.delete(oldThreadId);
     clearThreadStartConfigOverrides(oldThreadId);
-    rememberThreadStartConfigOverrides(newThreadId, configOverrides);
+    rememberThreadStartConfigOverrides(newThreadId, configOverrides, model);
     for (const cache of threadScopedCaches) cache.delete(oldThreadId);
     setThreadWorkspace(newThreadId, workspace);
     clearThreadWorkspace(oldThreadId);
-    runtimeStore.setCurrentThread(newThreadId, { savePrev: false });
-    threadStore.setCurrentThread(newThreadId);
+    if (wasCurrent) {
+      runtimeStore.setCurrentThread(newThreadId, { savePrev: false });
+      threadStore.setCurrentThread(newThreadId);
+    }
 
     appendDebugLog("thread.create", "recreate empty thread for model config resolved", {
       oldThreadId,
@@ -256,10 +253,10 @@ export function createThreadModelCompatibilityRuntime(
       const appliedModel = normalizeModelName(result.model ?? model);
       if (appliedModel !== model) return false;
       resumedThreadIds.add(threadId);
-      rememberThreadStartConfigOverrides(threadId, args.configOverrides);
+      rememberThreadStartConfigOverrides(threadId, args.configOverrides, model);
       return true;
-    } catch (error: unknown) {
-      pushEvent("thread:resume:error", readErrorMessage(error), { threadId, level: "error" });
+    } catch {
+      pushEvent("thread:resume:error", translate("runtime.prepareModelFailed"), { threadId, level: "error" });
       return false;
     }
   };
@@ -274,9 +271,12 @@ export function createThreadModelCompatibilityRuntime(
     const model = normalizeModelName(args.model);
     const configOverrides = buildThreadStartConfigOverridesForModel(model);
     if (!configOverrides) return { ok: true, threadId };
-    if (hasThreadModelToolConfigForModel(threadId, model)) return { ok: true, threadId };
+    const emptyThread = canRecreateEmptyUnpersistedThreadForModelConfig(threadId);
+    const startedModel = startedModelByThreadId.get(threadId);
+    const emptyModelChanged = emptyThread && startedModel && startedModel !== model;
+    if (hasThreadModelToolConfigForModel(threadId, model) && !emptyModelChanged) return { ok: true, threadId };
 
-    if (canRecreateEmptyUnpersistedThreadForModelConfig(threadId)) {
+    if (emptyThread) {
       try {
         const nextThreadId = await recreateEmptyUnpersistedThreadForModelConfig({
           threadId,
@@ -285,10 +285,10 @@ export function createThreadModelCompatibilityRuntime(
           model,
         });
         return { ok: true, threadId: nextThreadId };
-      } catch (error: unknown) {
+      } catch {
         return {
           ok: false,
-          error: readErrorMessage(error) || translate("runtime.createImageGenerationDisabledThreadFailed"),
+          error: translate("runtime.prepareModelFailed"),
         };
       }
     }

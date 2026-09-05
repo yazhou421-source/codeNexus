@@ -1,6 +1,7 @@
 import { ipcMain } from "electron";
 import { execFile } from "node:child_process";
-import { resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
+import { realpath } from "node:fs/promises";
 import { promisify } from "node:util";
 import { IPC_WORKSPACE_CHANNELS } from "@codenexus/shared/ipc/channels";
 import type {
@@ -9,6 +10,7 @@ import type {
   WorkspaceGitStatusResult,
 } from "@codenexus/shared/ipc/contracts";
 import { WorkspacePatchService } from "../../services/WorkspacePatchService";
+import type { WorkspaceAccessService } from "../../services/WorkspaceAccessService";
 
 const execFileAsync = promisify(execFile);
 
@@ -58,12 +60,16 @@ function parsePorcelainStatus(root: string, output: string): WorkspaceGitStatusE
 }
 
 async function readWorkspaceGitStatus(cwd: string): Promise<WorkspaceGitStatusResult> {
-  const workspace = resolve(String(cwd ?? "").trim() || ".");
+  let workspace = String(cwd ?? "").trim();
+  if (!isAbsolute(workspace))
+    return { ok: false, root: "", entries: [], reason: "failed", message: "Invalid workspace" };
   let root = workspace;
   try {
+    workspace = await realpath(workspace);
     const rootResult = await execFileAsync("git", ["-C", workspace, "rev-parse", "--show-toplevel"], {
       windowsHide: true,
       maxBuffer: 1024 * 1024,
+      timeout: 3000,
     });
     root = resolve(String(rootResult.stdout ?? "").trim());
   } catch (error) {
@@ -79,16 +85,34 @@ async function readWorkspaceGitStatus(cwd: string): Promise<WorkspaceGitStatusRe
   try {
     const statusResult = await execFileAsync(
       "git",
-      ["-C", root, "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+      [
+        "--no-optional-locks",
+        "-c",
+        "core.fsmonitor=false",
+        "-C",
+        workspace,
+        "status",
+        "--porcelain=v1",
+        "-z",
+        "--untracked-files=all",
+        "--no-renames",
+        "--",
+        ".",
+        ...["node_modules", ".git", "dist", "release", ".cache"].map((dir) => `:(glob,exclude)**/${dir}/**`),
+      ],
       {
         windowsHide: true,
-        maxBuffer: 8 * 1024 * 1024,
+        maxBuffer: 1024 * 1024,
+        timeout: 3000,
       }
     );
     return {
       ok: true,
       root,
-      entries: parsePorcelainStatus(root, String(statusResult.stdout ?? "")),
+      entries: parsePorcelainStatus(root, String(statusResult.stdout ?? "")).filter((entry) => {
+        const path = relative(workspace, entry.path);
+        return path !== ".." && !path.startsWith(`..${sep}`) && !isAbsolute(path);
+      }),
     };
   } catch (error) {
     return {
@@ -101,8 +125,20 @@ async function readWorkspaceGitStatus(cwd: string): Promise<WorkspaceGitStatusRe
   }
 }
 
-export function registerWorkspaceHandlers(deps: { workspacePatchService: WorkspacePatchService }) {
-  const { workspacePatchService } = deps;
+export function registerWorkspaceHandlers(deps: {
+  workspacePatchService: WorkspacePatchService;
+  workspaceAccess: WorkspaceAccessService;
+}) {
+  const { workspacePatchService, workspaceAccess } = deps;
+  ipcMain.handle(IPC_WORKSPACE_CHANNELS.workspaceActivate, async (evt, args: { cwd: string }) => {
+    return { ok: await workspaceAccess.activate(evt, args?.cwd) };
+  });
+  ipcMain.handle(IPC_WORKSPACE_CHANNELS.workspaceGitDiffRead, async (evt, args: { cwd: string }) => {
+    const lease = await workspaceAccess.workspace(evt, args?.cwd);
+    const result = await workspacePatchService.readGitDiff({ cwd: lease.root });
+    lease.assertCurrent();
+    return result;
+  });
 
   ipcMain.handle(
     IPC_WORKSPACE_CHANNELS.workspaceReverseDiffDryRun,
@@ -120,7 +156,10 @@ export function registerWorkspaceHandlers(deps: { workspacePatchService: Workspa
     }
   );
 
-  ipcMain.handle(IPC_WORKSPACE_CHANNELS.workspaceGitStatusRead, async (_evt, args: { cwd: string }) => {
-    return await readWorkspaceGitStatus(args?.cwd ?? "");
+  ipcMain.handle(IPC_WORKSPACE_CHANNELS.workspaceGitStatusRead, async (evt, args: { cwd: string }) => {
+    const lease = await workspaceAccess.workspace(evt, args?.cwd);
+    const result = await readWorkspaceGitStatus(lease.root);
+    lease.assertCurrent();
+    return result;
   });
 }

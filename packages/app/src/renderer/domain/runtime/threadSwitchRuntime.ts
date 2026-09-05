@@ -1,4 +1,6 @@
 import { nextTick } from "vue";
+import { codexDesktop } from "../../api/codexDesktopClient";
+import { translate } from "../../i18n/translate";
 import { appendDebugLog } from "../../shared/debugLog";
 import type { useRuntimeStore } from "../../stores/runtime.store";
 import type { useThreadStore } from "../../stores/thread.store";
@@ -89,6 +91,15 @@ export function createThreadSwitchRuntime(deps: ThreadSwitchRuntimeDeps): Thread
     if (didWorkspaceChange) {
       const confirmed = await workspaceFilesStore.confirmResetDirtyTabsForWorkspaceChange(nextCwd);
       if (!confirmed) return;
+      try {
+        if (!(await codexDesktop.workspace.activate({ cwd: nextCwd })).ok) return;
+      } catch {
+        pushEvent("workspace:error", translate("runtime.workspaceAccessDenied"), {
+          threadId: appTimelineId,
+          level: "error",
+        });
+        return;
+      }
     }
     const switchSeq = ++latestSwitchThreadSeq;
     const isActiveSwitch = () => switchSeq === latestSwitchThreadSeq;

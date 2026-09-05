@@ -697,6 +697,7 @@ export type CodexDesktopAppApi = {
   deleteFile(args: { path: string }): Promise<{ ok: true }>;
   readDirectory(args: {
     path: string;
+    workspaceRoot?: string;
   }): Promise<{ ok: true; entries: AppDirectoryEntry[] }>;
   getFileMetadata(args: {
     path: string;
@@ -822,7 +823,15 @@ export type CodexDesktopCodexServerApi = {
   onEvent(cb: (payload: CodexEventPayload) => void): () => void;
 };
 
+export type WorkspaceGitDiffResult = {
+  status: "ok" | "not_git" | "unavailable";
+  diffText: string;
+  skipped: number;
+};
+
 export type CodexDesktopWorkspaceApi = {
+  activate(args: { cwd: string }): Promise<{ ok: boolean }>;
+  readGitDiff(args: { cwd: string }): Promise<WorkspaceGitDiffResult>;
   select(): Promise<string | null>;
   dryRunApplyReverseDiff(args: {
     cwd: string;
