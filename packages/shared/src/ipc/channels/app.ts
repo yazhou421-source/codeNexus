@@ -33,6 +33,7 @@ export const IPC_APP_CHANNELS = {
   appRouterProviderSaveApiKey: "app:routerProviders:saveApiKey",
   appRouterProviderDeleteApiKey: "app:routerProviders:deleteApiKey",
   appRouterProviderConfigure: "app:routerProviders:configure",
+  appRouterProviderTestConnection: "app:routerProviders:testConnection",
 
   // 首次启动账号流程。主进程只返回去敏后的账号状态，并代为打开 OAuth 页面。
   appAccountRead: "app:account:read",

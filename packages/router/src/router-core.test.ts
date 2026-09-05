@@ -76,8 +76,9 @@ describe("Embedded Router API", () => {
       });
       const body = await response.json();
       expect(response.status).toBe(400);
-      expect(body.error.code).toBe("missing_provider_api_key");
-      expect(body.error.message).toContain(envName);
+      expect(body.error.code).toBe("PROVIDER_NOT_CONFIGURED");
+      expect(body.error.message).toMatch(/save an api key/i);
+      expect(JSON.stringify(body)).not.toContain(envName);
     } finally {
       if (previous === undefined) delete process.env[envName];
       else process.env[envName] = previous;
@@ -105,6 +106,356 @@ describe("Embedded Router API", () => {
     expect(body).toContain("event: response.completed");
     expect(body).toContain("streamed");
     expect(body).toContain("data: [DONE]");
+  });
+
+  it("forwards native SSE deltas before the upstream response completes", async () => {
+    let upstreamRequestBody: Record<string, any> | undefined;
+    let upstreamCompletedAt = 0;
+    const { origin } = await stackWithUpstream(async (request, response) => {
+      upstreamRequestBody = await readRequestJson(request);
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.write(
+        chatSse({
+          choices: [
+            { index: 0, delta: { content: "Hel" }, finish_reason: null },
+          ],
+        }),
+      );
+      setTimeout(() => {
+        response.write(
+          chatSse({
+            choices: [
+              { index: 0, delta: { content: "lo" }, finish_reason: null },
+            ],
+          }),
+        );
+      }, 300);
+      setTimeout(() => {
+        upstreamCompletedAt = Date.now();
+        response.write(
+          chatSse({
+            choices: [
+              {
+                index: 0,
+                delta: { content: " world" },
+                finish_reason: "stop",
+              },
+            ],
+            usage: { prompt_tokens: 3, completion_tokens: 3, total_tokens: 6 },
+          }),
+        );
+        response.end("data: [DONE]\n\n");
+      }, 600);
+    });
+    const response = await postJson(origin, {
+      model: "test-model",
+      input: "hello",
+      stream: true,
+    });
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let partial = "";
+    while (!partial.includes('"delta":"Hel"')) {
+      const next = await reader.read();
+      expect(next.done).toBe(false);
+      partial += decoder.decode(next.value, { stream: true });
+    }
+    const firstDownstreamDeltaAt = Date.now();
+    expect(partial).not.toContain("response.completed");
+    let remainder = "";
+    let reading = true;
+    while (reading) {
+      const next = await reader.read();
+      if (next.done) {
+        reading = false;
+        continue;
+      }
+      remainder += decoder.decode(next.value, { stream: true });
+    }
+    expect(partial + remainder).toContain('"output_text":"Hello world"');
+    expect(partial + remainder).toContain("response.completed");
+    expect(partial + remainder).toContain('"total_tokens":6');
+    expect(firstDownstreamDeltaAt).toBeLessThan(upstreamCompletedAt);
+    expect(upstreamRequestBody).toMatchObject({
+      stream: true,
+      stream_options: { include_usage: true },
+    });
+  });
+
+  it("reassembles streamed tool-call arguments without exposing reasoning", async () => {
+    const { origin } = await stackWithUpstream((_request, response) => {
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.write(
+        chatSse({
+          choices: [
+            {
+              index: 0,
+              delta: {
+                reasoning_content: "private chain of thought",
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: "call_stream",
+                    type: "function",
+                    function: { name: "read_file", arguments: '{"path":' },
+                  },
+                ],
+              },
+              finish_reason: null,
+            },
+          ],
+        }),
+      );
+      response.write(
+        chatSse({
+          choices: [
+            {
+              index: 0,
+              delta: {
+                tool_calls: [
+                  { index: 0, function: { arguments: '"README.md"}' } },
+                ],
+              },
+              finish_reason: "tool_calls",
+            },
+          ],
+        }),
+      );
+      response.end("data: [DONE]\n\n");
+    });
+    const response = await postJson(origin, {
+      model: "test-model",
+      input: "read",
+      stream: true,
+      tools: [readFileTool()],
+    });
+    const body = await response.text();
+    expect(body).toContain("response.function_call_arguments.delta");
+    expect(body).toContain("README.md");
+    expect(body).toContain("call_stream");
+    expect(body).not.toContain("private chain of thought");
+  });
+
+  it("keeps multiple streamed tool calls ordered and independently assembled", async () => {
+    const { origin } = await stackWithUpstream((_request, response) => {
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.write(
+        chatSse({
+          choices: [
+            {
+              index: 0,
+              delta: {
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: "call_a",
+                    function: { name: "read_file", arguments: '{"path":' },
+                  },
+                  {
+                    index: 1,
+                    id: "call_b",
+                    function: { name: "read_file", arguments: '{"path":' },
+                  },
+                ],
+              },
+              finish_reason: null,
+            },
+          ],
+        }),
+      );
+      response.write(
+        chatSse({
+          choices: [
+            {
+              index: 0,
+              delta: {
+                tool_calls: [
+                  { index: 0, function: { arguments: '"A.md"}' } },
+                  { index: 1, function: { arguments: '"B.md"}' } },
+                ],
+              },
+              finish_reason: "tool_calls",
+            },
+          ],
+        }),
+      );
+      response.end("data: [DONE]\n\n");
+    });
+    const response = await postJson(origin, {
+      model: "test-model",
+      input: "read both",
+      stream: true,
+      tools: [readFileTool()],
+    });
+    const body = await response.text();
+    expect(body).toContain("call_a");
+    expect(body).toContain("call_b");
+    expect(body).toContain("A.md");
+    expect(body).toContain("B.md");
+    expect(
+      body.match(/event: response\.function_call_arguments\.done/g),
+    ).toHaveLength(2);
+  });
+
+  it("turns malformed native SSE into a safe failed event", async () => {
+    const { origin } = await stackWithUpstream((_request, response) => {
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.end("data: {not-json-with-secret-value}\n\n");
+    });
+    const response = await postJson(origin, {
+      model: "test-model",
+      input: "hello",
+      stream: true,
+    });
+    const body = await response.text();
+    expect(response.status).toBe(200);
+    expect(body).toContain("response.failed");
+    expect(body).toContain("INVALID_RESPONSE");
+    expect(body).not.toContain("not-json-with-secret-value");
+  });
+
+  it("performs one buffered fallback only for a clearly unsupported stream error", async () => {
+    const upstreamBodies: Array<Record<string, any>> = [];
+    const { origin } = await stackWithUpstream(async (request, response) => {
+      const body = await readRequestJson(request);
+      upstreamBodies.push(body);
+      if (body.stream) {
+        response.writeHead(422, { "content-type": "application/json" });
+        response.end(
+          JSON.stringify({
+            error: {
+              code: "unsupported_stream",
+              message: "stream is unsupported",
+            },
+          }),
+        );
+        return;
+      }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          choices: [{ message: { role: "assistant", content: "fallback ok" } }],
+        }),
+      );
+    });
+    const response = await postJson(origin, {
+      model: "test-model",
+      input: "hello",
+      stream: true,
+    });
+    const body = await response.text();
+    expect(upstreamBodies.map((item) => item.stream)).toEqual([true, false]);
+    expect(body).toContain("fallback ok");
+    expect(body).toContain("response.completed");
+  });
+
+  it("retries native streaming without usage options when only stream_options is rejected", async () => {
+    const upstreamBodies: Array<Record<string, any>> = [];
+    const { origin } = await stackWithUpstream(async (request, response) => {
+      const body = await readRequestJson(request);
+      upstreamBodies.push(body);
+      if (body.stream_options) {
+        response.writeHead(400, { "content-type": "application/json" });
+        response.end(
+          JSON.stringify({
+            error: {
+              code: "invalid_parameter",
+              message: "stream_options unsupported",
+            },
+          }),
+        );
+        return;
+      }
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.end(
+        chatSse({
+          choices: [
+            { index: 0, delta: { content: "native" }, finish_reason: "stop" },
+          ],
+        }) + "data: [DONE]\n\n",
+      );
+    });
+    const response = await postJson(origin, {
+      model: "test-model",
+      input: "hello",
+      stream: true,
+    });
+    const body = await response.text();
+    expect(upstreamBodies).toHaveLength(2);
+    expect(upstreamBodies[1]).toMatchObject({ stream: true });
+    expect(upstreamBodies[1]).not.toHaveProperty("stream_options");
+    expect(body).toContain('"delta":"native"');
+  });
+
+  it("reports an interrupted upstream stream without inventing a completion", async () => {
+    const { origin } = await stackWithUpstream((_request, response) => {
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.write(
+        chatSse({
+          choices: [
+            {
+              index: 0,
+              delta: { content: "partial" },
+              finish_reason: null,
+            },
+          ],
+        }),
+      );
+      response.end();
+    });
+    const response = await postJson(origin, {
+      model: "test-model",
+      input: "hello",
+      stream: true,
+    });
+    const body = await response.text();
+    expect(body).toContain("response.failed");
+    expect(body).toContain("STREAM_INTERRUPTED");
+    expect(body).not.toContain("response.completed");
+  });
+
+  it("aborts a native upstream stream when the downstream client cancels", async () => {
+    let observeClose: (() => void) | undefined;
+    const upstreamClosed = new Promise<void>((resolve) => {
+      observeClose = resolve;
+    });
+    const { origin } = await stackWithUpstream((_request, response) => {
+      response.once("close", () => observeClose?.());
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.write(
+        chatSse({
+          choices: [
+            {
+              index: 0,
+              delta: { content: "first" },
+              finish_reason: null,
+            },
+          ],
+        }),
+      );
+    });
+    const controller = new AbortController();
+    const response = await fetch(`${origin}/v1/responses`, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer router-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "test-model",
+        input: "hello",
+        stream: true,
+      }),
+      signal: controller.signal,
+    });
+    await response.body!.getReader().read();
+    controller.abort();
+    await expect(
+      Promise.race([
+        upstreamClosed.then(() => "closed"),
+        new Promise((resolve) => setTimeout(() => resolve("timeout"), 1_000)),
+      ]),
+    ).resolves.toBe("closed");
   });
 
   it("maps a basic tool call back to Responses format", async () => {
@@ -208,7 +559,59 @@ describe("Embedded Router API", () => {
     );
   });
 
-  it("returns a local cooldown response after a provider 429", async () => {
+  it("preserves the tool-loop guard for streaming requests", async () => {
+    let upstreamRequestBody: Record<string, any> | undefined;
+    const { origin } = await stackWithUpstream(async (request, response) => {
+      upstreamRequestBody = await readRequestJson(request);
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          id: "chatcmpl_tool",
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: null,
+                tool_calls: [
+                  {
+                    id: "call_test",
+                    type: "function",
+                    function: {
+                      name: "read_file",
+                      arguments: '{"path":"README.md"}',
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      );
+    });
+    const response = await postJson(origin, {
+      model: "test-model",
+      stream: true,
+      input: [
+        userMessage("current request"),
+        toolCall("current_call_1"),
+        toolOutput("current_call_1"),
+        toolCall("current_call_2"),
+        toolOutput("current_call_2"),
+        toolCall("current_call_3"),
+        toolOutput("current_call_3"),
+      ],
+      tools: [readFileTool()],
+    });
+    const body = await response.text();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/event-stream");
+    expect(upstreamRequestBody).toMatchObject({ stream: false });
+    expect(body).toContain("stopped repeated tool loop");
+    expect(body).not.toContain('"type":"function_call"');
+    expect(body).toContain("response.completed");
+  });
+
+  it("returns a safe cached product error after a provider 429", async () => {
     let calls = 0;
     const { origin } = await stackWithUpstream((_request, response) => {
       calls += 1;
@@ -226,10 +629,10 @@ describe("Embedded Router API", () => {
       model: "test-model",
       input: "hello again",
     });
-    expect(first.status).toBe(200);
-    expect(second.status).toBe(200);
-    expect(await first.text()).toMatch(/rate limited|token waste/i);
-    expect(await second.text()).toMatch(/rate limited|token waste/i);
+    expect(first.status).toBe(429);
+    expect(second.status).toBe(429);
+    expect(await first.text()).toContain("RATE_LIMITED");
+    expect(await second.text()).toContain("RATE_LIMITED");
     expect(calls).toBe(1);
   });
 
@@ -392,6 +795,18 @@ async function postJson(origin: string, body: unknown): Promise<Response> {
     },
     body: JSON.stringify(body),
   });
+}
+
+async function readRequestJson(
+  request: http.IncomingMessage,
+): Promise<Record<string, any>> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) chunks.push(Buffer.from(chunk));
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+
+function chatSse(value: unknown): string {
+  return `data: ${JSON.stringify(value)}\n\n`;
 }
 
 async function fetchJson(url: string): Promise<any> {

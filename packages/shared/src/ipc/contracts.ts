@@ -638,6 +638,11 @@ export type RouterProviderStatus = {
   defaultModelId: string;
   configured: boolean;
   enabled: boolean;
+  verification?: {
+    state: "untested" | "testing" | "verified" | "failed";
+    verifiedAt: string | null;
+    errorCode: string | null;
+  };
   models: RouterProviderModelStatus[];
 };
 
@@ -753,6 +758,9 @@ export type CodexDesktopAppApi = {
     providerId: string;
     enabled: boolean;
     modelIds: string[];
+  }): Promise<RouterProviderRegistrySnapshot>;
+  testRouterProviderConnection(args: {
+    providerId: string;
   }): Promise<RouterProviderRegistrySnapshot>;
   readCodexSkillRoots(): Promise<CodexSkillRootsSnapshot>;
   setCodexSkillRootsForWorkspace(args: {

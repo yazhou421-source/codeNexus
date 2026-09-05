@@ -51,8 +51,11 @@ export function responsesToChatRequest(request, route, history) {
   const body = {
     model: route.model,
     messages: normalizedMessages,
-    stream: false,
+    stream: Boolean(request.stream) && route.streaming !== false,
   };
+  if (body.stream && route.streamUsage !== false) {
+    body.stream_options = { include_usage: true };
+  }
   if (shouldRequestSeparatedReasoning(route)) {
     body.reasoning_split = true;
   }

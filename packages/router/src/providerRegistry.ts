@@ -11,6 +11,8 @@ export type ProviderModelDefinition = {
   inputModalities?: readonly ("text" | "image")[];
   dropParams?: readonly string[];
   rpm?: number;
+  streaming?: boolean;
+  streamUsage?: boolean;
 };
 
 export type ProviderDefinition = {
@@ -260,6 +262,8 @@ function providerRoute(
       : undefined,
     dropParams: definition.dropParams ? [...definition.dropParams] : undefined,
     rpm: definition.rpm,
+    streaming: definition.streaming !== false,
+    streamUsage: definition.streamUsage !== false,
     priority,
   };
 }

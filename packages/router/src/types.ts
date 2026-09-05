@@ -13,6 +13,10 @@ export type RouterModelRoute = {
   apiKeyRef?: string;
   apiKey?: string;
   apiKeyEnv?: string;
+  /** Whether this route accepts native Chat Completions SSE. Defaults to true. */
+  streaming?: boolean;
+  /** Whether stream_options.include_usage is accepted. Defaults to true. */
+  streamUsage?: boolean;
   [key: string]: unknown;
 };
 

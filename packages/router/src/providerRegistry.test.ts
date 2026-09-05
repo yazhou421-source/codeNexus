@@ -9,6 +9,29 @@ import {
 } from "./providerRegistry";
 
 describe("Provider Registry", () => {
+  it("enables native streaming for every V0.1 provider route", () => {
+    const config = createProviderRouterConfig(
+      createDefaultRouterConfig(),
+      BUILTIN_PROVIDER_REGISTRY.map((provider) => ({
+        providerId: provider.id,
+        modelIds: provider.models.map((model) => model.id),
+      })),
+    );
+    const providerCapabilities = new Map(
+      config.models
+        .filter((route) => route.provider)
+        .map((route) => [route.provider, route.streaming]),
+    );
+    expect(providerCapabilities).toEqual(
+      new Map([
+        ["deepseek", true],
+        ["kimi", true],
+        ["qwen", true],
+        ["zhipu", true],
+      ]),
+    );
+  });
+
   it("defines the four initial providers and their real CodexBridge model IDs", () => {
     expect(BUILTIN_PROVIDER_REGISTRY.map((provider) => provider.id)).toEqual([
       "deepseek",

@@ -28,6 +28,7 @@ const managers: EmbeddedRouterManager[] = [];
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   await Promise.all(managers.splice(0).map((manager) => manager.stop()));
   await Promise.all(servers.splice(0).map(closeServer));
   await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
@@ -142,6 +143,93 @@ describe("ProviderRuntimeService", () => {
     const snapshot = await service.deleteApiKey("deepseek");
     expect(snapshot.providers.find((provider) => provider.id === "deepseek")?.configured).toBe(false);
     expect(service.resolveSecret("deepseek")).toBeUndefined();
+  });
+
+  it("tests a configured provider through the Router conversion path and persists only safe status", async () => {
+    const { preferencePath, service } = await fixture();
+    const secret = "synthetic-connection-test-secret";
+    await service.saveApiKey("deepseek", secret);
+    const requests: Array<{ authorization: string; body: Record<string, unknown> }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        requests.push({
+          authorization: String((init.headers as Record<string, string>).authorization),
+          body: JSON.parse(String(init.body)),
+        });
+        return new Response(
+          JSON.stringify({
+            id: "chatcmpl_connection",
+            choices: [{ message: { role: "assistant", content: "OK" } }],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      })
+    );
+
+    const snapshot = await service.testConnection("deepseek");
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].authorization).toBe(`Bearer ${secret}`);
+    expect(requests[0].body).toMatchObject({ stream: false, max_tokens: 1 });
+    expect(snapshot.providers.find((provider) => provider.id === "deepseek")?.verification).toMatchObject({
+      state: "verified",
+      errorCode: null,
+    });
+    expect(await readFile(preferencePath, "utf8")).not.toContain(secret);
+  });
+
+  it("maps provider test failures to a safe persisted error code and resets it after key replacement", async () => {
+    const { service } = await fixture();
+    await service.saveApiKey("deepseek", "synthetic-failed-test-secret");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ error: { message: "rejected", code: "invalid_api_key" } }), {
+            status: 401,
+            headers: { "content-type": "application/json" },
+          })
+      )
+    );
+
+    await expect(service.testConnection("deepseek")).rejects.toMatchObject({ code: "INVALID_API_KEY" });
+    expect(service.list().providers.find((provider) => provider.id === "deepseek")?.verification).toMatchObject({
+      state: "failed",
+      errorCode: "INVALID_API_KEY",
+    });
+    await service.saveApiKey("deepseek", "synthetic-replaced-test-secret");
+    expect(service.list().providers.find((provider) => provider.id === "deepseek")?.verification).toMatchObject({
+      state: "untested",
+      errorCode: null,
+    });
+    await service.deleteApiKey("deepseek");
+    expect(service.list().providers.find((provider) => provider.id === "deepseek")?.verification).toMatchObject({
+      state: "untested",
+      verifiedAt: null,
+      errorCode: null,
+    });
+  });
+
+  it("rejects connection tests when secure storage or a provider key is unavailable", async () => {
+    const { service } = await fixture();
+    await expect(service.testConnection("deepseek")).rejects.toMatchObject({ code: "PROVIDER_NOT_CONFIGURED" });
+    const directory = await mkdtemp(join(tmpdir(), "codenexus-provider-runtime-unavailable-"));
+    directories.push(directory);
+    const unavailable = new ProviderRuntimeService(
+      new ProviderSecretStore(join(directory, "provider-secrets.json"), {
+        isAvailable: () => false,
+        encrypt: () => Buffer.alloc(0),
+        decrypt: () => "",
+      }),
+      new ProviderPreferencesStore(join(directory, "provider-preferences.json")),
+      { updateConfig: vi.fn(), running: true } as unknown as EmbeddedRouterManager,
+      join(directory, "model-catalog.json")
+    );
+    await unavailable.initialize();
+    await expect(unavailable.testConnection("deepseek")).rejects.toMatchObject({
+      code: "SECURE_STORAGE_UNAVAILABLE",
+    });
   });
 
   it("keeps existing encrypted credentials disabled when secure storage is unavailable", async () => {

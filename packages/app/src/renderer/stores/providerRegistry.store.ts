@@ -6,6 +6,22 @@ import { useModelCatalogStore } from "./modelCatalog.store";
 import { useRuntimeStore } from "./runtime.store";
 
 type LoadState = "idle" | "loading" | "ready" | "error";
+const PRODUCT_ERROR_CODES = new Set([
+  "INVALID_API_KEY",
+  "INSUFFICIENT_BALANCE",
+  "RATE_LIMITED",
+  "MODEL_UNAVAILABLE",
+  "PROVIDER_UNAVAILABLE",
+  "NETWORK_ERROR",
+  "TIMEOUT",
+  "STREAM_INTERRUPTED",
+  "INVALID_RESPONSE",
+  "PROVIDER_NOT_CONFIGURED",
+  "SECURE_STORAGE_UNAVAILABLE",
+  "ROUTER_UNAVAILABLE",
+  "AGENT_RUNTIME_UNAVAILABLE",
+  "UNKNOWN",
+]);
 
 function safeSnapshot(value: RouterProviderRegistrySnapshot): RouterProviderRegistrySnapshot {
   return {
@@ -21,6 +37,15 @@ function safeSnapshot(value: RouterProviderRegistrySnapshot): RouterProviderRegi
           defaultModelId: String(provider.defaultModelId ?? ""),
           configured: Boolean(provider.configured),
           enabled: Boolean(provider.enabled),
+          verification: {
+            state: ["untested", "testing", "verified", "failed"].includes(String(provider.verification?.state))
+              ? provider.verification!.state
+              : "untested",
+            verifiedAt: typeof provider.verification?.verifiedAt === "string" ? provider.verification.verifiedAt : null,
+            errorCode: PRODUCT_ERROR_CODES.has(String(provider.verification?.errorCode))
+              ? String(provider.verification?.errorCode)
+              : null,
+          },
           models: Array.isArray(provider.models)
             ? provider.models.map((model) => ({
                 id: String(model.id ?? ""),
@@ -116,6 +141,24 @@ export const useProviderRegistryStore = defineStore("providerRegistry", {
           modelIds: normalized,
         })
       );
+    },
+    async testConnection(providerId: string): Promise<void> {
+      const provider = this.providers.find((entry) => entry.id === providerId);
+      if (provider) {
+        provider.verification = { state: "testing", verifiedAt: null, errorCode: null };
+      }
+      try {
+        await this.runProviderOperation(providerId, "", () =>
+          codexDesktop.app.testRouterProviderConnection({ providerId })
+        );
+      } catch (error) {
+        try {
+          this.applySnapshot(await codexDesktop.app.listRouterProviders());
+        } catch {
+          // Preserve the already-sanitized operation error when refresh also fails.
+        }
+        throw error;
+      }
     },
     isKnownProviderModel(modelId: string): boolean {
       return this.providers.some((provider) => provider.models.some((model) => model.id === modelId));

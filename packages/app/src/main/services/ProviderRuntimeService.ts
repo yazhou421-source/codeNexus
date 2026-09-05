@@ -7,6 +7,8 @@ import {
   createDefaultRouterConfig,
   createProviderRouterConfig,
   providerDefinition,
+  safeProductError,
+  testProviderConnection,
   type EmbeddedRouterManager,
   type RouterConfig,
 } from "@codenexus/router";
@@ -23,6 +25,7 @@ export class ProviderRuntimeService {
   private routerUpdatesEnabled = false;
   private revisionValue = 0;
   private readonly revisionListeners = new Set<(revision: number) => void>();
+  private readonly testingProviders = new Set<string>();
   private updateQueue: Promise<RouterProviderRegistrySnapshot> = Promise.resolve({
     secureStorageAvailable: false,
     runtimeRevision: 0,
@@ -96,6 +99,9 @@ export class ProviderRuntimeService {
           defaultModelId: provider.defaultModelId,
           configured,
           enabled: preference.enabled,
+          verification: this.testingProviders.has(provider.id)
+            ? { state: "testing" as const, verifiedAt: null, errorCode: null }
+            : (preference.verification ?? { state: "untested" as const, verifiedAt: null, errorCode: null }),
           models: provider.models.map((model) => ({
             id: model.id,
             displayName: model.displayName,
@@ -115,6 +121,10 @@ export class ProviderRuntimeService {
     if (!secret) throw providerRuntimeError("invalid_api_key", "Provider API key is required.");
     return await this.enqueueUpdate(async () => {
       await this.secretStore.save(provider.id, secret);
+      await this.preferencesStore.set(provider.id, {
+        ...this.effectivePreference(provider.id, true),
+        verification: { state: "untested", verifiedAt: null, errorCode: null },
+      });
     }, true);
   }
 
@@ -122,6 +132,11 @@ export class ProviderRuntimeService {
     const provider = providerDefinition(normalizeProviderId(providerId));
     return await this.enqueueUpdate(async () => {
       await this.secretStore.delete(provider.id);
+      await this.preferencesStore.set(provider.id, {
+        ...this.effectivePreference(provider.id, false),
+        enabled: false,
+        verification: { state: "untested", verifiedAt: null, errorCode: null },
+      });
     });
   }
 
@@ -140,8 +155,49 @@ export class ProviderRuntimeService {
       throw providerRuntimeError("unknown_provider_model", "Unknown provider model.");
     }
     return await this.enqueueUpdate(async () => {
-      await this.preferencesStore.set(provider.id, { enabled: args.enabled, modelIds });
+      await this.preferencesStore.set(provider.id, {
+        enabled: args.enabled,
+        modelIds,
+        verification: this.effectivePreference(provider.id, this.providerConfigured(provider.id)).verification,
+      });
     });
+  }
+
+  async testConnection(providerId: string): Promise<RouterProviderRegistrySnapshot> {
+    const provider = providerDefinition(normalizeProviderId(providerId));
+    if (!this.secretStore.encryptionAvailable) {
+      throw providerRuntimeError("SECURE_STORAGE_UNAVAILABLE", "Secure credential storage is unavailable.");
+    }
+    if (!this.providerConfigured(provider.id)) {
+      throw providerRuntimeError("PROVIDER_NOT_CONFIGURED", "Save an API key before testing this provider.");
+    }
+    if (this.testingProviders.has(provider.id)) return this.list();
+    this.testingProviders.add(provider.id);
+    const route = createProviderRouterConfig(this.baseConfig, [
+      { providerId: provider.id, modelIds: [provider.defaultModelId] },
+    ]).models.find((entry) => entry.id === provider.defaultModelId)!;
+    try {
+      await testProviderConnection(route, { resolveSecret: this.resolveSecret, timeoutMs: 15_000 });
+      this.testingProviders.delete(provider.id);
+      return await this.enqueueUpdate(async () => {
+        await this.preferencesStore.set(provider.id, {
+          ...this.effectivePreference(provider.id, true),
+          verification: { state: "verified", verifiedAt: new Date().toISOString(), errorCode: null },
+        });
+      });
+    } catch (error) {
+      const product = safeProductError(error, route);
+      this.testingProviders.delete(provider.id);
+      await this.enqueueUpdate(async () => {
+        await this.preferencesStore.set(provider.id, {
+          ...this.effectivePreference(provider.id, true),
+          verification: { state: "failed", verifiedAt: null, errorCode: product.code },
+        });
+      });
+      throw providerRuntimeError(product.code, product.message);
+    } finally {
+      this.testingProviders.delete(provider.id);
+    }
   }
 
   private async enqueueUpdate(
@@ -193,6 +249,7 @@ export class ProviderRuntimeService {
     return {
       enabled: saved.enabled,
       modelIds: saved.modelIds.filter((modelId) => knownModels.has(modelId)),
+      verification: saved.verification,
     };
   }
 
@@ -201,7 +258,14 @@ export class ProviderRuntimeService {
   }
 
   private runtimeSignature(): string {
-    return JSON.stringify(this.list());
+    return JSON.stringify(
+      this.list().providers.map((provider) => ({
+        id: provider.id,
+        configured: provider.configured,
+        enabled: provider.enabled,
+        modelIds: provider.models.filter((model) => model.selected).map((model) => model.id),
+      }))
+    );
   }
 }
 

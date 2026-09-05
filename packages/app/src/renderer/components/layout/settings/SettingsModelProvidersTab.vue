@@ -35,15 +35,23 @@
                 {{ provider.configured ? t("providerSettings.configured") : t("providerSettings.notConfigured") }}
               </div>
             </div>
-            <button
-              v-if="provider.configured"
-              class="btn-mini"
-              type="button"
-              :disabled="providerBusy(provider.id)"
-              @click="onDelete(provider.id)"
-            >
-              {{ t("providerSettings.deleteKey") }}
-            </button>
+            <div v-if="provider.configured" class="provider-card-actions">
+              <button class="btn-mini" type="button" :disabled="providerBusy(provider.id)" @click="onTest(provider.id)">
+                {{
+                  provider.verification?.state === "testing"
+                    ? t("providerSettings.testing")
+                    : t("providerSettings.testConnection")
+                }}
+              </button>
+              <button
+                class="btn-mini"
+                type="button"
+                :disabled="providerBusy(provider.id)"
+                @click="onDelete(provider.id)"
+              >
+                {{ t("providerSettings.deleteKey") }}
+              </button>
+            </div>
           </header>
 
           <div class="provider-credential-row">
@@ -85,6 +93,14 @@
                 {{ t("common.cancel") }}
               </button>
             </template>
+          </div>
+
+          <div
+            v-if="provider.configured"
+            class="provider-verification"
+            :class="`is-${provider.verification?.state || 'untested'}`"
+          >
+            {{ verificationLabel(provider) }}
           </div>
 
           <div class="provider-models-title">{{ t("providerSettings.enabledModels") }}</div>
@@ -193,6 +209,27 @@ async function onDelete(providerId: string): Promise<void> {
   }
 }
 
+async function onTest(providerId: string): Promise<void> {
+  statusByProvider[providerId] = "";
+  try {
+    await store.testConnection(providerId);
+    statusByProvider[providerId] = t("providerSettings.testSucceeded");
+  } catch {
+    const provider = store.providers.find((item) => item.id === providerId);
+    const code = provider?.verification?.errorCode || "UNKNOWN";
+    statusByProvider[providerId] = t(`providerSettings.errors.${code}`);
+  }
+}
+
+function verificationLabel(provider: RouterProviderStatus): string {
+  const state = provider.verification?.state || "untested";
+  if (state === "failed") {
+    const code = provider.verification?.errorCode || "UNKNOWN";
+    return t("providerSettings.testFailed", { message: t(`providerSettings.errors.${code}`) });
+  }
+  return t(`providerSettings.verification.${state}`);
+}
+
 async function onModelToggle(provider: RouterProviderStatus, modelId: string, event: Event): Promise<void> {
   const checked = Boolean((event.target as HTMLInputElement | null)?.checked);
   const selected = provider.models.filter((model) => model.selected).map((model) => model.id);
@@ -251,12 +288,27 @@ async function onModelToggle(provider: RouterProviderStatus, modelId: string, ev
 }
 
 .provider-card-head,
+.provider-card-actions,
 .provider-credential-row,
 .provider-model-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.provider-verification {
+  margin: 10px 0 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.provider-verification.is-verified {
+  color: var(--success);
+}
+
+.provider-verification.is-failed {
+  color: var(--danger);
 }
 
 .provider-card-title {

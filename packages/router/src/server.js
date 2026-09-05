@@ -125,6 +125,7 @@ export function createRouterServer(config = loadConfig(), runtime = {}) {
         req.method === "POST" &&
         ["/v1/responses", "/responses"].includes(pathname)
       ) {
+        const startedAt = Date.now();
         const clientAuth = authorizeClient(req, activeConfig, {
           allowCodexBearer: codexAuthRequest,
         });
@@ -136,7 +137,7 @@ export function createRouterServer(config = loadConfig(), runtime = {}) {
             openAiError(
               "Calmnova Code embedded model service credentials do not match. Restart the app and retry.",
               401,
-              "invalid_router_token",
+              "ROUTER_UNAVAILABLE",
             ),
             { connection: "close" },
           );
@@ -183,6 +184,7 @@ export function createRouterServer(config = loadConfig(), runtime = {}) {
             clientSignal: clientAbort.signal,
             knownSecrets,
             resolveSecret: runtime.resolveSecret,
+            startedAt,
           });
         } catch (error) {
           if (error?.code === "client_closed_request") {

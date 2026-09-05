@@ -5,6 +5,13 @@ import { dirname } from "node:path";
 export type ProviderPreference = {
   enabled: boolean;
   modelIds: string[];
+  verification?: ProviderVerification;
+};
+
+export type ProviderVerification = {
+  state: "untested" | "verified" | "failed";
+  verifiedAt: string | null;
+  errorCode: string | null;
 };
 
 type ProviderPreferencesFile = {
@@ -36,14 +43,24 @@ export class ProviderPreferencesStore {
   get(providerId: string): ProviderPreference | null {
     this.assertLoaded();
     const value = this.preferences.get(providerId);
-    return value ? { enabled: value.enabled, modelIds: [...value.modelIds] } : null;
+    return value
+      ? {
+          enabled: value.enabled,
+          modelIds: [...value.modelIds],
+          verification: value.verification ? { ...value.verification } : undefined,
+        }
+      : null;
   }
 
   async set(providerId: string, preference: ProviderPreference): Promise<void> {
     this.assertLoaded();
     const task = this.writeQueue.then(async () => {
       const next = new Map(this.preferences);
-      next.set(providerId, { enabled: preference.enabled, modelIds: [...preference.modelIds] });
+      next.set(providerId, {
+        enabled: preference.enabled,
+        modelIds: [...preference.modelIds],
+        verification: preference.verification ? { ...preference.verification } : undefined,
+      });
       await writePreferences(this.filePath, next);
       this.preferences = next;
     });
@@ -67,7 +84,11 @@ function parsePreferences(value: unknown): Map<string, ProviderPreference> {
       throw new Error("invalid provider preference");
     }
     const modelIds = raw.modelIds.map((item) => String(item ?? "").trim()).filter(Boolean);
-    result.set(providerId, { enabled: raw.enabled, modelIds: [...new Set(modelIds)] });
+    result.set(providerId, {
+      enabled: raw.enabled,
+      modelIds: [...new Set(modelIds)],
+      verification: parseVerification(raw.verification),
+    });
   }
   return result;
 }
@@ -75,7 +96,11 @@ function parsePreferences(value: unknown): Map<string, ProviderPreference> {
 async function writePreferences(filePath: string, values: ReadonlyMap<string, ProviderPreference>): Promise<void> {
   const providers = Object.create(null) as ProviderPreferencesFile["providers"];
   for (const [providerId, value] of [...values.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    providers[providerId] = { enabled: value.enabled, modelIds: [...value.modelIds] };
+    providers[providerId] = {
+      enabled: value.enabled,
+      modelIds: [...value.modelIds],
+      verification: value.verification ? { ...value.verification } : undefined,
+    };
   }
   const temporaryPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
   await mkdir(dirname(filePath), { recursive: true });
@@ -86,6 +111,19 @@ async function writePreferences(filePath: string, values: ReadonlyMap<string, Pr
     await unlink(temporaryPath).catch(() => undefined);
     throw error;
   }
+}
+
+function parseVerification(value: unknown): ProviderVerification | undefined {
+  if (!isRecord(value)) return undefined;
+  if (!new Set(["untested", "verified", "failed"]).has(String(value.state))) return undefined;
+  const verifiedAt = typeof value.verifiedAt === "string" ? value.verifiedAt : null;
+  const errorCode =
+    typeof value.errorCode === "string" && /^[A-Z_]{1,64}$/.test(value.errorCode) ? value.errorCode : null;
+  return {
+    state: value.state as ProviderVerification["state"],
+    verifiedAt,
+    errorCode,
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

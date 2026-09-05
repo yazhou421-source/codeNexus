@@ -97,7 +97,7 @@ describe("Router secret redaction", () => {
         expect(body).not.toContain(secret);
         expect(logText).not.toContain(secret);
       }
-      expect(body).toContain("[REDACTED]");
+      expect(body).toContain("INVALID_RESPONSE");
       expect(logText).toContain("[REDACTED]");
     } finally {
       if (previous === undefined) delete process.env[envName];

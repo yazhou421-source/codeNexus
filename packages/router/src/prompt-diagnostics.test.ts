@@ -38,6 +38,29 @@ function functionTool(name: string, description = "Synthetic diagnostic tool") {
 }
 
 describe("prompt diagnostics", () => {
+  it("preserves requested streaming for chat-completions routes", () => {
+    const converted = responsesToChatRequest(
+      { model: route.id, input: "Reply OK", stream: true },
+      route,
+      null,
+    );
+
+    expect(converted.wantsStream).toBe(true);
+    expect(converted.body.stream).toBe(true);
+  });
+
+  it("keeps Responses SSE while using buffered upstream for an explicitly non-streaming route", () => {
+    const converted = responsesToChatRequest(
+      { model: route.id, input: "Reply OK", stream: true },
+      { ...route, streaming: false },
+      null,
+    );
+
+    expect(converted.wantsStream).toBe(true);
+    expect(converted.body.stream).toBe(false);
+    expect(converted.body).not.toHaveProperty("stream_options");
+  });
+
   it("classifies prompt categories and accounts for the complete payload", () => {
     const report = analyzePromptPayload({
       model: "diagnostic-model",

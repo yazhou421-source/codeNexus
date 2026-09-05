@@ -6,6 +6,7 @@ const appApi = vi.hoisted(() => ({
   saveRouterProviderApiKey: vi.fn(),
   deleteRouterProviderApiKey: vi.fn(),
   configureRouterProvider: vi.fn(),
+  testRouterProviderConnection: vi.fn(),
 }));
 
 vi.mock("../api/codexDesktopClient", () => ({
@@ -34,6 +35,7 @@ function snapshot(overrides: Partial<RouterProviderRegistrySnapshot> = {}): Rout
         defaultModelId: "deepseek-v4-pro",
         configured: true,
         enabled: true,
+        verification: { state: "untested", verifiedAt: null, errorCode: null },
         models: [
           {
             id: "deepseek-v4-pro",
@@ -73,11 +75,23 @@ describe("providerRegistry store", () => {
     store.applySnapshot({
       ...(snapshot() as any),
       encryptedSecret: "ciphertext-must-not-enter-renderer-state",
-      providers: [{ ...(snapshot().providers[0] as any), apiKey: "plaintext-must-not-enter-renderer-state" }],
+      providers: [
+        {
+          ...(snapshot().providers[0] as any),
+          apiKey: "plaintext-must-not-enter-renderer-state",
+          verification: {
+            state: "failed",
+            errorCode: "INVALID_API_KEY",
+            verifiedAt: null,
+            rawBody: "raw-provider-body-must-not-enter-state",
+          },
+        },
+      ],
     });
 
     expect(JSON.stringify(store.$state)).not.toContain("plaintext-must-not-enter-renderer-state");
     expect(JSON.stringify(store.$state)).not.toContain("ciphertext-must-not-enter-renderer-state");
+    expect(JSON.stringify(store.$state)).not.toContain("raw-provider-body-must-not-enter-state");
   });
 
   it("saves a key, becomes configured, and never stores the key in renderer state", async () => {
@@ -161,5 +175,46 @@ describe("providerRegistry store", () => {
 
     await expect(store.saveApiKey("deepseek", key)).rejects.toThrow("failed [REDACTED]");
     expect(store.errorText).not.toContain(key);
+  });
+
+  it("shows testing and applies a verified connection snapshot", async () => {
+    const store = useProviderRegistryStore();
+    store.applySnapshot(snapshot());
+    let observedTesting = false;
+    appApi.testRouterProviderConnection.mockImplementation(async () => {
+      observedTesting = store.providers[0].verification?.state === "testing";
+      return snapshot({
+        providers: [
+          {
+            ...snapshot().providers[0],
+            verification: { state: "verified", verifiedAt: "2026-09-05T00:00:00.000Z", errorCode: null },
+          },
+        ],
+      });
+    });
+
+    await store.testConnection("deepseek");
+
+    expect(observedTesting).toBe(true);
+    expect(store.providers[0].verification).toMatchObject({ state: "verified", errorCode: null });
+  });
+
+  it("refreshes a safe failed verification status after a connection error", async () => {
+    const store = useProviderRegistryStore();
+    store.applySnapshot(snapshot());
+    appApi.testRouterProviderConnection.mockRejectedValue(new Error("safe failure"));
+    appApi.listRouterProviders.mockResolvedValue(
+      snapshot({
+        providers: [
+          {
+            ...snapshot().providers[0],
+            verification: { state: "failed", verifiedAt: null, errorCode: "INVALID_API_KEY" },
+          },
+        ],
+      })
+    );
+
+    await expect(store.testConnection("deepseek")).rejects.toThrow("safe failure");
+    expect(store.providers[0].verification).toMatchObject({ state: "failed", errorCode: "INVALID_API_KEY" });
   });
 });

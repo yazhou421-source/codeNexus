@@ -22,6 +22,8 @@ export type {
 } from "./providerRegistry";
 export { buildModelCatalog, openAiModelsList } from "./model-catalog.js";
 export { EmbeddedRouterManager } from "./EmbeddedRouterManager";
+export { ProductErrorCode, safeProductError } from "./product-errors.js";
+export { testProviderConnection } from "./provider-connection.js";
 export type {
   EmbeddedRouterLog,
   EmbeddedRouterManagerOptions,

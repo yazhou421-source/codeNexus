@@ -84,6 +84,7 @@ export function createAppApi(ipcRenderer: IpcRenderer): CodexDesktopApi["app"] {
     saveRouterProviderApiKey: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appRouterProviderSaveApiKey, args),
     deleteRouterProviderApiKey: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appRouterProviderDeleteApiKey, args),
     configureRouterProvider: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appRouterProviderConfigure, args),
+    testRouterProviderConnection: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appRouterProviderTestConnection, args),
     // 读取 skill roots：获取当前启用的技能根目录。
     readCodexSkillRoots: () => ipcRenderer.invoke(IPC_APP_CHANNELS.appCodexSkillRootsRead),
     // 为当前工作区设置 skill roots：联动工作区与技能配置。

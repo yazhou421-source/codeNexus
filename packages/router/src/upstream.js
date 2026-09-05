@@ -23,6 +23,8 @@ import {
   chatResponseToResponse,
   responseToSse,
 } from "./chat-to-responses.js";
+import { streamChatCompletionToResponses } from "./chat-stream-to-responses.js";
+import { safeProductError } from "./product-errors.js";
 import {
   proxyImageGenerationFallback,
   shouldUseImageGenerationFallback,
@@ -416,6 +418,19 @@ export async function proxyChatCompletions(
   const upstreamUrl = joinUpstreamUrl(route.baseUrl, "/chat/completions");
   logRoute(context, route, upstreamUrl);
   let messagesForHistory = converted.messagesForHistory;
+  if (converted.body.stream) {
+    return proxyNativeStreamingChatCompletions({
+      requestBody,
+      route,
+      history,
+      res,
+      context,
+      converted,
+      upstreamUrl,
+      messagesForHistory,
+      toolContinuationTurns,
+    });
+  }
   let upstream;
   try {
     upstream = await callJsonUpstream(
@@ -425,18 +440,6 @@ export async function proxyChatCompletions(
       context,
     );
   } catch (error) {
-    if (isRateLimitError(error)) {
-      return sendLocalRateLimitedResponse({
-        requestBody,
-        route,
-        history,
-        res,
-        context,
-        converted,
-        messagesForHistory,
-        error,
-      });
-    }
     if (!shouldRetryChatWithoutImages(error, converted.body)) {
       throw error;
     }
@@ -539,6 +542,216 @@ export async function proxyChatCompletions(
   }
 
   jsonResponse(res, 200, response);
+}
+
+async function proxyNativeStreamingChatCompletions({
+  requestBody,
+  route,
+  history,
+  res,
+  context,
+  converted,
+  upstreamUrl,
+  messagesForHistory,
+  toolContinuationTurns,
+}) {
+  // Once the existing tool-loop limit has been exceeded, inspect one buffered
+  // response so a further tool call can be replaced by the established local
+  // guard before any irreversible streaming events reach Codex. A normal text
+  // answer is still returned unchanged; only this pathological tail is buffered.
+  if (toolContinuationTurns > maxChatToolContinuationTurns(route)) {
+    const guardedBody = { ...converted.body, stream: false };
+    delete guardedBody.stream_options;
+    const guarded = await callJsonUpstream(
+      upstreamUrl,
+      route,
+      guardedBody,
+      context,
+      { trackRateLimit: false },
+    );
+    return sendBufferedChatAsStream({
+      requestBody,
+      route,
+      history,
+      res,
+      context,
+      converted,
+      messagesForHistory,
+      toolContinuationTurns,
+      upstream: guarded,
+      localFallback: "streaming_tool_loop_guard_check",
+    });
+  }
+
+  let upstream;
+  try {
+    upstream = await callStreamingUpstream(
+      upstreamUrl,
+      route,
+      converted.body,
+      context,
+    );
+  } catch (error) {
+    if (isStreamOptionsUnsupportedError(error)) {
+      const compatibleStreamBody = { ...converted.body };
+      delete compatibleStreamBody.stream_options;
+      console.warn(
+        `[${new Date().toISOString()}] ${context.requestId || "req"} ` +
+          `!! stream usage option unsupported route=${route.id}; retrying native stream`,
+      );
+      upstream = await callStreamingUpstream(
+        upstreamUrl,
+        route,
+        compatibleStreamBody,
+        context,
+        { trackRateLimit: false },
+      );
+    } else if (isStreamingUnsupportedError(error)) {
+      const bufferedBody = { ...converted.body, stream: false };
+      delete bufferedBody.stream_options;
+      console.warn(
+        `[${new Date().toISOString()}] ${context.requestId || "req"} ` +
+          `!! native stream unsupported route=${route.id}; retrying buffered`,
+      );
+      const buffered = await callJsonUpstream(
+        upstreamUrl,
+        route,
+        bufferedBody,
+        context,
+        { trackRateLimit: false },
+      );
+      return sendBufferedChatAsStream({
+        requestBody,
+        route,
+        history,
+        res,
+        context,
+        converted,
+        messagesForHistory,
+        toolContinuationTurns,
+        upstream: buffered,
+        localFallback: "streaming_unsupported",
+      });
+    } else if (shouldRetryChatWithoutImages(error, converted.body)) {
+      const textOnlyBody = chatBodyWithoutImages(converted.body);
+      messagesForHistory = chatMessagesWithoutImages(
+        converted.messagesForHistory,
+      );
+      upstream = await callStreamingUpstream(
+        upstreamUrl,
+        route,
+        textOnlyBody,
+        context,
+        { trackRateLimit: false },
+      );
+    } else {
+      throw error;
+    }
+  }
+
+  const contentType = String(upstream.headers.get("content-type") || "");
+  if (!/text\/event-stream/i.test(contentType)) {
+    const text = await upstream.text();
+    const parsed = tryParseJson(text);
+    if (!parsed) {
+      throw new UpstreamHttpError(
+        502,
+        "Invalid upstream response",
+        upstreamUrl,
+        route,
+      );
+    }
+    return sendBufferedChatAsStream({
+      requestBody,
+      route,
+      history,
+      res,
+      context,
+      converted,
+      messagesForHistory,
+      toolContinuationTurns,
+      upstream: parsed,
+      localFallback: "streaming_json_fallback",
+    });
+  }
+
+  const streamed = await streamChatCompletionToResponses(upstream, res, {
+    requestBody,
+    route,
+    converted,
+    context,
+  });
+  history.record(streamed.response.id, [
+    ...messagesForHistory,
+    assistantHistoryMessageFromChat(streamed.chat),
+  ]);
+  history.recordResponse(streamed.response, {
+    api: "chat_completions",
+    routeId: route.id || "",
+    upstreamModel: route.model || "",
+    upstreamKnown: false,
+    toolContinuationTurns: responseHasRunnableToolCall(streamed.response)
+      ? toolContinuationTurns
+      : 0,
+  });
+  logUsage(context, route, streamed.chat.usage);
+}
+
+function sendBufferedChatAsStream({
+  requestBody,
+  route,
+  history,
+  res,
+  context,
+  converted,
+  messagesForHistory,
+  toolContinuationTurns,
+  upstream,
+  localFallback,
+}) {
+  const adjusted = enforceInteractivePluginBootstrap(
+    upstream,
+    requestBody,
+    converted,
+    context,
+  );
+  let chatForHistory = adjusted;
+  let response = chatResponseToResponse(
+    adjusted,
+    requestBody.model || route.id,
+    converted.toolContext,
+    { stripReasoningTags: shouldStripReasoningTags(route) },
+  );
+  if (shouldStopChatToolContinuation(response, route, toolContinuationTurns)) {
+    chatForHistory = localToolLoopGuardChat(route, toolContinuationTurns);
+    response = chatResponseToResponse(
+      chatForHistory,
+      requestBody.model || route.id,
+      converted.toolContext,
+    );
+    localFallback = "tool_loop_guard";
+  }
+  history.record(response.id, [
+    ...messagesForHistory,
+    assistantHistoryMessageFromChat(chatForHistory),
+  ]);
+  history.recordResponse(response, {
+    api: "chat_completions",
+    routeId: route.id || "",
+    upstreamModel: route.model || "",
+    upstreamKnown: false,
+    toolContinuationTurns: responseHasRunnableToolCall(response)
+      ? toolContinuationTurns
+      : 0,
+    localFallback,
+  });
+  logUsage(context, route, adjusted.usage);
+  res.writeHead(200, {
+    "content-type": "text/event-stream; charset=utf-8",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+  });
+  res.end(responseToSse(response));
 }
 
 function chatToolContinuationTurns(requestBody, history) {
@@ -757,78 +970,6 @@ function interactivePluginBootstrapCode(kind) {
 const IMAGE_REJECTED_PLACEHOLDER =
   "[image input omitted because upstream rejected image content]";
 
-function sendLocalRateLimitedResponse({
-  requestBody,
-  route,
-  history,
-  res,
-  context,
-  converted,
-  messagesForHistory,
-  error,
-}) {
-  const localChat = localRateLimitedChat(route, error);
-  const response = chatResponseToResponse(
-    localChat,
-    requestBody.model || route.id,
-    converted.toolContext,
-    { stripReasoningTags: false },
-  );
-
-  history.record(response.id, [
-    ...messagesForHistory,
-    assistantHistoryMessageFromChat(localChat),
-  ]);
-  history.recordResponse(response, {
-    api: "chat_completions",
-    routeId: route.id || "",
-    upstreamModel: route.model || "",
-    upstreamKnown: false,
-    localFallback: "provider_rate_limited",
-  });
-  logUsage(context, route, null);
-
-  if (converted.wantsStream) {
-    res.writeHead(200, {
-      "content-type": "text/event-stream; charset=utf-8",
-      "cache-control": "no-cache",
-      connection: "keep-alive",
-    });
-    res.end(responseToSse(response));
-    return;
-  }
-
-  jsonResponse(res, 200, response);
-}
-
-function localRateLimitedChat(route, error) {
-  const retryAfterMs = Number(error?.retryAfterMs || 0);
-  const waitSeconds = Math.ceil(Math.max(0, retryAfterMs) / 1000);
-  const waitText =
-    waitSeconds > 0
-      ? `Please wait about ${waitSeconds}s, then retry or switch to another model.`
-      : "Please wait a moment, then retry or switch to another model.";
-  const displayName = route.displayName || route.id || "the current model";
-  return {
-    id: `chatcmpl_rate_limited_${Date.now().toString(36)}_${Math.random()
-      .toString(36)
-      .slice(2, 8)}`,
-    object: "chat.completion",
-    choices: [
-      {
-        message: {
-          role: "assistant",
-          content:
-            `CodexBridge stopped sending requests to ${displayName} because the provider is rate limited. ` +
-            "This turn was handled locally to avoid repeated upstream calls and token waste. " +
-            waitText,
-        },
-      },
-    ],
-    usage: null,
-  };
-}
-
 function sendLocalImageRejectedResponse({
   requestBody,
   route,
@@ -875,10 +1016,6 @@ function sendLocalImageRejectedResponse({
   }
 
   jsonResponse(res, 200, response);
-}
-
-function isRateLimitError(error) {
-  return Number(error?.statusCode || 0) === 429;
 }
 
 function localImageRejectedChat(route, retryError, knownSecrets = []) {
@@ -1048,10 +1185,50 @@ export async function callJsonUpstream(
       upstreamUrl,
       route,
     );
+    error.code = "invalid_upstream_response";
     rememberUpstreamFailure(route, upstreamUrl, payload, error, options);
     throw error;
   }
   return parsed;
+}
+
+export async function callStreamingUpstream(
+  upstreamUrl,
+  route,
+  payload,
+  context = {},
+  options = {},
+) {
+  throwIfRecentUpstreamFailure(route, upstreamUrl, payload, context);
+  let upstream;
+  try {
+    upstream = await fetchUpstream(
+      upstreamUrl,
+      {
+        method: "POST",
+        headers: upstreamHeaders(route, context, { acceptEventStream: true }),
+        body: JSON.stringify(payload),
+      },
+      context,
+      route,
+      options,
+    );
+  } catch (error) {
+    rememberUpstreamFailure(route, upstreamUrl, payload, error, options);
+    throw error;
+  }
+  if (!upstream.ok) {
+    const text = await upstream.text();
+    const error = new UpstreamHttpError(
+      upstream.status,
+      text,
+      upstreamUrl,
+      route,
+    );
+    rememberUpstreamFailure(route, upstreamUrl, payload, error, options);
+    throw error;
+  }
+  return upstream;
 }
 
 export function __resetUpstreamFailureCacheForTests() {
@@ -1059,15 +1236,31 @@ export function __resetUpstreamFailureCacheForTests() {
 }
 
 export function sendUpstreamError(res, error, knownSecrets = []) {
-  if (error instanceof UpstreamNetworkError) {
+  if (
+    [
+      "request_too_large",
+      "invalid_compressed_body",
+      "unsupported_content_encoding",
+    ].includes(error?.code)
+  ) {
+    const statusCode = error.statusCode || 400;
     jsonResponse(
       res,
-      error.statusCode,
+      statusCode,
       openAiError(
         redactSensitiveText(error.message, knownSecrets),
-        error.statusCode,
+        statusCode,
         error.code,
       ),
+    );
+    return;
+  }
+  if (error instanceof UpstreamNetworkError) {
+    const product = safeProductError(error, error.route);
+    jsonResponse(
+      res,
+      product.statusCode,
+      openAiError(product.message, product.statusCode, product.code),
     );
     return;
   }
@@ -1086,28 +1279,40 @@ export function sendUpstreamError(res, error, knownSecrets = []) {
       );
       return;
     }
+    const product = safeProductError(error, error.route);
     jsonResponse(
       res,
-      error.statusCode,
-      openAiError(
-        clientUpstreamErrorMessage(error, parsed, knownSecrets),
-        error.statusCode,
-        "upstream_error",
-      ),
+      product.statusCode,
+      openAiError(product.message, product.statusCode, product.code),
     );
     return;
   }
 
   const statusCode = error.statusCode || 500;
+  const product = safeProductError(error);
   jsonResponse(
     res,
-    statusCode,
+    product.statusCode || statusCode,
     openAiError(
-      redactSensitiveText(error.message, knownSecrets),
-      statusCode,
-      error.code || "router_error",
+      product.message,
+      product.statusCode || statusCode,
+      product.code,
     ),
   );
+}
+
+function isStreamingUnsupportedError(error) {
+  if (!(error instanceof UpstreamHttpError)) return false;
+  if (![400, 415, 422].includes(Number(error.statusCode))) return false;
+  return /stream(?:ing)?|stream_options|event-stream|sse/i.test(
+    String(error.bodyText || ""),
+  );
+}
+
+function isStreamOptionsUnsupportedError(error) {
+  if (!(error instanceof UpstreamHttpError)) return false;
+  if (![400, 415, 422].includes(Number(error.statusCode))) return false;
+  return /stream_options|include_usage/i.test(String(error.bodyText || ""));
 }
 
 function isMissingResponsesWriteScope(parsedBody, rawBody) {
@@ -1115,28 +1320,6 @@ function isMissingResponsesWriteScope(parsedBody, rawBody) {
     .filter(Boolean)
     .join(" ");
   return /missing scopes?:\s*api\.responses\.write/i.test(message);
-}
-
-function clientUpstreamErrorMessage(error, parsedBody, knownSecrets = []) {
-  const routeLabel = [error.route?.displayName, error.route?.id]
-    .filter(Boolean)
-    .join(" / ");
-  const model = error.route?.model
-    ? ` upstream_model=${error.route.model}`
-    : "";
-  const api = error.route?.api ? ` api=${error.route.api}` : "";
-  const upstreamMessage = upstreamBodyMessage(
-    error.bodyText,
-    parsedBody,
-    knownSecrets,
-  );
-  return redactSensitiveText(
-    `CodexBridge upstream error` +
-      (routeLabel ? ` from ${routeLabel}` : "") +
-      `${model}${api}: HTTP ${error.statusCode}` +
-      (upstreamMessage ? ` - ${upstreamMessage}` : ""),
-    knownSecrets,
-  );
 }
 
 function upstreamBodyMessage(rawBody, parsedBody, knownSecrets = []) {

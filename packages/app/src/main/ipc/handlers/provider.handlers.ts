@@ -49,6 +49,16 @@ export function registerProviderHandlers(deps: { providerRuntimeService: Provide
       throw sanitizedProviderError(error);
     }
   });
+
+  ipcMain.handle(IPC_APP_CHANNELS.appRouterProviderTestConnection, async (_event, value: unknown) => {
+    const args = record(value);
+    if (typeof args?.providerId !== "string") throw new Error("Provider connection test request is invalid.");
+    try {
+      return await service.testConnection(args.providerId);
+    } catch (error) {
+      throw sanitizedProviderError(error);
+    }
+  });
 }
 
 function record(value: unknown): Record<string, unknown> | null {

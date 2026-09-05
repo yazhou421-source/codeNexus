@@ -40,6 +40,7 @@ describe("Provider IPC", () => {
       saveApiKey: vi.fn(async () => snapshot),
       deleteApiKey: vi.fn(async () => snapshot),
       configure: vi.fn(async () => snapshot),
+      testConnection: vi.fn(async () => snapshot),
     } as unknown as ProviderRuntimeService;
     registerProviderHandlers({ providerRuntimeService: service });
 
@@ -49,6 +50,7 @@ describe("Provider IPC", () => {
         IPC_APP_CHANNELS.appRouterProviderSaveApiKey,
         IPC_APP_CHANNELS.appRouterProviderDeleteApiKey,
         IPC_APP_CHANNELS.appRouterProviderConfigure,
+        IPC_APP_CHANNELS.appRouterProviderTestConnection,
       ].sort()
     );
     expect([...ipcMock.handlers.keys()].some((channel) => /read.*key|get.*key/i.test(channel))).toBe(false);
@@ -65,6 +67,7 @@ describe("Provider IPC", () => {
       }),
       deleteApiKey: vi.fn(async () => snapshot),
       configure: vi.fn(async () => snapshot),
+      testConnection: vi.fn(async () => snapshot),
     } as unknown as ProviderRuntimeService;
     registerProviderHandlers({ providerRuntimeService: service });
     const save = ipcMock.handlers.get(IPC_APP_CHANNELS.appRouterProviderSaveApiKey)!;
@@ -75,5 +78,23 @@ describe("Provider IPC", () => {
     await expect(configure({}, { providerId: "deepseek", enabled: true, modelIds: ["valid", 123] })).rejects.toThrow(
       "request is invalid"
     );
+  });
+
+  it("exposes a provider connection test without accepting a key", async () => {
+    const testConnection = vi.fn(async () => snapshot);
+    const service = {
+      list: vi.fn(() => snapshot),
+      saveApiKey: vi.fn(async () => snapshot),
+      deleteApiKey: vi.fn(async () => snapshot),
+      configure: vi.fn(async () => snapshot),
+      testConnection,
+    } as unknown as ProviderRuntimeService;
+    registerProviderHandlers({ providerRuntimeService: service });
+    const invoke = ipcMock.handlers.get(IPC_APP_CHANNELS.appRouterProviderTestConnection)!;
+
+    await expect(invoke({}, { providerId: "deepseek" })).resolves.toBe(snapshot);
+    expect(testConnection).toHaveBeenCalledWith("deepseek");
+    await expect(invoke({}, { providerId: "deepseek", apiKey: "must-not-be-used" })).resolves.toBe(snapshot);
+    expect(testConnection).toHaveBeenLastCalledWith("deepseek");
   });
 });

@@ -129,6 +129,7 @@ class JsonRpcClient {
       if (Object.hasOwn(message, "id")) {
         this.handleServerRequest(message);
       } else {
+        message.__receivedAt = Date.now();
         this.notifications.push(message);
         for (const waiter of this.notificationWaiters) {
           if (waiter.method !== message.method || !waiter.predicate(message.params)) continue;
@@ -189,30 +190,92 @@ let client;
 try {
   await Promise.all([mkdir(codexHome), mkdir(workspace)]);
   const upstreamRequests = [];
+  let firstUpstreamCompletedAt = 0;
   upstream = createServer(async (request, response) => {
     const chunks = [];
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
+    const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
     upstreamRequests.push({
       authorization: request.headers.authorization,
-      body: JSON.parse(Buffer.concat(chunks).toString("utf8")),
+      body,
     });
-    response.writeHead(200, { "content-type": "application/json" });
-    response.end(
-      JSON.stringify({
-        id: "chatcmpl_protocol_smoke",
-        object: "chat.completion",
-        created: Math.floor(Date.now() / 1000),
-        model: MODEL_ID,
+    response.writeHead(200, { "content-type": "text/event-stream" });
+    if (upstreamRequests.length === 1) {
+      writeChatSse(response, { choices: [{ index: 0, delta: { content: "Hel" }, finish_reason: null }] });
+      await delay(300);
+      writeChatSse(response, { choices: [{ index: 0, delta: { content: "lo" }, finish_reason: null }] });
+      await delay(300);
+      firstUpstreamCompletedAt = Date.now();
+      writeChatSse(response, {
+        choices: [{ index: 0, delta: { content: " world" }, finish_reason: "stop" }],
+        usage: { prompt_tokens: 8, completion_tokens: 3, total_tokens: 11 },
+      });
+      response.end("data: [DONE]\n\n");
+      return;
+    }
+    if (upstreamRequests.length === 2) {
+      const commandTool = body.tools?.find((tool) => /(?:exec|shell)_command/i.test(tool?.function?.name || ""));
+      assert(commandTool, "Codex did not expose a command tool to the streamed provider request");
+      const name = commandTool.function.name;
+      const argumentsJson = JSON.stringify(
+        /exec_command/i.test(name) ? { cmd: "printf controlled-tool-ok" } : { command: "printf controlled-tool-ok" }
+      );
+      const firstBoundary = Math.max(1, argumentsJson.indexOf(":") + 1);
+      const secondBoundary = Math.max(firstBoundary + 1, argumentsJson.length - 1);
+      writeChatSse(response, {
         choices: [
           {
             index: 0,
-            message: { role: "assistant", content: "bundled protocol smoke ok" },
-            finish_reason: "stop",
+            delta: {
+              tool_calls: [
+                {
+                  index: 0,
+                  id: "call_protocol_smoke",
+                  type: "function",
+                  function: { name, arguments: argumentsJson.slice(0, firstBoundary) },
+                },
+              ],
+            },
+            finish_reason: null,
           },
         ],
-        usage: { prompt_tokens: 8, completion_tokens: 4, total_tokens: 12 },
-      })
+      });
+      await delay(300);
+      writeChatSse(response, {
+        choices: [
+          {
+            index: 0,
+            delta: {
+              tool_calls: [{ index: 0, function: { arguments: argumentsJson.slice(firstBoundary, secondBoundary) } }],
+            },
+            finish_reason: null,
+          },
+        ],
+      });
+      await delay(300);
+      writeChatSse(response, {
+        choices: [
+          {
+            index: 0,
+            delta: { tool_calls: [{ index: 0, function: { arguments: argumentsJson.slice(secondBoundary) } }] },
+            finish_reason: "tool_calls",
+          },
+        ],
+      });
+      response.end("data: [DONE]\n\n");
+      return;
+    }
+    assert(
+      body.messages?.some(
+        (message) => message?.role === "tool" && String(message?.content || "").includes("controlled-tool-ok")
+      ),
+      "Codex did not execute the streamed command tool or return its output"
     );
+    writeChatSse(response, {
+      choices: [{ index: 0, delta: { content: "tool result accepted" }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+    });
+    response.end("data: [DONE]\n\n");
   });
   const upstreamOrigin = await listen(upstream);
 
@@ -339,6 +402,18 @@ try {
     (params) => params?.threadId === threadId && params?.turn?.id === firstTurnId
   );
   assert(firstCompleted?.turn?.status === "completed", `turn completed with status ${firstCompleted?.turn?.status}`);
+  const firstDelta = client.notifications.find(
+    (message) =>
+      message.method === "item/agentMessage/delta" &&
+      message.params?.threadId === threadId &&
+      message.params?.turnId === firstTurnId &&
+      String(message.params?.delta || "").includes("Hel")
+  );
+  assert(firstDelta, "Codex app-server did not emit the first streamed text delta");
+  assert(
+    firstDelta.__receivedAt < firstUpstreamCompletedAt,
+    "First Codex downstream delta did not arrive before upstream completion"
+  );
 
   const resumed = await client.request("thread/resume", {
     threadId,
@@ -346,7 +421,7 @@ try {
     modelProvider: "codenexus-router",
     cwd: workspace,
     approvalPolicy: "never",
-    sandbox: "read-only",
+    sandbox: "workspace-write",
     excludeTurns: true,
   });
   assert(resumed?.thread?.id === threadId, "thread/resume returned a different thread");
@@ -368,7 +443,7 @@ try {
     resumedCompleted?.turn?.status === "completed",
     `resumed turn completed with status ${resumedCompleted?.turn?.status}`
   );
-  assert(upstreamRequests.length === 2, `Expected two Router upstream requests, got ${upstreamRequests.length}`);
+  assert(upstreamRequests.length === 3, `Expected three Router upstream requests, got ${upstreamRequests.length}`);
   assert(
     upstreamRequests.every((request) => request.authorization === `Bearer ${providerKey}`),
     "Router provider authorization mismatch"
@@ -380,10 +455,18 @@ try {
 
   console.info(
     `[codex-protocol-smoke] Codex ${manifest.version} passed initialize, model/list, config/read, ` +
-      "MCP status, skills/list, thread/start, thread/resume, and Router-backed turn/start"
+      "MCP status, skills/list, native text streaming, streamed command execution, and continued streaming"
   );
 } finally {
   await client?.stop().catch(() => undefined);
   await Promise.all([router ? close(router) : undefined, upstream ? close(upstream) : undefined]);
   await rm(temporaryRoot, { recursive: true, force: true });
+}
+
+function writeChatSse(response, payload) {
+  response.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
