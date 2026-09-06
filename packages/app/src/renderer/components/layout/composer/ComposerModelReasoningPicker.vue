@@ -45,6 +45,7 @@
             class="composer-model-reasoning-option"
             :class="[option.toneClass, { 'is-selected': option.selected, 'is-active': option.active }]"
             :data-value="option.value"
+            :title="option.label"
             :disabled="option.disabled"
             role="option"
             :aria-selected="option.selected ? 'true' : 'false'"
@@ -87,6 +88,7 @@
             class="composer-model-reasoning-option composer-model-reasoning-option--sub"
             :class="[option.toneClass, { 'is-selected': option.selected }]"
             :data-value="option.value"
+            :title="option.label"
             role="option"
             :aria-selected="option.selected ? 'true' : 'false'"
             @click="onReasoningClick(option.value)"
@@ -147,7 +149,7 @@ const reasoningPopoverStyle = ref<Record<string, string>>({});
 const POPOVER_GAP_PX = 6;
 const VIEWPORT_PADDING_PX = 8;
 const POPOVER_MAX_HEIGHT_PX = 320;
-const MODEL_POPOVER_MIN_WIDTH_PX = 224;
+const MODEL_POPOVER_MIN_WIDTH_PX = 300;
 const REASONING_POPOVER_WIDTH_PX = 176;
 
 function onPreservePointerFocus(event: PointerEvent) {
@@ -200,7 +202,10 @@ function updatePopoverPosition() {
   const trigger = triggerRef.value;
   if (!trigger) return;
   const rect = trigger.getBoundingClientRect();
-  const width = Math.max(MODEL_POPOVER_MIN_WIDTH_PX, Math.round(rect.width));
+  const width = Math.min(
+    window.innerWidth - VIEWPORT_PADDING_PX * 2,
+    Math.max(MODEL_POPOVER_MIN_WIDTH_PX, Math.round(rect.width))
+  );
   let left = Math.round(rect.left);
   left = Math.max(VIEWPORT_PADDING_PX, Math.min(left, window.innerWidth - width - VIEWPORT_PADDING_PX));
 

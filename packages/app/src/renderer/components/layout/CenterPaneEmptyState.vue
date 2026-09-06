@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="center-empty-state flex flex-col w-full max-w-[860px] mx-auto pt-[8vh] pb-10 px-6 max-[1500px]:max-w-[720px] max-[1500px]:pt-[6vh] animate-enter-pop"
-  >
+  <div class="center-empty-state">
     <div v-if="loading" class="mono dim flex w-full items-center justify-center gap-3 my-12">
       <span class="running-indicator is-muted" aria-hidden="true"></span>
       <span class="text-sm">{{ t("centerEmpty.loadingMemory") }}</span>
@@ -23,41 +21,10 @@
         </div>
       </div>
 
-      <div
-        v-else-if="historyItems.length > 0"
-        class="center-empty-history w-full animate-enter-slide-up"
-        style="animation-delay: 100ms"
-      >
-        <div class="flex items-center justify-between mb-4 px-1">
-          <h2 class="text-sm max-[1500px]:text-[13px] font-bold text-[var(--text-muted)] flex items-center gap-2">
-            <History class="w-4 h-4" /> {{ t("centerEmpty.history") }}
-          </h2>
-          <span class="text-[12px] max-[1500px]:text-[11px] text-[var(--text-muted)] opacity-60">{{
-            t("centerEmpty.recentCount", { count: historyItems.length })
-          }}</span>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 max-[1500px]:gap-2.5">
-          <button
-            v-for="(item, index) in historyItems"
-            :key="item.id"
-            type="button"
-            :style="{ animationDelay: `${index * 40 + 150}ms` }"
-            class="group flex flex-col items-start justify-center h-[72px] max-[1500px]:h-[64px] px-4 max-[1500px]:px-3 rounded-xl border border-[var(--border)] bg-[var(--surface-1)]/50 hover:bg-[var(--surface-1)] text-left transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[color:var(--border-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/30 active:scale-[0.98] opacity-0 animate-enter-slide-up"
-            @click="$emit('switch-thread', item.id)"
-          >
-            <span
-              class="title font-medium text-[14px] max-[1500px]:text-[13px] text-[var(--text)] group-hover:text-[var(--accent)] transition-colors w-full truncate mb-1"
-            >
-              {{ item.title }}
-            </span>
-            <span
-              class="text-[11px] max-[1500px]:text-[10px] text-[var(--text-muted)] font-mono opacity-70 flex items-center gap-1"
-            >
-              <MessageSquareText class="w-3 h-3" /> {{ t("centerEmpty.chatThread") }}
-            </span>
-          </button>
-        </div>
+      <div v-else class="new-task-heading">
+        <BrandLogo kind="symbol" />
+        <h1>{{ t("threadHistory.newThread") }}</h1>
+        <TopBarWorkspaceButton />
       </div>
     </template>
   </div>
@@ -66,7 +33,8 @@
 <script setup lang="ts">
 import type { ThreadHistoryItem } from "../../domain/types";
 import LoadingDots from "../ui/LoadingDots.vue";
-import { History, MessageSquareText } from "lucide-vue-next";
+import BrandLogo from "../brand/BrandLogo.vue";
+import TopBarWorkspaceButton from "./topbar/TopBarWorkspaceButton.vue";
 import { useI18n } from "vue-i18n";
 
 defineProps<{

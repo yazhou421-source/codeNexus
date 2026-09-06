@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_MODEL_NAME, buildModelPickerOptions } from "./modelCatalog";
 
 describe("provider model picker catalog", () => {
+  it("uses the authoritative Codex list without adding built-in or custom ungranted models", () => {
+    expect(buildModelPickerOptions({ codexIds: ["gpt-6-astra", "gpt-5.5"], providerIds: ["deepseek-v4-flash"], customIds: ["not-granted"] }))
+      .toEqual(["gpt-6-astra", "gpt-5.5", "deepseek-v4-flash"]);
+    expect(buildModelPickerOptions({ codexIds: ["gpt-5.5"], customIds: ["gpt-6-astra"] })).toEqual(["gpt-5.5"]);
+    expect(buildModelPickerOptions({ codexIds: [], providerIds: ["deepseek-v4-flash"] })).toEqual(["deepseek-v4-flash"]);
+  });
   it("adds available Provider models without duplicating built-in or custom models", () => {
     const result = buildModelPickerOptions({
       providerIds: ["deepseek-v4-pro", DEFAULT_MODEL_NAME, "deepseek-v4-pro"],

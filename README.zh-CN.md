@@ -1,3 +1,5 @@
+> 当前交付：macOS arm64 · 1.0.4 本机试用候选版，未公开发布。本地安装包及验收结果见 [试用记录](docs/ui-review/DESKTOP-TRIAL.md)。
+
 <p align="center">
   <a href="./README.md">English</a> | 简体中文
 </p>
@@ -15,13 +17,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zhenyue6612/codeNexus/releases/latest">
-    <img src="https://img.shields.io/github/v/release/zhenyue6612/codeNexus?label=release&color=2ea043" alt="最新版本" />
+  <a href="./docs/ui-review/DESKTOP-TRIAL.md">
+    <img src="https://img.shields.io/badge/local_trial-1.0.4-2ea043" alt="最新版本" />
   </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/github/license/zhenyue6612/codeNexus?color=6e7681" alt="许可证" />
   </a>
-  <img src="https://img.shields.io/badge/platform-Windows-0078D4" alt="Windows" />
+  <img src="https://img.shields.io/badge/platform-macOS_arm64-333333" alt="macOS arm64" />
   <img src="https://img.shields.io/badge/Electron-40.8.5-47848F?logo=electron&logoColor=white" alt="Electron 40.8.5" />
   <img src="https://img.shields.io/badge/Vue-3.5.28-42b883?logo=vuedotjs&logoColor=white" alt="Vue 3.5.28" />
   <img src="https://img.shields.io/badge/TypeScript-5.7.3-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5.7.3" />
@@ -29,7 +31,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zhenyue6612/codeNexus/releases/latest"><strong>下载最新版本</strong></a>
+  <a href="./docs/ui-review/DESKTOP-TRIAL.md"><strong>本机试用包与验收记录</strong></a>
   ·
   <a href="#运行效果">运行效果</a>
   ·
@@ -80,20 +82,20 @@ Calmnova Code 已经对 Codex 协议中的流式输出做了可视化处理，�
 
 ## 亮点
 
-| 领域         | Calmnova Code 提供的能力                                              |
-| ------------ | --------------------------------------------------------------------- |
-| 会话         | 在持久化桌面工作台中启动和继续 Codex 线程。                           |
-| 时间线       | 按上下文查看协议事件、命令活动、审批、diff、MCP 调用和系统消息。      |
-| 工作区       | 浏览项目文件，使用多标签编辑，保存变更，并直观检查 agent 修改内容。   |
-| 审批         | 通过桌面化审阅界面处理命令、补丁和权限请求。                          |
-| 设置         | 集中管理 Provider、模型、Skills、MCP、通知、主题、字体和更新行为。    |
-| Windows 体验 | 面向安装包、窗口生命周期、本地路径处理和更新集成的 Windows 桌面体验。 |
+| 领域             | Calmnova Code 提供的能力                                            |
+| ---------------- | ------------------------------------------------------------------- |
+| 会话             | 在持久化桌面工作台中启动和继续 Codex 线程。                         |
+| 时间线           | 按上下文查看协议事件、命令活动、审批、diff、MCP 调用和系统消息。    |
+| 工作区           | 浏览项目文件，使用多标签编辑，保存变更，并直观检查 agent 修改内容。 |
+| 审批             | 通过桌面化审阅界面处理命令、补丁和权限请求。                        |
+| 设置             | 集中管理 Provider、模型、Skills、MCP、通知、主题、字体和更新行为。  |
+| macOS arm64 体验 | 本地 DMG 安装、原生桌面窗口、本地文件与既有更新集成。               |
 
 ## 环境要求
 
 | 依赖          | 要求                              |
 | ------------- | --------------------------------- |
-| 操作系统      | Windows 10 或 Windows 11          |
+| 操作系统      | macOS（Apple 芯片）               |
 | Node.js       | 建议使用当前 LTS 版本             |
 | 包管理器      | `pnpm@10`                         |
 | Codex Runtime | 内置 `codex-cli 0.153.2`          |
@@ -104,7 +106,7 @@ Codex CLI 的 Provider、模型、账号和环境配置，建议使用 [CC Switc
 正式安装包已经包含固定版本的 Codex Runtime，用户不需要另外安装系统 Codex CLI。源码开发时请先准备内置 Runtime：
 
 ```powershell
-pnpm codex:runtime:fetch -- --platform win-x64
+pnpm codex:runtime:fetch -- --platform mac-arm64
 ```
 
 ## 本地开发

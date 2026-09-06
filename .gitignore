@@ -6,10 +6,12 @@ node_modules/
 # Build outputs
 dist/
 release/
+*.dmg
 .vite/
 coverage/
 *.tsbuildinfo
 packages/app/.cache/codex-runtime/
+packages/app/.cache/bundle/
 packages/app/build/codex-runtime/
 
 # Logs
@@ -24,6 +26,13 @@ pnpm-debug.log*
 .env
 .env.local
 .env.*.local
+.env.production
+/.codex/auth.json
+
+# Local signing credentials
+*.p12
+*.pfx
+AuthKey_*.p8
 
 # OS / editor
 .DS_Store

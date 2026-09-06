@@ -217,6 +217,31 @@ export default {
     loadFailedWithMessage: "加载失败：{message}",
     noBuiltInSounds: "未发现内置铃声（music/）",
   },
+  accountStatus: {
+    title: "认证状态",
+    description:
+      "GPT-5.5 等 Codex 认证模型复用本机 Codex 的 ChatGPT 登录。通过账户接口确认，不发送模型任务；API Key 模型的状态单独显示在下方。",
+    source: "凭据来源：",
+    plan: "账户套餐：",
+    checked: "最近检查：",
+    failed: "暂时无法确认认证状态。请检查网络或重试；这不代表凭据已失效。",
+    expiredHelp: "登录凭据已无法通过认证，请重新登录。",
+    login: "登录 ChatGPT / Codex",
+    states: {
+      unknown: "暂时无法确认",
+      checking: "正在检查",
+      logging_in: "等待登录",
+      logged_in: "已登录",
+      logged_out: "未登录",
+      expired: "已失效",
+    },
+    storage: {
+      file: "Codex 凭据文件",
+      keyring: "系统钥匙串",
+      auto: "Codex 自动选择钥匙串或文件",
+      unknown: "由 Codex 管理的登录存储",
+    },
+  },
   settingsUpdate: {
     aria: "应用更新设置",
     title: "应用更新",
@@ -231,8 +256,13 @@ export default {
     install: "重启安装",
     processing: "处理中...",
     progress: "下载进度 {percent}%",
-    description: "应用启动后会自动检查 GitHub Releases。发现新版本后，需要手动下载并重启安装。",
+    description:
+      "配置更新源后，启动时自动检查；下载后由你选择重启安装。本试用版尚未配置更新源，不连接任何线上更新服务。",
+    checkedAt: "最近检查",
+    installBlocked: "有任务正在运行，请先完成或停止任务，再重启安装。",
+    actionFailed: "操作未完成，请重试。",
     statuses: {
+      unconfigured: "更新源未配置",
       unsupported: "开发模式不可用",
       idle: "待检查",
       checking: "正在检查",
@@ -1237,7 +1267,7 @@ export default {
     remoteModels: {
       connectFirst: "连接服务后可从 Codex 读取可用模型（model/list），无需手动查找。",
       loading: "正在读取可用模型...",
-      error: "读取可用模型失败，可点击刷新重试。",
+      error: "Codex 模型列表加载失败，可在设置中点击刷新重试。",
       loaded: "已读取 {count} 个可用模型。",
       refreshHint: "点击刷新读取可用模型列表。",
       notLoaded: "未加载，点击刷新",
@@ -1540,6 +1570,7 @@ export default {
     turnCompletedBody: "{title} 已完成一次回复。",
   },
   runtime: {
+    turnInterrupted: "已中断",
     noService: "未连接服务",
     noWorkspace: "无工作区",
     noWorkspaceSelected: "未选择工作区",

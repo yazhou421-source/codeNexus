@@ -27,12 +27,23 @@
         </div>
 
         <div v-if="updateState.status === 'downloading'" class="settings-update-progress" aria-live="polite">
-          <div class="settings-update-progress-track">
+          <div
+            class="settings-update-progress-track"
+            role="progressbar"
+            :aria-valuenow="progressPercent"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-label="t('settingsUpdate.downloading')"
+          >
             <div class="settings-update-progress-fill" :style="{ width: `${progressPercent}%` }"></div>
           </div>
           <div class="mono dim text-[12px]">{{ progressText }}</div>
         </div>
 
+        <div v-if="actionError" role="alert">{{ actionError }}</div>
+        <div v-if="updateState.checkedAt" class="dim text-[12px]">
+          {{ t("settingsUpdate.checkedAt") }}: {{ new Date(updateState.checkedAt).toLocaleString() }}
+        </div>
         <div v-if="updateState.errorMessage" class="dim text-[12px] leading-[1.25]">
           {{ updateState.errorMessage }}
         </div>
@@ -70,6 +81,7 @@ const DEFAULT_STATE: AppUpdateSnapshot = {
 
 const updateState = reactive<AppUpdateSnapshot>({ ...DEFAULT_STATE });
 const actionRunning = ref(false);
+const actionError = ref("");
 let offUpdateState: (() => void) | null = null;
 
 const applyState = (next: AppUpdateSnapshot) => {
@@ -84,7 +96,12 @@ const progressPercent = computed(() => {
   return Math.max(0, Math.min(100, Math.round(percent)));
 });
 
-const progressText = computed(() => t("settingsUpdate.progress", { percent: progressPercent.value }));
+const progressText = computed(() => {
+  const p = updateState.progress;
+  const amount =
+    p && p.total > 0 ? ` · ${(p.transferred / 1048576).toFixed(1)} / ${(p.total / 1048576).toFixed(1)} MB` : "";
+  return t("settingsUpdate.progress", { percent: progressPercent.value }) + amount;
+});
 
 const releaseSummary = computed(() => {
   const parts = [updateState.releaseName, updateState.releaseNotes].filter(Boolean);
@@ -95,7 +112,7 @@ const primaryActionLabel = computed(() => {
   if (actionRunning.value) return t("settingsUpdate.processing");
   if (updateState.status === "checking") return t("settingsUpdate.checking");
   if (updateState.status === "downloading") return t("settingsUpdate.downloading");
-  if (updateState.status === "available") return t("settingsUpdate.download");
+  if (updateState.updateAvailable && !updateState.downloaded) return t("settingsUpdate.download");
   if (updateState.status === "downloaded") return t("settingsUpdate.install");
   return t("settingsUpdate.check");
 });
@@ -109,8 +126,9 @@ const actionDisabled = computed(() => {
 const onPrimaryAction = async () => {
   if (actionDisabled.value) return;
   actionRunning.value = true;
+  actionError.value = "";
   try {
-    if (updateState.status === "available") {
+    if (updateState.updateAvailable && !updateState.downloaded) {
       applyState(await codexDesktop.app.downloadUpdate());
       return;
     }
@@ -119,6 +137,11 @@ const onPrimaryAction = async () => {
       return;
     }
     applyState(await codexDesktop.app.checkForUpdates());
+  } catch (error) {
+    actionError.value =
+      error instanceof Error && error.message.includes("AI task is running")
+        ? t("settingsUpdate.installBlocked")
+        : t("settingsUpdate.actionFailed");
   } finally {
     actionRunning.value = false;
   }

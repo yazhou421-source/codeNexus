@@ -2,7 +2,16 @@
   <section class="settings-page" :aria-label="t('settings.pageAria')">
     <div class="settings-workspace">
       <aside class="settings-sidebar app-scrollbar" :aria-label="t('settings.sidebarAria')">
-        <nav class="settings-nav" role="tablist" :aria-label="t('settings.tabsAria')">
+        <button class="settings-back" type="button" @click="appShellStore.closeSettings()">
+          <ArrowLeft aria-hidden="true" />{{ t("common.back") }}
+        </button>
+        <nav
+          class="settings-nav"
+          @keydown="onNavKeydown"
+          role="tablist"
+          aria-orientation="vertical"
+          :aria-label="t('settings.tabsAria')"
+        >
           <section v-for="group in tabGroups" :key="group.label" class="settings-nav-group">
             <div class="settings-nav-section">{{ group.label }}</div>
             <button
@@ -13,6 +22,7 @@
               type="button"
               role="tab"
               :aria-selected="activeTab === tab.key ? 'true' : 'false'"
+              :tabindex="activeTab === tab.key ? 0 : -1"
               @click="appShellStore.setSettingsTab(tab.key)"
             >
               <component :is="tab.icon" class="settings-nav-icon" aria-hidden="true" />
@@ -49,6 +59,7 @@
 import { computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import {
+  ArrowLeft,
   Bell,
   Bot,
   Cpu,
@@ -150,6 +161,22 @@ const tabGroups = computed(() => [
     ],
   },
 ]);
+
+function onNavKeydown(event: KeyboardEvent) {
+  if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+  const buttons = Array.from((event.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+  const index = buttons.indexOf(event.target as HTMLButtonElement);
+  if (index < 0) return;
+  event.preventDefault();
+  const next =
+    event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? buttons.length - 1
+        : (index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
+  buttons[next]?.focus();
+  buttons[next]?.click();
+}
 
 watch(
   () => appShellStore.settingsOpen,

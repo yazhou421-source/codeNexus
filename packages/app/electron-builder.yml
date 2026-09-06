@@ -2,12 +2,8 @@ appId: com.calmnova.code
 productName: Calmnova Code
 executableName: Calmnova Code
 
-publish:
-  provider: github
-  owner: QinQinChina
-  repo: codeNexus
-  releaseType: release
-  channel: latest
+# No online update feed is configured for this local trial.
+publish: null
 
 directories:
   buildResources: build
@@ -16,15 +12,18 @@ directories:
 asar: true
 beforePack: scripts/electron-builder-before-pack.mjs
 
+# Main/preload and renderer are fully bundled. Do not ship their source dependencies twice.
 files:
   - from: .
     to: .
     filter:
       - package.json
+      - "!node_modules{,/**/*}"
   - from: dist
     to: dist
     filter:
       - "**/*"
+      - "!**/*.map"
 
 extraResources:
   - from: codex-runtime-manifest.json
@@ -47,19 +46,8 @@ extraResources:
     to: music
     filter:
       - "**/*"
-  - from: build/icon.ico
-    to: icon.ico
   - from: build/branding/app-icon-1024.png
     to: branding/app-icon.png
-
-win:
-  icon: build/icon.ico
-  artifactName: "Calmnova-Code-Setup-${version}.${ext}"
-  signAndEditExecutable: true
-  target:
-    - target: nsis
-      arch:
-        - x64
 
 mac:
   icon: build/icon.icns
@@ -86,11 +74,3 @@ dmg:
       y: 190
       type: link
       path: /Applications
-
-nsis:
-  oneClick: false
-  perMachine: false
-  allowToChangeInstallationDirectory: true
-  installerIcon: build/icon.ico
-  uninstallerIcon: build/icon.ico
-  installerHeaderIcon: build/icon.ico

@@ -1,53 +1,12 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  windows:
-    name: Build Windows installer
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build app
-        run: pnpm run build
-
-      - name: Prepare bundled Codex runtime
-        run: pnpm --filter @codenexus/app codex:runtime:fetch -- --platform win-x64
-
-      - name: Verify bundled Codex runtime
-        run: pnpm --filter @codenexus/app codex:runtime:verify -- --platform win-x64
-
-      - name: Verify generated Codex protocol
-        run: pnpm codex:types:check
-
-      - name: Publish release artifacts
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm --filter @codenexus/app exec electron-builder --config electron-builder.yml --publish always
-
   macos-arm64:
     name: Build macOS arm64 artifacts
     runs-on: macos-14
@@ -82,7 +41,13 @@ jobs:
       - name: Verify generated Codex protocol
         run: pnpm codex:types:check
 
-      - name: Publish release artifacts
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm --filter @codenexus/app exec electron-builder --config electron-builder.yml --mac --arm64 --publish always
+      - name: Package local trial (publishing disabled until a feed is configured)
+        run: pnpm --filter @codenexus/app exec electron-builder --config electron-builder.yml --mac dmg zip --arm64 --publish never
+
+      - name: Save trial artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Calmnova-macOS-arm64
+          path: |
+            packages/app/release/*.dmg
+            packages/app/release/*.zip

@@ -44,6 +44,7 @@ import { ProviderSecretStore, ElectronSafeStorageEncryption } from "./services/P
 import { ProviderPreferencesStore } from "./services/ProviderPreferencesStore";
 import { ProviderRuntimeService } from "./services/ProviderRuntimeService";
 import { CodexAccountService } from "./services/CodexAccountService";
+import { CodexModelCatalogService } from "./services/CodexModelCatalogService";
 import { detectLegacyUserData } from "./services/OnboardingMigrationService";
 import { migrateProductUserDataFailSoft } from "./services/ProductUserDataMigrationService";
 import {
@@ -102,7 +103,13 @@ const embeddedRouterManager = new EmbeddedRouterManager(
   },
   { resolveSecret: (secretRef) => providerRuntimeService?.resolveSecret(secretRef) }
 );
+const codexModelCatalogService = new CodexModelCatalogService();
 const codexServerManager = new CodexServerManager({
+  listAccountModels: async () => {
+    const data = await codexModelCatalogService.list();
+    if (managedRouterRuntimeActive && providerRuntimeService) await providerRuntimeService.syncCodexModels(data);
+    return { data, nextCursor: null };
+  },
   resolveRuntimeConfig: () =>
     createCodexRouterRuntime(embeddedRouterManager.ownedConnection, {
       modelCatalogPath: routerModelCatalogPath,
@@ -132,9 +139,12 @@ function sendToRenderer(channel: string, payload: unknown) {
   }
 }
 
-const updateService = new UpdateService((payload) => {
-  sendToRenderer(IPC_APP_CHANNELS.appUpdateState, payload);
-});
+const updateService = new UpdateService(
+  (payload) => {
+    sendToRenderer(IPC_APP_CHANNELS.appUpdateState, payload);
+  },
+  { canInstall: () => !codexServerManager.hasActiveTurns() }
+);
 
 function pushHistoryUpdate(items: HistoryThread[]) {
   sendToRenderer(IPC_EVENT_CHANNELS.historyUpdated, { items: runtimeThreadStateTracker.decorateHistoryItems(items) });
@@ -433,6 +443,7 @@ app
       getMainWindow: () => mainWindow,
       serverManager: codexServerManager,
       sendCodexEvent: (payload) => {
+        if (historyStore.interruptedTurns.observe(payload.msg) === false) return;
         runtimeThreadStateTracker.observeEvent(payload);
         sendToRenderer(IPC_EVENT_CHANNELS.codexEvent, payload);
       },

@@ -51,60 +51,6 @@
           "purpose": "Bundled zsh used by shell snapshot and execution"
         }
       ]
-    },
-    "win-x64": {
-      "target": "x86_64-pc-windows-msvc",
-      "asset": {
-        "name": "codex-package-x86_64-pc-windows-msvc.tar.gz",
-        "url": "https://github.com/openai/codex/releases/download/rust-v0.153.2/codex-package-x86_64-pc-windows-msvc.tar.gz",
-        "sha256": "eaa00e30f3c1a2b5ca8263960f340a8e5d06fb705de09716f9a2bc42eceef437",
-        "size": 136067003
-      },
-      "entrypoint": "bin/codex.exe",
-      "files": [
-        {
-          "path": "bin/codex.exe",
-          "sha256": "e86ffd96751ded51f669b520d70ba3139b514eb36313a8eeeedde37baa7b58e3",
-          "size": 295447856,
-          "executable": true,
-          "purpose": "Codex CLI and app-server entrypoint"
-        },
-        {
-          "path": "bin/codex-code-mode-host.exe",
-          "sha256": "ee37f218b8052cf7c2c99fcc5414da20c07262eaab14c81870c6ed8cd522d3f0",
-          "size": 72472880,
-          "executable": true,
-          "purpose": "Code-mode host used by Codex tool execution"
-        },
-        {
-          "path": "codex-package.json",
-          "sha256": "a37bbfd7b817d39a78f685a3af358a0f7aab7dcb533b893437e1003e589ce510",
-          "size": 215,
-          "executable": false,
-          "purpose": "Official package layout and version metadata"
-        },
-        {
-          "path": "codex-path/rg.exe",
-          "sha256": "14231169855ec5205cf5a1b6f1db358ff4aed4247c86b69ce8aae647c77f6680",
-          "size": 4218880,
-          "executable": true,
-          "purpose": "Bundled ripgrep used for workspace search"
-        },
-        {
-          "path": "codex-resources/codex-command-runner.exe",
-          "sha256": "7d4e37fafc1ca073d281964f9a86f2ac9cfa588f86e63d33cc380c48658c5b76",
-          "size": 8204080,
-          "executable": true,
-          "purpose": "Windows command runner used by sandboxed execution"
-        },
-        {
-          "path": "codex-resources/codex-windows-sandbox-setup.exe",
-          "sha256": "77157133a72dd129947841587a28ab27370c1059b99de7904a35f6f9b26d3a1f",
-          "size": 15412016,
-          "executable": true,
-          "purpose": "Windows sandbox setup helper"
-        }
-      ]
     }
   },
   "licenses": [

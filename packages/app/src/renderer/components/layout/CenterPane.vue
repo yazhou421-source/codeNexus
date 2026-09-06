@@ -172,6 +172,7 @@ import { isPendingThreadId } from "../../shared/threadCreateDebug";
 import { useAppShellStore } from "../../stores/appShell.store";
 import { useConfigStore } from "../../stores/config.store";
 import { useMessageQueueStore } from "../../stores/messageQueue.store";
+import { useAccountStatusStore } from "../../stores/accountStatus.store";
 import { useModelCatalogStore } from "../../stores/modelCatalog.store";
 import { useRuntimeStore, type SandboxMode } from "../../stores/runtime.store";
 import { useSkillsUiStore } from "../../stores/skillsUi.store";
@@ -314,17 +315,20 @@ const emptyStateMode = computed<"default" | "pendingThread">(() => {
 const modelOptions = computed(() => {
   const ids = buildModelPickerOptions({
     customIds: modelCatalogStore.customIds,
+    codexIds: modelCatalogStore.remoteIds,
     providerIds: providerRegistryStore.availableModelIds,
     current: runtimeStore.model,
   });
   return ids.map((id) => {
     const knownProviderModel = providerRegistryStore.isKnownProviderModel(id);
-    const available = providerRegistryStore.isAvailableProviderModel(id);
+    const available = knownProviderModel
+      ? providerRegistryStore.isAvailableProviderModel(id)
+      : !modelCatalogStore.isRemoteModelUnavailable(id);
     const baseLabel = providerRegistryStore.modelLabels[id] || id;
     return {
       value: id,
-      label: knownProviderModel && !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
-      disabled: knownProviderModel && !available,
+      label: !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
+      disabled: !available,
     };
   });
 });
@@ -380,7 +384,7 @@ const shouldShowCenterEmptyState = computed(() => {
   if (contentTimelineEvents.value.length > 0) return false;
   if (emptyStateMode.value === "pendingThread") return true;
   if (currentThreadId.value) return false;
-  return emptyStateHistoryItems.value.length > 0;
+  return true;
 });
 const composerDockSpacePx = computed(() => {
   if (!shouldShowComposerPanel.value) return 12;
@@ -415,6 +419,7 @@ const isTimelineCompact = computed(() => {
 const timelinePaneClass = computed(() => {
   if (skillsUiStore.managerOpen) return ["timeline-pane--skills-page"];
   const classes = ["timeline-pane--chat"];
+  if (shouldShowCenterEmptyState.value && emptyStateMode.value === "default") classes.push("is-new-task");
   if (runtimeStore.timelineDebugEnabled) classes.push("is-debug-open");
   if (isTimelineCompact.value) classes.push("is-compact");
   return classes;
@@ -1184,6 +1189,26 @@ async function onEmptyStateSwitchThread(threadId: string) {
 }
 
 watch(
+  () => useAccountStatusStore().status,
+  (status) => {
+    void modelCatalogStore.accountStatusChanged(status);
+  },
+  { immediate: true }
+);
+
+watch(
+  () => modelCatalogStore.remoteLoadState,
+  (state) => {
+    if (state === "error" && modelCatalogStore.retryAttempt <= 1)
+      showToast({ kind: "error", message: t("globalConfig.remoteModels.error"), timeoutMs: 8000 });
+  }
+);
+
+function refreshAccountModelChoices() {
+  void modelCatalogStore.ensureRemoteModels();
+}
+
+watch(
   () => runtimeStore.composerFocusSeq,
   () => {
     nextTick(() => composerInputRef.value?.focus());
@@ -1334,6 +1359,7 @@ onMounted(() => {
   window.addEventListener("resize", onWindowLayoutChange);
   window.addEventListener("scroll", onWindowViewportChange, true);
   window.addEventListener("keydown", onWindowKeydown);
+  window.addEventListener("focus", refreshAccountModelChoices);
   scheduleTimelineViewportStateUpdate();
 });
 
@@ -1341,6 +1367,8 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", onWindowLayoutChange);
   window.removeEventListener("scroll", onWindowViewportChange, true);
   window.removeEventListener("keydown", onWindowKeydown);
+  window.removeEventListener("focus", refreshAccountModelChoices);
+  modelCatalogStore.cancelRetry();
   window.removeEventListener("keydown", onComposeLightboxWindowKeydown, true);
   if (pendingSlashPopoverPlacementRafId != null) cancelAnimationFrame(pendingSlashPopoverPlacementRafId);
   if (centerContentResizeObserver) {

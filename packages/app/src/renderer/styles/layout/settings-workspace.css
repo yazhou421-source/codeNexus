@@ -1,0 +1,157 @@
+:root[data-theme] .settings-page,
+:root[data-theme] .settings-scroll {
+  background: var(--bg);
+}
+.settings-workspace {
+  grid-template-columns: 248px minmax(0, 1fr);
+}
+:root[data-theme] .settings-sidebar {
+  background: var(--surface-1);
+  padding: 10px 12px;
+}
+.settings-back {
+  margin: 0 0 20px;
+}
+:root[data-theme] .settings-nav-item {
+  min-height: 40px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  padding: 9px 10px;
+}
+:root[data-theme] .settings-nav-item.is-active {
+  background: var(--workspace-selected);
+  border-color: transparent;
+  box-shadow: none;
+}
+.settings-nav-desc {
+  display: none;
+}
+:root[data-theme] .settings-nav-label {
+  font-weight: 500;
+}
+:root[data-theme] .settings-nav-section {
+  font-weight: 500;
+  letter-spacing: 0;
+}
+:root[data-theme] .settings-scroll {
+  padding: 40px 48px;
+}
+:root[data-theme] .settings-stage {
+  max-width: 880px;
+  margin: 0 auto;
+}
+:root[data-theme] .settings-card {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding-bottom: 20px;
+}
+:root[data-theme] .settings-card-head {
+  background: transparent;
+  border: 0;
+}
+:root[data-theme] .settings-row {
+  min-height: 44px;
+  gap: 16px;
+}
+:root[data-theme] .settings-page :is(input, select, textarea) {
+  border-radius: 7px;
+  background: var(--surface-elevated);
+  box-shadow: none;
+}
+:root[data-theme] .settings-page :is(h1, h2) {
+  letter-spacing: -0.4px;
+}
+@media (max-width: 1280px) {
+  :root[data-theme] .settings-scroll {
+    padding: 28px;
+  }
+}
+:root[data-theme] .provider-card {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  padding: 22px 0;
+}
+:root[data-theme] .provider-card-head {
+  align-items: flex-start;
+}
+:root[data-theme] .provider-model-row {
+  min-height: 48px;
+}
+:root[data-theme] .settings-card-title {
+  font-size: 22px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+/* Settings use the same page surface as the conversation, with aligned form rows. */
+:root[data-theme] .settings-page .global-config-drawer-panel {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+:root[data-theme] .settings-page .global-config-drawer-head {
+  padding: 0 0 20px;
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+:root[data-theme] .settings-page .global-config-drawer-head .panel-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+:root[data-theme] .settings-page .global-config-drawer-body {
+  padding: 0;
+  gap: 0;
+}
+:root[data-theme] .settings-page .global-config-local-entry {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 22px 0;
+  margin: 0;
+  align-items: center;
+  gap: 20px;
+}
+:root[data-theme] .settings-page .guide-entry-text {
+  align-content: start;
+  gap: 6px;
+  flex: 1 1 240px;
+}
+:root[data-theme] .settings-page .typography-controls {
+  width: 280px;
+  max-width: 100%;
+}
+:root[data-theme] .settings-page .typography-row {
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+}
+:root[data-theme] .settings-page .global-config-grid {
+  padding-top: 22px;
+}
+:root[data-theme] .settings-page .global-config-section {
+  background: transparent;
+  border: 0;
+  padding-inline: 0;
+}
+:root[data-theme] .settings-page .service-tier-segment {
+  background: var(--surface-1);
+  box-shadow: none;
+}
+:root[data-theme] .settings-page .service-tier-option[aria-checked="true"] {
+  background: var(--workspace-selected);
+  color: var(--text);
+  box-shadow: none;
+}
+
+:root[data-theme] .settings-page .service-tier-thumb {
+  background: var(--workspace-selected);
+  border-color: transparent;
+  box-shadow: none;
+}

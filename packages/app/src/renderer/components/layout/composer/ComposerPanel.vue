@@ -33,6 +33,7 @@
           contenteditable="true"
           role="textbox"
           aria-multiline="true"
+          :aria-label="inputPlaceholder || t('composer.inputPlaceholder')"
           spellcheck="false"
           :data-placeholder="inputPlaceholder || t('composer.inputPlaceholder')"
           @keydown="onComposerKeydown"
@@ -146,7 +147,13 @@
               <ImagePlus class="composer-icon-button-icon" />
             </button>
 
-            <div v-if="variant !== 'inline'" class="composer-context">
+            <div
+              v-if="variant !== 'inline'"
+              class="composer-context"
+              :title="contextUsageTooltip"
+              :aria-label="contextUsageTooltip"
+              tabindex="0"
+            >
               <WaterBallProgress
                 class="composer-context-ball"
                 :percent="contextUsagePercent"
@@ -172,7 +179,7 @@
               @click="emit('send')"
             >
               <div v-if="!sendDisabled && !isTurnRunning" class="composer-send-ping"></div>
-              <SendHorizontal class="composer-send-icon" />
+              <ArrowUp class="composer-send-icon" />
               <span class="composer-send-label">{{ t("composer.send") }}</span>
             </button>
             <button
@@ -198,7 +205,7 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
-import { Bot, ImagePlus, ListTodo, SendHorizontal, Square } from "lucide-vue-next";
+import { ArrowUp, Bot, ImagePlus, ListTodo, Square } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 import type { CollaborationModeKind, ComposeImageAttachment, ComposeWorkspaceFileMention } from "../../../domain/types";
 import {

@@ -6,7 +6,7 @@ import { getCachedUserLocalSettings, patchUserLocalSettings } from "../domain/lo
 import { getRuntimeOrchestrator } from "../domain/runtimeOrchestrator";
 import { useProviderRegistryStore } from "./providerRegistry.store";
 
-type AccountState = "idle" | "checking" | "logged_out" | "logging_in" | "logged_in" | "failed";
+type AccountState = "idle" | "checking" | "logged_out" | "logging_in" | "logged_in" | "expired" | "failed";
 
 export const useOnboardingStore = defineStore("onboarding", {
   state: () => ({

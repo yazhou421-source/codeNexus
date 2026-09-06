@@ -47,6 +47,7 @@ export class CodexServerManager {
       isServerBusy?: (serverId: string) => boolean;
       refreshRetryBaseMs?: number;
       createServer?: (options: ConstructorParameters<typeof CodexAppServer>[0]) => CodexAppServer;
+      listAccountModels?: () => Promise<CodexRpcResult<"model/list">>;
     } = {}
   ) {}
 
@@ -87,6 +88,10 @@ export class CodexServerManager {
       attempts.push(this.refreshWhenSafe(serverId, record));
     }
     await Promise.all(attempts);
+  }
+
+  hasActiveTurns(): boolean {
+    return [...this.servers].some(([id, record]) => this.recordBusy(id, record));
   }
 
   runtimeState(serverId: string): CodexServerRuntimeState | null {
@@ -144,8 +149,16 @@ export class CodexServerManager {
     if (firstError) throw firstError;
   }
 
+  async listAccountModels(): Promise<CodexRpcResult<"model/list">> {
+    if (!this.options.listAccountModels) throw new Error("Account model discovery is unavailable.");
+    return this.options.listAccountModels();
+  }
+
   async request<M extends CodexRpcMethod>(args: CodexRpcArgs<M>): Promise<CodexRpcResult<M>> {
     const record = this.getServer(args.serverId);
+    if (args.method === "model/list" && this.options.listAccountModels) {
+      return (await this.listAccountModels()) as CodexRpcResult<M>;
+    }
     const protectsTurnStart = args.method === "turn/start";
     if (protectsTurnStart && record.startedWithRevision < this.runtimeRevision) {
       record.pendingRefresh = true;

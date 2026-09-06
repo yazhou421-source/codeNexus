@@ -29,3 +29,7 @@
 @import "../theme/component-tokens.css";
 @import "../theme/app-themes.css";
 @import "../theme/view-transition.css";
+@import "../theme/workspace-tokens.css";
+@import "./foundation/workspace.css";
+@import "./layout/center/workspace.css";
+@import "./layout/settings-workspace.css";

@@ -245,6 +245,21 @@ export function parseSessionReplayEvents(entries: HistoryThreadEvent[], threadId
   }
   const events: ReplayTimelineEvent[] = [];
   const seenMessage = new Set<string>();
+  const stoppedTurns = new Set<string>();
+  const snapshotTurns = new Set(
+    entries.filter((e) => e.type === "calmnova_interrupted_turn").map((e) => String((e.payload as any)?.turnId ?? ""))
+  );
+  const canonicalReplies = new Map<string, string[]>();
+  let canonicalTurn = "";
+  for (const entry of entries) {
+    const p = entry.payload as any;
+    canonicalTurn = normalizeText(p?.turn_id ?? p?.turnId ?? p?.turn?.id) || canonicalTurn;
+    if (entry.type === "response_item" && p?.type === "message" && p.role === "assistant") {
+      const replies = canonicalReplies.get(canonicalTurn) ?? [];
+      replies.push(extractTextFromContent(p.content) || normalizeText(p.text));
+      canonicalReplies.set(canonicalTurn, replies);
+    }
+  }
   const seenContextSummary = new Set<string>();
   const seenUserMessageIndex = new Map<string, number>();
   const pendingCalls = new Map<
@@ -362,6 +377,10 @@ export function parseSessionReplayEvents(entries: HistoryThreadEvent[], threadId
   ) => {
     const normalized = normalizeUserMessagePayload(payload);
     if (!normalized.displayText) return;
+    if (/^<turn_aborted>[\s\S]*<\/turn_aborted>$/.test(normalized.displayText.trim())) {
+      if (!snapshotTurns.has(turnId)) pushInterrupted(turnId, createdAt);
+      return;
+    }
 
     const dedupeKeys = buildUserDedupeKeys(turnId, normalized.canonical, createdAt);
     const existingIdx = findExistingUserMessageIndex(dedupeKeys);
@@ -461,6 +480,12 @@ export function parseSessionReplayEvents(entries: HistoryThreadEvent[], threadId
     });
   };
 
+  const pushInterrupted = (turnId: string, createdAt: number) => {
+    if (stoppedTurns.has(turnId)) return;
+    stoppedTurns.add(turnId);
+    push({ method: "local/turnInterrupted", paramsText: "", turnId, createdAt });
+  };
+
   for (const entry of entries) {
     if (!entry || typeof entry !== "object" || !normalizeText((entry as any).type)) {
       throw new Error(translate("runtime.sessionsInvalidLogLine"));
@@ -477,6 +502,21 @@ export function parseSessionReplayEvents(entries: HistoryThreadEvent[], threadId
     if (contextualTurnId) {
       activeTurnId = contextualTurnId;
       ensureTurnStarted(contextualTurnId, createdAt);
+    }
+
+    if (type === "calmnova_interrupted_turn") {
+      const turnId = normalizeText(payload?.turnId);
+      for (const item of payload?.messages ?? []) {
+        if (!(canonicalReplies.get(turnId) ?? []).some((text) => text.startsWith(normalizeText(item.text)))) {
+          pushAssistantMessage(turnId, item.text, createdAt - 1, normalizeAgentMessagePhase(item.phase));
+        }
+      }
+      pushInterrupted(turnId, createdAt);
+      continue;
+    }
+    if (type === "event_msg" && payload?.type === "turn_aborted") {
+      if (!snapshotTurns.has(activeTurnId)) pushInterrupted(activeTurnId, createdAt);
+      continue;
     }
 
     if (type === "turn_context") {

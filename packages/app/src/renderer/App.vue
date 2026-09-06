@@ -193,10 +193,19 @@ watch(
   }
 );
 
-const UNIFIED_SIDEBAR_WIDTH_PX = 300;
+const UNIFIED_SIDEBAR_WIDTH_PX = 248;
 const CENTER_EDITOR_KEYBOARD_STEP_PX = 20;
 
 const mainRef = ref<HTMLElement | null>(null);
+const mainWidthPx = ref(window.innerWidth);
+let mainResizeObserver: ResizeObserver | null = null;
+onMounted(() => {
+  if (!mainRef.value) return;
+  mainResizeObserver = new ResizeObserver(([entry]) => {
+    if (entry) mainWidthPx.value = entry.contentRect.width;
+  });
+  mainResizeObserver.observe(mainRef.value);
+});
 const mainViewTransitionName = ref("main-view-fade");
 const leftPaneTransitionName = ref("left-pane-switch-forward");
 const editorResizeState = ref<{
@@ -300,7 +309,7 @@ const mainStyle = computed(
     }) as Record<string, string>
 );
 
-const getMainWidthPx = () => mainRef.value?.getBoundingClientRect().width ?? window.innerWidth;
+const getMainWidthPx = () => mainWidthPx.value;
 
 const clampEditorPreferredWidthPx = (value: number) => {
   const totalWidth = resolvedShellWidths.value.centerWidth;
@@ -371,6 +380,7 @@ const onEditorSashKeydown = (event: KeyboardEvent) => {
 };
 
 onBeforeUnmount(() => {
+  mainResizeObserver?.disconnect();
   try {
     stopWindowStateListener?.();
   } catch {}

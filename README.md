@@ -1,3 +1,5 @@
+> Current delivery: macOS arm64 · 1.0.4 local trial candidate, not a public release. See [trial notes](docs/ui-review/DESKTOP-TRIAL.md) for local package details and verification.
+
 <p align="center">
   English | <a href="./README.zh-CN.md">简体中文</a>
 </p>
@@ -15,13 +17,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zhenyue6612/codeNexus/releases/latest">
-    <img src="https://img.shields.io/github/v/release/zhenyue6612/codeNexus?label=release&color=2ea043" alt="Latest release" />
+  <a href="./docs/ui-review/DESKTOP-TRIAL.md">
+    <img src="https://img.shields.io/badge/local_trial-1.0.4-2ea043" alt="Latest release" />
   </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/github/license/zhenyue6612/codeNexus?color=6e7681" alt="License" />
   </a>
-  <img src="https://img.shields.io/badge/platform-Windows-0078D4" alt="Windows" />
+  <img src="https://img.shields.io/badge/platform-macOS_arm64-333333" alt="macOS arm64" />
   <img src="https://img.shields.io/badge/Electron-40.8.5-47848F?logo=electron&logoColor=white" alt="Electron 40.8.5" />
   <img src="https://img.shields.io/badge/Vue-3.5.28-42b883?logo=vuedotjs&logoColor=white" alt="Vue 3.5.28" />
   <img src="https://img.shields.io/badge/TypeScript-5.7.3-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5.7.3" />
@@ -29,7 +31,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zhenyue6612/codeNexus/releases/latest"><strong>Download Latest Release</strong></a>
+  <a href="./docs/ui-review/DESKTOP-TRIAL.md"><strong>Local Trial & Verification</strong></a>
   ·
   <a href="#screenshots">Screenshots</a>
   ·
@@ -80,20 +82,20 @@ This capability depends on Codex experimental protocol events. Enable the stream
 
 ## Highlights
 
-| Area               | What Calmnova Code Provides                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Sessions           | Start and continue Codex threads in a persistent desktop workspace.                                          |
-| Timeline           | Review protocol events, command activity, approvals, diffs, MCP calls, and system messages in context.       |
-| Workspace          | Browse project files, open multiple editor tabs, save changes, and inspect agent edits visually.             |
-| Approvals          | Handle command, patch, and permission requests through desktop-native review surfaces.                       |
-| Settings           | Manage providers, models, skills, MCP, notifications, theme, fonts, and update behavior from one place.      |
-| Windows Experience | Installer-oriented packaging, desktop window lifecycle handling, local path support, and update integration. |
+| Area        | What Calmnova Code Provides                                                                             |
+| ----------- | ------------------------------------------------------------------------------------------------------- |
+| Sessions    | Start and continue Codex threads in a persistent desktop workspace.                                     |
+| Timeline    | Review protocol events, command activity, approvals, diffs, MCP calls, and system messages in context.  |
+| Workspace   | Browse project files, open multiple editor tabs, save changes, and inspect agent edits visually.        |
+| Approvals   | Handle command, patch, and permission requests through desktop-native review surfaces.                  |
+| Settings    | Manage providers, models, skills, MCP, notifications, theme, fonts, and update behavior from one place. |
+| macOS arm64 | Local DMG installer, native desktop lifecycle, workspace files, and update integration.                 |
 
 ## Requirements
 
 | Dependency       | Requirement                         |
 | ---------------- | ----------------------------------- |
-| Operating system | Windows 10 or Windows 11            |
+| Operating system | macOS on Apple silicon              |
 | Node.js          | Current LTS recommended             |
 | Package manager  | `pnpm@10`                           |
 | Codex runtime    | Bundled `codex-cli 0.153.2`         |
@@ -104,7 +106,7 @@ For Codex CLI provider, model, account, and environment configuration, use [CC S
 Release builds include the pinned Codex runtime, so users do not need a system Codex CLI. For source development, prepare the bundled runtime with:
 
 ```powershell
-pnpm codex:runtime:fetch -- --platform win-x64
+pnpm codex:runtime:fetch -- --platform mac-arm64
 ```
 
 ## Development

@@ -34,8 +34,8 @@
   --radius-pill: 999px;
   --mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
   --system-ui-font:
-    "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC",
-    sans-serif;
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC",
+    "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
   --system-cn-font:
     "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC", "Segoe UI",
     sans-serif;

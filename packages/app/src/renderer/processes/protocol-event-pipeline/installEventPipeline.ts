@@ -1449,6 +1449,15 @@ export function installEventPipeline(pinia: Pinia) {
       const params = n.params;
       const completedTurnId = resolveId(params.turn.id, rawTurnId, activeTurnId);
       const err = params.turn.error ?? null;
+      if (params.turn.status === "interrupted" && effectiveThreadId && completedTurnId) {
+        timelineStore.appendEvent({
+          id: `interrupted:${effectiveThreadId}:${completedTurnId}`,
+          threadId: effectiveThreadId,
+          turnId: completedTurnId,
+          method: "local/turnInterrupted",
+          paramsText: "",
+        });
+      }
       if (effectiveThreadId && effectiveThreadId !== "__app__") {
         clearThreadPreparingEvent(effectiveThreadId);
         threadStore.setThreadRunning(effectiveThreadId, false);
@@ -1463,11 +1472,19 @@ export function installEventPipeline(pinia: Pinia) {
           );
         }
         if (completedTurnId) {
-          completeThinkingEvent({
-            threadId: effectiveThreadId,
-            turnId: completedTurnId,
-            failed: Boolean(err),
-          });
+          if (params.turn.status === "interrupted") {
+            clearThinkingTurnTimers(effectiveThreadId, completedTurnId);
+            timelineStore.removeEvent({
+              threadId: effectiveThreadId,
+              id: toThinkingEventId(effectiveThreadId, completedTurnId),
+            });
+          } else {
+            completeThinkingEvent({
+              threadId: effectiveThreadId,
+              turnId: completedTurnId,
+              failed: Boolean(err),
+            });
+          }
           reasoningItemIdByTurnKey.delete(toReasoningTurnKey(effectiveThreadId, completedTurnId));
           const keyPrefix = `${effectiveThreadId}:${completedTurnId}:`;
           for (const key of reasoningSummaryEventIdByKey.keys()) {

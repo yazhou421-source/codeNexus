@@ -218,6 +218,32 @@ export default {
     loadFailedWithMessage: "Load failed: {message}",
     noBuiltInSounds: "No built-in sounds found (music/)",
   },
+  accountStatus: {
+    title: "Authentication status",
+    description:
+      "GPT-5.5 and other Codex-auth models reuse the local Codex ChatGPT sign-in. Checked through the account API without sending a model task. API-key providers have separate status below.",
+    source: "Credential source:",
+    plan: "Account plan:",
+    checked: "Last checked:",
+    failed:
+      "Authentication could not be confirmed. Check the network and retry; this does not mean your credentials expired.",
+    expiredHelp: "The sign-in credentials no longer authenticate. Please sign in again.",
+    login: "Sign in to ChatGPT / Codex",
+    states: {
+      unknown: "Unable to confirm",
+      checking: "Checking",
+      logging_in: "Waiting for sign-in",
+      logged_in: "Signed in",
+      logged_out: "Signed out",
+      expired: "Expired",
+    },
+    storage: {
+      file: "Codex credential file",
+      keyring: "System keychain",
+      auto: "Codex selects keychain or file",
+      unknown: "Codex-managed credential storage",
+    },
+  },
   settingsUpdate: {
     aria: "App update settings",
     title: "App updates",
@@ -233,8 +259,12 @@ export default {
     processing: "Processing...",
     progress: "Download progress {percent}%",
     description:
-      "The app checks GitHub Releases on startup. When a new version is found, download and restart manually.",
+      "The update source is not configured for this trial. Automatic update checks are unavailable until a source is configured. Once configured, you choose when to download and restart to install.",
+    checkedAt: "Last checked",
+    installBlocked: "An AI task is running. Finish or stop it before restarting to install.",
+    actionFailed: "The operation did not complete. Please retry.",
     statuses: {
+      unconfigured: "Update source not configured",
       unsupported: "Unavailable in development",
       idle: "Not checked",
       checking: "Checking",
@@ -1548,6 +1578,7 @@ export default {
     turnCompletedBody: "{title} completed a response.",
   },
   runtime: {
+    turnInterrupted: "Interrupted",
     noService: "Service not connected",
     noWorkspace: "No workspace",
     noWorkspaceSelected: "No workspace selected",

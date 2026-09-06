@@ -1131,17 +1131,20 @@ const onResetGlobalConfig = () => {
 const globalModelOptions = computed(() => {
   const ids = buildModelPickerOptions({
     customIds: modelCatalogStore.customIds,
+    codexIds: modelCatalogStore.remoteIds,
     providerIds: providerRegistryStore.availableModelIds,
     current: configStore.draft.model,
   });
   return ids.map((id) => {
     const knownProviderModel = providerRegistryStore.isKnownProviderModel(id);
-    const available = providerRegistryStore.isAvailableProviderModel(id);
+    const available = knownProviderModel
+      ? providerRegistryStore.isAvailableProviderModel(id)
+      : !modelCatalogStore.isRemoteModelUnavailable(id);
     const baseLabel = providerRegistryStore.modelLabels[id] || id;
     return {
       value: id,
-      label: knownProviderModel && !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
-      disabled: knownProviderModel && !available,
+      label: !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
+      disabled: !available,
     };
   });
 });
@@ -1174,20 +1177,14 @@ const remoteModelPickExists = computed(() => {
   const next = normalizedRemoteModelPick.value;
   return Boolean(next) && modelCatalogStore.availableModelIds.includes(next);
 });
-const canRefreshRemoteModels = computed(
-  () => Boolean(runtimeStore.serverId) && modelCatalogStore.remoteLoadState !== "loading"
-);
+const canRefreshRemoteModels = computed(() => modelCatalogStore.remoteLoadState !== "loading");
 const canAddRemoteModel = computed(
   () => Boolean(normalizedRemoteModelPick.value) && !remoteModelPickExists.value && !modelCatalogControlsDisabled.value
 );
 const remoteModelSelectDisabled = computed(
-  () =>
-    !runtimeStore.serverId ||
-    modelCatalogStore.remoteLoadState === "loading" ||
-    modelCatalogStore.remoteIds.length === 0
+  () => modelCatalogStore.remoteLoadState === "loading" || modelCatalogStore.remoteIds.length === 0
 );
 const remoteModelStatusText = computed(() => {
-  if (!runtimeStore.serverId) return t("globalConfig.remoteModels.connectFirst");
   if (modelCatalogStore.remoteLoadState === "loading") return t("globalConfig.remoteModels.loading");
   if (modelCatalogStore.remoteLoadState === "error") return t("globalConfig.remoteModels.error");
   if (modelCatalogStore.remoteIds.length > 0) {
@@ -1196,13 +1193,11 @@ const remoteModelStatusText = computed(() => {
   return t("globalConfig.remoteModels.refreshHint");
 });
 const remoteModelDropdownOptions = computed(() => {
-  const hasServer = Boolean(runtimeStore.serverId);
   const loading = modelCatalogStore.remoteLoadState === "loading";
   const errored = modelCatalogStore.remoteLoadState === "error";
   const ids = modelCatalogStore.remoteIds;
   let placeholder = t("globalConfig.remoteModels.notLoaded");
-  if (!hasServer) placeholder = t("globalConfig.remoteModels.disconnected");
-  else if (loading) placeholder = t("globalConfig.remoteModels.loadingShort");
+  if (loading) placeholder = t("globalConfig.remoteModels.loadingShort");
   else if (errored) placeholder = t("globalConfig.remoteModels.errorShort");
   else if (ids.length === 0) placeholder = t("globalConfig.remoteModels.notLoaded");
   else placeholder = t("globalConfig.remoteModels.choose");

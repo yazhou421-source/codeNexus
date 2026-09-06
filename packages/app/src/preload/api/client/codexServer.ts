@@ -25,6 +25,7 @@ export function createCodexServerApi(ipcRenderer: IpcRenderer): CodexDesktopApi[
     start: (args) => ipcRenderer.invoke(IPC_CODEX_CHANNELS.codexServerStart, args),
     // 停止指定 Codex server 实例。
     stop: (args) => ipcRenderer.invoke(IPC_CODEX_CHANNELS.codexServerStop, args),
+    listAccountModels: () => ipcRenderer.invoke(IPC_CODEX_CHANNELS.codexListAccountModels),
     rpc,
     notify,
     // 把 RPC 响应回传给主进程。

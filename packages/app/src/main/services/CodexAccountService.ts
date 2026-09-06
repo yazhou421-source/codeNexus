@@ -21,18 +21,59 @@ export class CodexAccountService {
     return () => this.loginListeners.delete(listener);
   }
 
+  private readPromise: Promise<SafeAccountStatus> | null = null;
+
   async read(): Promise<SafeAccountStatus> {
-    const serverId = await this.ensureServer();
-    try {
-      const result = await this.serverManager.request({
-        serverId,
-        method: "account/read",
-        params: { refreshToken: false },
+    if (!this.readPromise)
+      this.readPromise = this.readVerified().finally(() => {
+        this.readPromise = null;
       });
-      return safeAccountStatus(result);
-    } catch {
-      throw accountFlowError("agent_unavailable");
+    return this.readPromise;
+  }
+
+  private async readVerified(): Promise<SafeAccountStatus> {
+    const serverId = await this.ensureServer();
+    let account: SafeAccountStatus;
+    try {
+      account = safeAccountStatus(
+        await this.serverManager.request({ serverId, method: "account/read", params: { refreshToken: false } })
+      );
+      if (account.state === "logged_in") {
+        try {
+          await this.serverManager.request({ serverId, method: "account/rateLimits/read", params: undefined });
+        } catch (error) {
+          if (!isAccountAuthFailure(error)) throw error;
+          // An expired access token may still be renewable. Let Codex perform
+          // its own refresh once; no credential is read or exported here.
+          account = safeAccountStatus(
+            await this.serverManager.request({ serverId, method: "account/read", params: { refreshToken: true } })
+          );
+          if (account.state !== "logged_in") throw new Error("authentication required");
+          await this.serverManager.request({ serverId, method: "account/rateLimits/read", params: undefined });
+        }
+      }
+    } catch (error) {
+      if (!isAccountAuthFailure(error)) throw accountFlowError("account_check_failed");
+      account = { state: "expired", email: null, planType: null, requiresOpenaiAuth: true };
     }
+    let credentialStorage: SafeAccountStatus["credentialStorage"] = "unknown";
+    try {
+      const { config } = await this.serverManager.request({
+        serverId,
+        method: "config/read",
+        params: { includeLayers: false },
+      });
+      const mode = config.cli_auth_credentials_store;
+      if (mode === "file" || mode === "keyring" || mode === "auto") credentialStorage = mode;
+    } catch {
+      /* Source metadata failure does not change verified authentication. */
+    }
+    return {
+      ...account,
+      checkedAt: Date.now(),
+      credentialHome: process.env.CODEX_HOME ? "environment" : "default",
+      credentialStorage,
+    };
   }
 
   async startChatGptLogin(): Promise<LoginStartResult> {
@@ -98,7 +139,12 @@ export class CodexAccountService {
   }
 
   private handleMessage(message: CodexIncomingMessage): void {
-    if (!("method" in message) || message.method !== "account/login/completed") return;
+    if (!("method" in message)) return;
+    if (message.method === "codex/exit") {
+      this.serverId = "";
+      return;
+    }
+    if (message.method !== "account/login/completed") return;
     const params = message.params;
     const loginId = String(params.loginId ?? "").trim();
     if (this.pendingLoginId && loginId && loginId !== this.pendingLoginId) return;
@@ -135,13 +181,24 @@ function record(value: unknown): Record<string, unknown> | null {
 }
 
 function accountFlowError(
-  code: "agent_unavailable" | "login_start_failed" | "login_cancel_failed"
+  code: "agent_unavailable" | "login_start_failed" | "login_cancel_failed" | "account_check_failed"
 ): Error & { code: string } {
   const message =
-    code === "agent_unavailable"
-      ? "AI Agent component could not start. Reinstall the application."
-      : code === "login_cancel_failed"
-        ? "ChatGPT login could not be cancelled. Please try again."
-        : "ChatGPT login could not start. Please try again.";
+    code === "account_check_failed"
+      ? "Account authentication could not be verified. Check the network and try again."
+      : code === "agent_unavailable"
+        ? "AI Agent component could not start. Reinstall the application."
+        : code === "login_cancel_failed"
+          ? "ChatGPT login could not be cancelled. Please try again."
+          : "ChatGPT login could not start. Please try again.";
   return Object.assign(new Error(message), { code });
+}
+
+// Match authentication failures only. A timeout, 403 policy denial, or exhausted
+// quota must not be reported as an expired login. Never forward raw RPC errors.
+function isAccountAuthFailure(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : "";
+  return /\b401\b|refresh_token_(?:expired|reused|invalidated)|refresh token[^.]*?(?:expired|invalid)|authentication required|please (?:log|sign) in again/i.test(
+    message
+  );
 }

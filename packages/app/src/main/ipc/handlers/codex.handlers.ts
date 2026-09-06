@@ -41,6 +41,8 @@ export function registerCodexHandlers(deps: {
     return serverManager.stop(args.serverId);
   });
 
+  ipcMain.handle(IPC_CODEX_CHANNELS.codexListAccountModels, async () => serverManager.listAccountModels());
+
   ipcMain.handle(IPC_CODEX_CHANNELS.codexRpc, async (_evt, args: CodexRpcArgs) => {
     const result = await serverManager.request(args);
     return { result };

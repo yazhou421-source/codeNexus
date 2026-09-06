@@ -1,15 +1,8 @@
 import { defineStore } from "pinia";
 import type { Model } from "@codenexus/generated/codex-app-server/v2/Model";
-import type { ModelListParams } from "@codenexus/generated/codex-app-server/v2/ModelListParams";
 import { getCachedUserLocalSettings, patchUserLocalSettings } from "../domain/localSettings";
 import { codexDesktop } from "../api/codexDesktopClient";
-import { useRuntimeStore } from "./runtime.store";
-import {
-  buildAvailableModelIds,
-  normalizeCustomModelIds,
-  normalizeModelId,
-  normalizeModelIdList,
-} from "@codenexus/shared/modelCatalog";
+import { buildAvailableModelIds, normalizeCustomModelIds, normalizeModelId } from "@codenexus/shared/modelCatalog";
 
 function areSameStringLists(left: readonly string[], right: readonly string[]): boolean {
   if (left.length !== right.length) return false;
@@ -24,7 +17,7 @@ function normalizeRemoteModelIds(models: unknown): string[] {
   const ids: string[] = [];
   for (const item of list) {
     const id = normalizeModelId((item as any)?.model ?? (item as any)?.id);
-    if (!id || seen.has(id)) continue;
+    if (!id || item.hidden || seen.has(id)) continue;
     seen.add(id);
     ids.push(id);
   }
@@ -39,12 +32,15 @@ export const useModelCatalogStore = defineStore("modelCatalog", {
     remoteLoadState: "idle" as RemoteLoadState,
     remoteErrorText: "" as string,
     remoteIds: [] as string[],
-    remoteServerId: "" as string,
+    generation: 0,
+    lastAccountState: "unknown" as string,
+    retryAttempt: 0,
+    retryTimer: null as ReturnType<typeof setTimeout> | null,
     remoteLoadedAt: 0 as number,
   }),
   getters: {
     availableModelIds(state): string[] {
-      return buildAvailableModelIds(state.customIds);
+      return buildAvailableModelIds(state.customIds, [], state.remoteIds);
     },
   },
   actions: {
@@ -53,69 +49,83 @@ export const useModelCatalogStore = defineStore("modelCatalog", {
       this.customIds = normalizeCustomModelIds(cached.settings.models?.customIds);
       this.errorText = "";
     },
+    cancelRetry() {
+      if (this.retryTimer) clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    },
     resetRemoteModels() {
+      this.cancelRetry();
+      this.generation += 1;
       this.remoteLoadState = "idle";
       this.remoteErrorText = "";
       this.remoteIds = [];
-      this.remoteServerId = "";
       this.remoteLoadedAt = 0;
+      this.retryAttempt = 0;
     },
-    async refreshRemoteModels(options?: { includeHidden?: boolean }) {
-      const runtimeStore = useRuntimeStore();
-      const serverId = String(runtimeStore.serverId ?? "").trim();
-      if (!serverId) {
+    isRemoteModelUnavailable(id: string): boolean {
+      return (
+        this.lastAccountState === "logged_out" ||
+        this.lastAccountState === "expired" ||
+        (this.remoteLoadedAt > 0 && !this.remoteIds.includes(id))
+      );
+    },
+    async accountStatusChanged(status: string): Promise<boolean> {
+      if (status === "checking" || status === "logging_in") return false;
+      const previous = this.lastAccountState;
+      this.lastAccountState = status;
+      if (status === "logged_out" || status === "expired") {
         this.resetRemoteModels();
         return false;
       }
-
+      if (status !== "logged_in") return false;
+      if (previous !== "logged_in") {
+        // Invalidate a pre-login request so its late response cannot hide the recovered catalog.
+        this.generation += 1;
+        this.remoteLoadState = "idle";
+        this.retryAttempt = 0;
+        return this.refreshRemoteModels();
+      }
+      return this.ensureRemoteModels();
+    },
+    async refreshRemoteModels(options?: { retry?: boolean }): Promise<boolean> {
       if (this.remoteLoadState === "loading") return false;
+      this.cancelRetry();
+      if (!options?.retry) this.retryAttempt = 0;
+      const generation = this.generation;
       this.remoteLoadState = "loading";
       this.remoteErrorText = "";
       try {
-        const ids: string[] = [];
-        let cursor: string | null = null;
-        const includeHidden = options?.includeHidden ?? false;
-        for (let page = 0; page < 12; page += 1) {
-          const params: ModelListParams = {
-            cursor,
-            limit: 200,
-            includeHidden: includeHidden ? true : null,
-          };
-          const { result } = await codexDesktop.codexServer.rpc({
-            serverId,
-            method: "model/list",
-            params,
-          });
-          const batch = normalizeRemoteModelIds((result as any)?.data);
-          for (const id of batch) ids.push(id);
-          const nextCursor = String((result as any)?.nextCursor ?? "").trim();
-          cursor = nextCursor ? nextCursor : null;
-          if (!cursor) break;
-        }
-        this.remoteIds = normalizeModelIdList(ids);
+        // Account discovery has no dependency on a workspace or chat server.
+        const result = await codexDesktop.codexServer.listAccountModels();
+        if (!Array.isArray(result.data) || result.nextCursor) throw new Error("Incomplete model catalog");
+        if (generation !== this.generation) return false;
+        this.remoteIds = normalizeRemoteModelIds(result.data);
         this.remoteLoadState = "ready";
-        this.remoteServerId = serverId;
         this.remoteLoadedAt = Date.now();
+        this.retryAttempt = 0;
         return true;
-      } catch (error: any) {
+      } catch {
+        if (generation !== this.generation) return false;
+        // A transport failure is not evidence that previously returned models were revoked.
         this.remoteLoadState = "error";
-        this.remoteErrorText = String(error?.message ?? error ?? "unknown error");
+        this.remoteErrorText = "Codex model catalog could not be loaded. Please retry.";
+        if (this.retryAttempt < 3) {
+          const delay = 2_000 * 2 ** this.retryAttempt;
+          this.retryAttempt += 1;
+          this.retryTimer = setTimeout(() => {
+            this.retryTimer = null;
+            void this.refreshRemoteModels({ retry: true });
+          }, delay);
+        }
         return false;
       }
     },
-    async ensureRemoteModels(options?: { maxAgeMs?: number }) {
-      const runtimeStore = useRuntimeStore();
-      const serverId = String(runtimeStore.serverId ?? "").trim();
-      if (!serverId) {
-        this.resetRemoteModels();
-        return false;
-      }
+    async ensureRemoteModels(options?: { maxAgeMs?: number }): Promise<boolean> {
+      if (this.lastAccountState === "logged_out" || this.lastAccountState === "expired") return false;
       const maxAgeMs = Math.max(5_000, Number(options?.maxAgeMs ?? 60_000));
       const stale = !this.remoteLoadedAt || Date.now() - this.remoteLoadedAt > maxAgeMs;
-      const serverChanged = this.remoteServerId !== serverId;
-      const shouldReload = serverChanged || stale || this.remoteLoadState === "idle";
-      if (!shouldReload) return false;
-      return await this.refreshRemoteModels();
+      if (!stale && this.remoteLoadState !== "idle" && this.remoteLoadState !== "error") return false;
+      return this.refreshRemoteModels();
     },
     async persistCustomIds(nextIds: string[]) {
       this.saving = true;

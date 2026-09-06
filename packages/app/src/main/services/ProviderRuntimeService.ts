@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import type { Model } from "@codenexus/generated/codex-app-server/v2/Model";
 import {
   BUILTIN_PROVIDER_REGISTRY,
   buildModelCatalog,
@@ -11,6 +12,7 @@ import {
   testProviderConnection,
   type EmbeddedRouterManager,
   type RouterConfig,
+  type RouterModelRoute,
 } from "@codenexus/router";
 import type { RouterProviderRegistrySnapshot } from "@codenexus/shared/ipc/contracts";
 import { ProviderPreferencesStore, type ProviderPreference } from "./ProviderPreferencesStore";
@@ -21,6 +23,7 @@ export type ProviderRuntimeOptions = { baseConfig?: RouterConfig };
 
 export class ProviderRuntimeService {
   private readonly baseConfig: RouterConfig;
+  private readonly codexRouteTemplate: RouterModelRoute | undefined;
   private currentConfig: RouterConfig | null = null;
   private routerUpdatesEnabled = false;
   private revisionValue = 0;
@@ -41,6 +44,7 @@ export class ProviderRuntimeService {
     options: ProviderRuntimeOptions = {}
   ) {
     this.baseConfig = options.baseConfig ?? createDefaultRouterConfig();
+    this.codexRouteTemplate = this.baseConfig.models.find((route) => route.authMode === "codex_openai");
   }
 
   async initialize(): Promise<RouterConfig> {
@@ -75,6 +79,45 @@ export class ProviderRuntimeService {
 
   setRouterUpdatesEnabled(enabled: boolean): void {
     this.routerUpdatesEnabled = enabled;
+  }
+
+  async syncCodexModels(models: readonly Model[]): Promise<void> {
+    // An empty account catalog hides choices in the picker. Keep the router's
+    // transport configuration valid while signed out; it still requires auth.
+    if (!models.length) return;
+    const template = this.codexRouteTemplate;
+    if (!template) throw new Error("Codex authentication route is not configured.");
+    const providerIds = new Set(
+      BUILTIN_PROVIDER_REGISTRY.flatMap((provider) => provider.models.map((model) => model.id))
+    );
+    const routes = models
+      .filter((model) => !model.hidden)
+      .map((model, priority) => {
+        if (providerIds.has(model.model)) throw new Error("Codex catalog conflicts with an API-key model ID.");
+        const existing = this.baseConfig.models.find(
+          (route) => route.id === model.model && route.authMode === "codex_openai"
+        );
+        return {
+          ...(existing ?? { api: template.api, baseUrl: template.baseUrl, authMode: "codex_openai" as const }),
+          id: model.model,
+          model: model.model,
+          displayName: model.displayName,
+          description: model.description,
+          priority,
+          defaultReasoningLevel: model.defaultReasoningEffort,
+          supportedReasoningLevels: model.supportedReasoningEfforts.map((option) => ({
+            effort: option.reasoningEffort,
+            description: option.description,
+          })),
+          inputModalities: model.inputModalities,
+        };
+      });
+    const previous = this.baseConfig.models.filter((route) => route.authMode === "codex_openai");
+    if (JSON.stringify(previous) === JSON.stringify(routes)) return;
+    await this.enqueueUpdate(async () => {
+      // Keep provider selections and secrets intact; only synchronize Codex registrations.
+      this.baseConfig.models = routes;
+    }, true);
   }
 
   resolveSecret = (secretRef: string): string | undefined => {

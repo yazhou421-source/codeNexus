@@ -1,7 +1,7 @@
 {
   "name": "@codenexus/app",
   "productName": "Calmnova Code",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "Calmnova Code — AI Coding Workspace",
   "author": "Calmnova contributors",
@@ -24,7 +24,7 @@
     "codex:prompt:diagnostics": "node scripts/codex-prompt-diagnostics.mjs",
     "codex:runtime:fetch": "node scripts/codex-runtime.mjs fetch",
     "codex:runtime:verify": "node scripts/codex-runtime.mjs verify",
-    "dist": "pnpm run codex:runtime:fetch && pnpm run codex:runtime:verify && pnpm run build && pnpm exec electron-builder --config electron-builder.yml"
+    "dist": "pnpm run codex:runtime:fetch && pnpm run codex:runtime:verify && pnpm run build && pnpm exec electron-builder --config electron-builder.yml --mac dmg zip --arm64 --publish never"
   },
   "dependencies": {
     "@codenexus/agent-core": "workspace:*",

@@ -1,4 +1,5 @@
 <template>
+  <SettingsAccountStatus />
   <section class="settings-card provider-settings" :aria-label="t('providerSettings.aria')">
     <header class="settings-card-head provider-settings-head">
       <div>
@@ -138,6 +139,8 @@ import { useI18n } from "vue-i18n";
 import type { RouterProviderStatus } from "@codenexus/shared/ipc/contracts";
 import { confirmModal } from "../../../ui/modal";
 import { useProviderRegistryStore } from "../../../stores/providerRegistry.store";
+
+import SettingsAccountStatus from "./SettingsAccountStatus.vue";
 
 const { t } = useI18n();
 const store = useProviderRegistryStore();

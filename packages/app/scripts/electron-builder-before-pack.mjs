@@ -2,6 +2,9 @@ import { runtimeKeyForBuilder, verifyRuntime } from "./codex-runtime-lib.mjs";
 import { verifyBrandingAssets } from "./branding-assets.mjs";
 
 export default async function beforePack(context) {
+  if (context.electronPlatformName !== "darwin" || context.arch !== 3) {
+    throw new Error("This trial build supports macOS arm64 only");
+  }
   await verifyBrandingAssets();
   const runtimeKey = runtimeKeyForBuilder(context.electronPlatformName, context.arch);
   if (!runtimeKey) {

@@ -1,55 +1,60 @@
 <template>
   <div :class="[CHAT_ROW_BASE_CLASS, 'chat-row--user', 'chat-row--user-shell']">
     <div class="chat-user-bubble-stack" :class="{ 'is-editing': inlineRewriteDraft }">
-      <ChatUserBubbleFrame @click="$emit('click', event)">
-        <template v-for="part in messageParts" :key="part.key">
-          <span v-if="part.type === 'text'">{{ part.text }}</span>
-          <button
-            v-else-if="part.type === 'file'"
-            class="chat-inline-file-token"
-            type="button"
-            v-tooltip="part.title"
-            @click.stop="$emit('file-token-click', part.path)"
-          >
-            <Icon class="chat-inline-file-token__icon" :icon="part.icon" aria-hidden="true" />
-            <span class="chat-inline-file-token__label">{{ part.label }}</span>
-          </button>
-          <div v-else class="chat-environment-context">
-            <div class="chat-environment-context__title mono">{{ t("chat.environmentContext.title") }}</div>
-            <dl class="chat-environment-context__grid">
-              <template v-for="row in environmentContextRows(part.context)" :key="row.key">
-                <dt class="mono">{{ row.label }}</dt>
-                <dd class="mono">{{ row.value }}</dd>
-              </template>
-            </dl>
-            <pre v-if="environmentContextRows(part.context).length === 0" class="chat-environment-context__raw mono">{{
-              part.context.raw
-            }}</pre>
+      <component :is="contextOnly ? 'details' : 'div'" :class="{ 'chat-context-disclosure': contextOnly }">
+        <summary v-if="contextOnly" @click.stop>{{ t("chat.environmentContext.title") }}</summary>
+        <ChatUserBubbleFrame @click="$emit('click', event)">
+          <template v-for="part in messageParts" :key="part.key">
+            <span v-if="part.type === 'text'">{{ part.text }}</span>
+            <button
+              v-else-if="part.type === 'file'"
+              class="chat-inline-file-token"
+              type="button"
+              v-tooltip="part.title"
+              @click.stop="$emit('file-token-click', part.path)"
+            >
+              <Icon class="chat-inline-file-token__icon" :icon="part.icon" aria-hidden="true" />
+              <span class="chat-inline-file-token__label">{{ part.label }}</span>
+            </button>
+            <div v-else class="chat-environment-context">
+              <div class="chat-environment-context__title mono">{{ t("chat.environmentContext.title") }}</div>
+              <dl class="chat-environment-context__grid">
+                <template v-for="row in environmentContextRows(part.context)" :key="row.key">
+                  <dt class="mono">{{ row.label }}</dt>
+                  <dd class="mono">{{ row.value }}</dd>
+                </template>
+              </dl>
+              <pre
+                v-if="environmentContextRows(part.context).length === 0"
+                class="chat-environment-context__raw mono"
+                >{{ part.context.raw }}</pre
+              >
+            </div>
+          </template>
+          <div v-if="imageCount > 0" class="chat-user-images mt-2.5 flex flex-col gap-2">
+            <div class="mono dim text-[11px]">{{ t("chat.activity.attachedImages", { count: imageCount }) }}</div>
+            <div v-if="visibleImages.length > 0" class="chat-user-image-list flex flex-wrap gap-2 max-[1500px]:gap-1.5">
+              <LazyImageThumb
+                v-for="image in visibleImages"
+                :key="image.id"
+                :imageId="image.id"
+                class="h-[92px] w-[92px] max-w-full"
+                :source="image.source"
+                :sourceKind="image.sourceKind"
+                :previewTitle="image.title"
+                v-tooltip="image.title"
+                :workspaceRoot="workspaceRoot"
+                :rootMarginPx="260"
+                @load-error="$emit('thumb-load-error', $event)"
+                @preview="$emit('preview-image', $event)"
+              />
+            </div>
           </div>
-        </template>
-        <div v-if="imageCount > 0" class="chat-user-images mt-2.5 flex flex-col gap-2">
-          <div class="mono dim text-[11px]">{{ t("chat.activity.attachedImages", { count: imageCount }) }}</div>
-          <div v-if="visibleImages.length > 0" class="chat-user-image-list flex flex-wrap gap-2 max-[1500px]:gap-1.5">
-            <LazyImageThumb
-              v-for="image in visibleImages"
-              :key="image.id"
-              :imageId="image.id"
-              class="h-[92px] w-[92px] max-w-full"
-              :source="image.source"
-              :sourceKind="image.sourceKind"
-              :previewTitle="image.title"
-              v-tooltip="image.title"
-              :workspaceRoot="workspaceRoot"
-              :rootMarginPx="260"
-              @load-error="$emit('thumb-load-error', $event)"
-              @preview="$emit('preview-image', $event)"
-            />
-          </div>
-        </div>
-        <template #meta>
-          <span v-if="showTimestamps" class="mono dim">{{ formattedTime }}</span>
-        </template>
-      </ChatUserBubbleFrame>
+          <template #meta>
+            <span v-if="showTimestamps" class="mono dim">{{ formattedTime }}</span>
+          </template>
+        </ChatUserBubbleFrame>
+      </component>
       <ChatInlineRewriteOverlay
         v-if="inlineRewriteDraft"
         :draft="inlineRewriteDraft"
@@ -66,6 +71,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
+import { isMessageContextOnly } from "@codenexus/shared/messageContext";
 import { useI18n } from "vue-i18n";
 import { Icon } from "@iconify/vue";
 import LazyImageThumb from "../ui/LazyImageThumb.vue";
@@ -82,7 +89,7 @@ type SelectOption = {
   disabled?: boolean;
 };
 
-defineProps<{
+const props = defineProps<{
   event: TimelineEventItem;
   workspaceRoot: string;
   messageParts: readonly ChatUserMessagePart[];
@@ -98,6 +105,19 @@ defineProps<{
 }>();
 
 const { t } = useI18n();
+const contextOnly = computed(() =>
+  isMessageContextOnly(
+    props.messageParts
+      .map((part) =>
+        part.type === "text"
+          ? part.text
+          : part.type === "environmentContext"
+            ? `<environment_context>${part.context.raw}</environment_context>`
+            : "[file]"
+      )
+      .join("")
+  )
+);
 
 const environmentContextRows = (context: EnvironmentContextBlock) => {
   const rows = [
@@ -121,6 +141,24 @@ defineEmits<{
 </script>
 
 <style scoped>
+.chat-context-disclosure {
+  min-width: 0;
+}
+.chat-context-disclosure > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 8px 0;
+}
+.chat-context-disclosure[open] > summary {
+  margin-bottom: 8px;
+}
+.chat-context-disclosure[open] :deep(.chat-bubble-body) {
+  max-height: 300px;
+  overflow: auto;
+}
+
 .chat-environment-context {
   display: grid;
   gap: 8px;

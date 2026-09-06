@@ -517,6 +517,7 @@ export type SystemPowerShutdownResult =
   | { ok: false; reason: "unsupported" | "failed"; message?: string };
 
 export type AppUpdateStatus =
+  | "unconfigured"
   | "unsupported"
   | "idle"
   | "checking"
@@ -653,7 +654,10 @@ export type RouterProviderRegistrySnapshot = {
 };
 
 export type SafeAccountStatus = {
-  state: "logged_in" | "logged_out";
+  state: "logged_in" | "logged_out" | "expired";
+  credentialHome?: "default" | "environment";
+  credentialStorage?: "file" | "keyring" | "auto" | "unknown";
+  checkedAt?: number;
   email: string | null;
   planType: string | null;
   requiresOpenaiAuth: boolean;
@@ -808,6 +812,9 @@ export type CodexDesktopCacheApi = {
 export type CodexDesktopCodexServerApi = {
   ensureInstalled(): Promise<CodexEnsureInstalledResult>;
   getDiagnostics(): Promise<CodexDiagnosticsResult>;
+  listAccountModels(): Promise<
+    import("@codenexus/generated/codex-app-server/v2/ModelListResponse").ModelListResponse
+  >;
   start(args: { cwd?: string; experimentalApi?: boolean }): Promise<{
     serverId: string;
     capabilities?: { experimentalApi?: boolean };

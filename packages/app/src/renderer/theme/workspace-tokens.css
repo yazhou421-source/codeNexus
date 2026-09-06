@@ -1,0 +1,64 @@
+/* Calmnova desktop design values; theme selection and status semantics stay intact. */
+:root[data-theme] {
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 18px;
+  --topbar-h: 44px;
+  --bottombar-h: 28px;
+  --workspace-hover: color-mix(in srgb, var(--text) 5%, transparent);
+  --workspace-selected: color-mix(in srgb, var(--text) 9%, transparent);
+  --theme-page-bg-image: none;
+  --shell-bg: var(--surface-1);
+  --shell-chrome-bg: var(--bg);
+  --pane-bg: var(--bg);
+  --panel-surface-bg: var(--surface-elevated);
+  --chat-surface-bg: var(--bg);
+  --composer-surface-bg: var(--surface-elevated);
+  --topbar-bg: var(--bg);
+  --sidebar-bg: var(--surface-1);
+  --center-bg: var(--bg);
+  --control-surface: var(--surface-elevated);
+  --control-surface-hover: var(--workspace-hover);
+  --control-surface-active: var(--workspace-selected);
+  --control-border-hover: var(--theme-border-strong);
+  --shadow-soft: 0 2px 6px rgb(from var(--theme-seed-shadow-source) r g b / 0.06);
+  --panel-shadow: var(--shadow-soft);
+  --floating-bg: var(--surface-elevated);
+  --floating-border: var(--border);
+  --floating-shadow: 0 8px 24px rgb(from var(--theme-seed-shadow-source) r g b / 0.12);
+  --floating-item-bg: transparent;
+  --floating-item-bg-hover: var(--workspace-hover);
+  --floating-backdrop-filter: none;
+  --topbar-hover-bg: var(--workspace-hover);
+  --topbar-active-bg: var(--workspace-selected);
+  --topbar-btn-active-bg: var(--workspace-selected);
+  --topbar-btn-active-text: var(--text);
+  --topbar-dropdown-shadow: var(--floating-shadow);
+  --ui-history-row-bg: transparent;
+  --ui-history-active-shadow: none;
+  --ui-timeline-card-bg: var(--surface-1);
+  --ui-timeline-card-shadow: none;
+  --ui-code-bg: var(--surface-1);
+  --ui-code-border: var(--border);
+  --bubble-shadow: none;
+  --composer-shell-shadow: var(--shadow-soft);
+  --composer-shell-backdrop: none;
+  --composer-agent-bg: var(--surface-elevated);
+  --composer-agent-border: var(--border);
+  --composer-plan-bg: var(--surface-elevated);
+  --composer-plan-border: var(--border);
+  --composer-mode-active-text: var(--text);
+  --composer-mode-active-bg: var(--workspace-selected);
+  --composer-mode-active-border: transparent;
+  --composer-mode-group-bg: transparent;
+  --composer-mode-group-border: transparent;
+  --ui-cta-bg: var(--workspace-selected);
+  --ui-cta-bg-hover: var(--workspace-hover);
+  --ui-cta-text: var(--text);
+}
+:root[data-theme] {
+  --diff-hunk-bg: var(--surface-2);
+  --diff-meta-bg: var(--surface-1);
+}

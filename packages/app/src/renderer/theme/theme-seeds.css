@@ -22,15 +22,15 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --theme-seed-bg: rgb(243 247 250);
-  --theme-seed-surface-1: rgb(249 251 253);
-  --theme-seed-surface-2: rgb(234 241 246);
-  --theme-seed-surface-3: rgb(225 235 242);
+  --theme-seed-bg: rgb(255 255 255);
+  --theme-seed-surface-1: rgb(247 247 246);
+  --theme-seed-surface-2: rgb(240 240 239);
+  --theme-seed-surface-3: rgb(231 231 230);
   --theme-seed-elevated: rgb(255 255 255);
-  --theme-seed-text: rgb(43 55 70);
-  --theme-seed-text-muted: rgb(100 115 131);
-  --theme-seed-border-source: rgb(43 55 70);
-  --theme-seed-shadow-source: rgb(43 55 70);
+  --theme-seed-text: rgb(35 35 34);
+  --theme-seed-text-muted: rgb(111 111 108);
+  --theme-seed-border-source: rgb(35 35 34);
+  --theme-seed-shadow-source: rgb(35 35 34);
   --theme-seed-accent: rgb(7 126 156);
   --theme-seed-accent-contrast: rgb(255 255 255);
   --theme-seed-success: rgb(17 121 90);

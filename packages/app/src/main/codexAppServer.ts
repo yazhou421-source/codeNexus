@@ -328,7 +328,24 @@ export class CodexAppServer {
     const desiredProvider = codexRouterModelProviderForModel(model, this.runtimeConfig);
     if (!threadId || !model || !desiredProvider || this.threadModelProviders.get(threadId) === desiredProvider) return;
 
-    await this.request("thread/resume", { threadId, model }, timeoutMs);
+    let resumed = await this.request("thread/resume", { threadId, model }, timeoutMs);
+    if (resumed.modelProvider === desiredProvider) return;
+    // A loaded 0.153.2 thread is rejoined by resume; its provider overrides are
+    // ignored while subscribed. After unsubscribe, resume performs the idle
+    // thread shutdown/flush and reload atomically inside app-server.
+    if (resumed.thread.status.type === "active") {
+      throw new Error("Cannot switch model provider during an active turn. Stop or finish the turn first.");
+    }
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await this.request("thread/unsubscribe", { threadId }, timeoutMs);
+      // turn/completed can precede the core's idle transition. Only retry this
+      // local rebind, never a model request, and leave the subscription restored.
+      await new Promise((resolve) => setTimeout(resolve, 50 * 2 ** attempt));
+      resumed = await this.request("thread/resume", { threadId, model }, timeoutMs);
+      if (resumed.modelProvider === desiredProvider) return;
+      if (resumed.thread.status.type === "active") break;
+    }
+    throw new Error("Model provider switch did not take effect. No model request was sent.");
   }
 
   private rememberThreadModelProvider(method: string, params: unknown, result: unknown): void {

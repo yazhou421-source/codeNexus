@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { app } from "electron";
 import { autoUpdater } from "electron-updater";
 import type { AppUpdateProgress, AppUpdateSnapshot, AppUpdateStatus } from "@codenexus/shared/ipc/contracts";
@@ -16,8 +18,11 @@ type ProgressInfoLike = {
 };
 
 function readErrorMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : String((error as any)?.message ?? error ?? "");
-  return message.trim() || "Update check failed.";
+  const message = error instanceof Error ? error.message : "";
+  if (/sha512|checksum/i.test(message)) return "Update verification failed. Download the update again.";
+  if (/signature|code.?sign/i.test(message))
+    return "Update signature verification failed. The update was not installed.";
+  return "Update failed. Check the network or contact the release maintainer, then try again.";
 }
 
 function normalizeText(value: unknown): string | null {
@@ -57,13 +62,22 @@ function normalizeProgress(value: ProgressInfoLike): AppUpdateProgress {
 export class UpdateService {
   private state: AppUpdateSnapshot;
   private startupTimer: NodeJS.Timeout | null = null;
+  private readonly feedConfigured: boolean;
 
-  constructor(private readonly emitState: (snapshot: AppUpdateSnapshot) => void) {
+  constructor(
+    private readonly emitState: (snapshot: AppUpdateSnapshot) => void,
+    private readonly options: { feedConfigured?: boolean; canInstall?: () => boolean } = {}
+  ) {
+    this.feedConfigured =
+      options.feedConfigured ??
+      (typeof process.resourcesPath === "string" && existsSync(join(process.resourcesPath, "app-update.yml")));
+    autoUpdater.allowDowngrade = false;
+    autoUpdater.allowPrerelease = false;
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = false;
 
     this.state = {
-      status: app.isPackaged ? "idle" : "unsupported",
+      status: app.isPackaged ? (this.feedConfigured ? "idle" : "unconfigured") : "unsupported",
       currentVersion: app.getVersion(),
       latestVersion: null,
       releaseName: null,
@@ -84,7 +98,7 @@ export class UpdateService {
   }
 
   scheduleStartupCheck(delayMs = 3_000): void {
-    if (!app.isPackaged || this.startupTimer) return;
+    if (!app.isPackaged || !this.feedConfigured || this.startupTimer) return;
     this.startupTimer = setTimeout(
       () => {
         this.startupTimer = null;
@@ -104,7 +118,12 @@ export class UpdateService {
       });
       return this.getState();
     }
-    if (this.state.status === "checking" || this.state.status === "downloading") return this.getState();
+    if (!this.feedConfigured) {
+      this.patchState({ status: "unconfigured", checkedAt: Date.now(), errorMessage: null });
+      return this.getState();
+    }
+    if (this.state.downloaded || this.state.status === "checking" || this.state.status === "downloading")
+      return this.getState();
 
     this.patchState({
       status: "checking",
@@ -126,7 +145,8 @@ export class UpdateService {
   }
 
   async downloadUpdate(): Promise<AppUpdateSnapshot> {
-    if (!app.isPackaged) return this.checkForUpdates();
+    if (!app.isPackaged || !this.feedConfigured) return this.checkForUpdates();
+    if (this.state.status === "downloading" || this.state.status === "checking") return this.getState();
     if (this.state.status === "downloaded") return this.getState();
     if (!this.state.updateAvailable && this.state.status !== "available") {
       this.patchState({
@@ -149,7 +169,10 @@ export class UpdateService {
   }
 
   quitAndInstall(): void {
-    if (this.state.status !== "downloaded") return;
+    if (!app.isPackaged || !this.feedConfigured || !this.state.downloaded) return;
+    if (this.options.canInstall && !this.options.canInstall()) {
+      throw new Error("An AI task is running. Finish or stop it before restarting to install.");
+    }
     autoUpdater.quitAndInstall(false, true);
   }
 
@@ -211,7 +234,7 @@ export class UpdateService {
     });
     autoUpdater.on("error", (error: unknown) => {
       this.patchState({
-        status: "error",
+        status: this.state.downloaded ? "downloaded" : "error",
         errorMessage: readErrorMessage(error),
       });
     });

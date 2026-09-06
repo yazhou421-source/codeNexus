@@ -20,7 +20,7 @@ function requestedKeys(manifest) {
 
 const command = String(process.argv[2] ?? "").trim();
 if (!new Set(["fetch", "verify"]).has(command)) {
-  throw new Error("Usage: codex-runtime.mjs <fetch|verify> [--platform mac-arm64|win-x64|all]");
+  throw new Error("Usage: codex-runtime.mjs <fetch|verify> [--platform mac-arm64|all]");
 }
 
 const manifest = await loadRuntimeManifest();

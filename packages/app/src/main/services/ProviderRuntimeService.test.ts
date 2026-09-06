@@ -2,10 +2,12 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { existsSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({
+  app: { getVersion: () => "1.0.4-test" },
   safeStorage: {
     isEncryptionAvailable: () => false,
     encryptString: () => Buffer.alloc(0),
@@ -14,7 +16,7 @@ vi.mock("electron", () => ({
 }));
 
 import { createDefaultRouterConfig, EmbeddedRouterManager, type RouterConfig } from "@codenexus/router";
-import type { CodexAppServer } from "../codexAppServer";
+import { CodexAppServer } from "../codexAppServer";
 import { createCodexRouterRuntime } from "../codexRouterRuntime";
 import { RuntimeThreadStateTracker } from "../runtimeThreadStateTracker";
 import { CodexServerManager } from "./CodexServerManager";
@@ -62,6 +64,82 @@ async function fixture(manager?: EmbeddedRouterManager, baseConfig?: RouterConfi
 }
 
 describe("ProviderRuntimeService", () => {
+  it.runIf(
+    process.platform === "darwin" && existsSync(resolve("packages/app/build/codex-runtime/mac-arm64/bin/codex"))
+  )(
+    "loads the discovered model metadata with the actual bundled Codex parser",
+    async () => {
+      const { service, catalogPath, directory } = await fixture();
+      await service.syncCodexModels([
+        {
+          model: "gpt-6-astra",
+          displayName: "Astra",
+          hidden: false,
+          defaultReasoningEffort: "high",
+          supportedReasoningEfforts: [{ reasoningEffort: "high", description: "High" }],
+          inputModalities: ["text"],
+        } as any,
+      ]);
+      const server = new CodexAppServer({
+        id: "catalog-parser-test",
+        mode: "native",
+        cwd: directory,
+        runtimeConfig: {
+          globalConfigOverrides: [`model_catalog_json='${catalogPath}'`],
+          childEnv: { CODEX_HOME: directory },
+          sensitiveValues: [],
+          localTokenModelIds: new Set(),
+        },
+        resolveExecutable: async () =>
+          ({
+            source: "bundled",
+            version: "0.153.2",
+            path: resolve("packages/app/build/codex-runtime/mac-arm64/bin/codex"),
+            command: { kind: "direct", path: resolve("packages/app/build/codex-runtime/mac-arm64/bin/codex") },
+          }) as any,
+      });
+      try {
+        await server.start();
+        const result = await server.request("model/list", { includeHidden: false });
+        expect(result.data.find((model) => model.model === "gpt-6-astra")?.supportedReasoningEfforts).toEqual([
+          { reasoningEffort: "high", description: "High" },
+        ]);
+      } finally {
+        server.stop();
+      }
+    },
+    15000
+  );
+  it("registers discovered Codex models on the existing auth route without changing API-key routes", async () => {
+    const { service } = await fixture();
+    await service.saveApiKey("deepseek", "test-key");
+    const before = service.routerConfig.models.filter((route) => route.authMode === "api_key");
+    const model = {
+      model: "gpt-6-astra",
+      displayName: "Astra",
+      hidden: false,
+      supportedReasoningEfforts: [{ reasoningEffort: "high", description: "High" }],
+      inputModalities: ["text"],
+      defaultReasoningEffort: "high",
+    } as any;
+    await service.syncCodexModels([model]);
+    expect(service.routerConfig.models.find((route) => route.id === "gpt-6-astra")).toMatchObject({
+      model: "gpt-6-astra",
+      authMode: "codex_openai",
+      api: "responses",
+      baseUrl: "https://chatgpt.com/backend-api/codex",
+      supportedReasoningLevels: [{ effort: "high", description: "High" }],
+    });
+    // Their display ordering follows the number of Codex entries; routing and credentials stay identical.
+    const withoutPriority = ({ priority: _priority, ...route }: Record<string, unknown>) => route;
+    expect(service.routerConfig.models.filter((route) => route.authMode === "api_key").map(withoutPriority)).toEqual(
+      before.map(withoutPriority)
+    );
+    const revision = service.revision;
+    await service.syncCodexModels([model]);
+    expect(service.revision).toBe(revision);
+    await expect(service.syncCodexModels([{ ...model, model: "deepseek-v4-flash" }])).rejects.toThrow("conflicts");
+  });
   it("starts with Registry metadata but no callable third-party routes", async () => {
     const { catalogPath, service } = await fixture();
     const snapshot = service.list();

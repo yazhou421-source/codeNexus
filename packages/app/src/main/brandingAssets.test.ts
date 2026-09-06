@@ -98,13 +98,13 @@ describe("Calmnova Code branding assets", () => {
     expect(chinese).toContain("强大的 AI，从容的创造。");
   });
 
-  it("configures native icons, DMG layout, NSIS icons, and About identity", async () => {
+  it("configures macOS native icons, DMG layout, and About identity", async () => {
     const builder = await readFile(resolve(appRoot, "electron-builder.yml"), "utf8");
     const main = await readFile(resolve(appRoot, "src/main/main.ts"), "utf8");
     expect(builder).toContain("icon: build/icon.icns");
-    expect(builder).toContain("icon: build/icon.ico");
+    expect(builder).not.toContain("win:");
     expect(builder).toContain("path: /Applications");
-    expect(builder).toContain("installerIcon: build/icon.ico");
+    expect(builder).not.toContain("nsis:");
     expect(builder).toContain("to: branding/app-icon.png");
     expect(main).toContain('version: "AI Coding Workspace"');
     expect(main).toContain("iconPath: aboutIconPath");
