@@ -1,3 +1,4 @@
+import { parseToolPause } from "../../../domain/toolPause";
 import { computed, ref, watch } from "vue";
 import type { TimelineEventItem } from "../../../domain/types";
 import {
@@ -831,17 +832,19 @@ export function useChatRenderModel(
         finalAnswerEvent && Number.isFinite(finalAnswerEvent.createdAt)
           ? Math.max(startedAtMs ?? 0, Math.round(Number(finalAnswerEvent.createdAt)))
           : null;
-      grouped.push(
-        buildAuxActivityGroup({
-          items: pending,
-          groupIndex,
-          defaultCollapsed: !shouldStayOpen,
-          startedAtMs,
-          answerStartedAtMs,
-          elapsedLive:
-            !finalAnswerStarted && (groupStatus === "running" || (currentThreadRunning && matchesActiveTurn)),
-        })
-      );
+      const group = buildAuxActivityGroup({
+        items: pending,
+        groupIndex,
+        defaultCollapsed: !shouldStayOpen,
+        startedAtMs,
+        answerStartedAtMs,
+        elapsedLive: !finalAnswerStarted && (groupStatus === "running" || (currentThreadRunning && matchesActiveTurn)),
+      });
+      if (interruptedBy?.kind === "assistant" && parseToolPause(interruptedBy.event.paramsText)) {
+        group.status = "paused";
+        group.elapsedLive = false;
+      }
+      grouped.push(group);
       groupIndex += 1;
       pending = [];
     };

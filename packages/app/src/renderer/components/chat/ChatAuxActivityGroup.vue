@@ -123,7 +123,7 @@ const currentStep = computed(() =>
   [...steps.value].reverse().find((step) => step.state === "executing" || step.state === "thinking")
 );
 const currentState = computed(() =>
-  hasError.value && !isRunning.value
+  props.status === "paused" || (hasError.value && !isRunning.value)
     ? "warning"
     : isRunning.value
       ? currentStep.value?.state || "thinking"
@@ -132,6 +132,7 @@ const currentState = computed(() =>
         : "idle"
 );
 const currentTitle = computed(() => {
+  if (props.status === "paused") return zh.value ? "任务已暂停" : "Task paused";
   if (isRunning.value) return currentStep.value?.title || (zh.value ? "正在分析任务…" : "Analyzing the task…");
   if (hasError.value) return zh.value ? "执行记录中有错误，请查看详情" : "Some operations failed. Review details.";
   return props.answerStartedAtMs

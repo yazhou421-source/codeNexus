@@ -1,3 +1,4 @@
+import { createToolPauseRuntime } from "./runtime/toolPauseRuntime";
 import { useModelCatalogStore } from "../stores/modelCatalog.store";
 import { useProviderRegistryStore } from "../stores/providerRegistry.store";
 import type { Pinia } from "pinia";
@@ -118,6 +119,7 @@ export type RuntimeOrchestrator = {
   loadOlderHistoryTurns: (threadId?: string) => Promise<boolean>;
   deleteHistoryThread: (threadId: string) => Promise<void>;
   send: () => Promise<boolean>;
+  continueToolPausedTurn: (threadId: string, eventId: string) => Promise<boolean>;
   sendHistoryRewriteDraft: (draft: {
     anchorTurnId: string;
     composeInput: string;
@@ -1067,6 +1069,20 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
     return await sendOrQueueDraft("auto", runtimeStoreSendDraft(), { clearRuntimeDraftOnAccept: true });
   };
 
+  const continueToolPausedTurn = createToolPauseRuntime({
+    currentThreadId: () => String(runtimeStore.currentThreadId ?? ""),
+    isRunning: (threadId) => threadStore.runningThreadIds.has(threadId),
+    events: (threadId) => timelineStore.eventsForThread(threadId),
+    send: (text) =>
+      sendOrQueueDraft("auto", {
+        ...runtimeStoreSendDraft(),
+        anchorTurnId: "",
+        composeInput: text,
+        composeAttachments: [],
+        composeFileMentions: [],
+      }),
+  });
+
   const sendHistoryRewriteDraft: RuntimeOrchestrator["sendHistoryRewriteDraft"] = async (draft) => {
     const anchorTurnId = String(draft?.anchorTurnId ?? "").trim();
     if (!anchorTurnId) {
@@ -1188,6 +1204,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
     loadOlderHistoryTurns,
     deleteHistoryThread,
     send,
+    continueToolPausedTurn,
     sendHistoryRewriteDraft,
     steerNow,
     sendQueuedMessageNow,

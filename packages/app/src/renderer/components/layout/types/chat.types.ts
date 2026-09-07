@@ -75,7 +75,7 @@ export type ChatRowBase = {
   turnKey: string;
 };
 
-export type ChatAuxActivityStatus = "running" | "completed";
+export type ChatAuxActivityStatus = "running" | "completed" | "paused";
 
 export type ChatAuxActivitySummaryItem = {
   key: string;

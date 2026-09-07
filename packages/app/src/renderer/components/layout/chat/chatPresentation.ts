@@ -1,3 +1,4 @@
+import { parseToolPause } from "../../../domain/toolPause";
 import type { ChatRenderedRow } from "../types/chat.types";
 
 export const CHAT_TIMELINE_ROW_CLASS = "chat-timeline-row";
@@ -76,8 +77,10 @@ function rowDensity(row: ChatRenderedRow): ChatTimelineRowDensity {
 }
 
 function rowStatus(row: ChatRenderedRow): ChatTimelineRowStatus {
+  if (row.kind === "assistant" && parseToolPause(row.event.paramsText)) return "warning";
   if (row.kind === "system") return "error";
-  if (row.kind === "auxActivityGroup") return row.status === "running" ? "running" : "completed";
+  if (row.kind === "auxActivityGroup")
+    return row.status === "paused" ? "warning" : row.status === "running" ? "running" : "completed";
   if (row.kind === "activity") {
     if (row.tone === "running") return "running";
     if (row.tone === "ok") return "completed";

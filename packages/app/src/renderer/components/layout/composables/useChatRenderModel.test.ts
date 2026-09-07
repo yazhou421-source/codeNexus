@@ -1,3 +1,4 @@
+import { getChatRowPresentation } from "../chat/chatPresentation";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -70,6 +71,16 @@ describe("assistant answer classification in the actual chat render model", () =
     expect(groups).toHaveLength(1);
     expect(groups[0].defaultCollapsed).toBe(true);
     expect(groups[0].items.map((row) => row.kind)).toEqual(["reasoningBlock", "assistantCommentary", "activity"]);
+  });
+
+  it.each(["tool_loop_guard", "tool_limit_reached"])("renders %s as a paused warning, including replay", (reason) => {
+    const text = `<!-- calmnova:tool-pause:v1 ${JSON.stringify({ reason, detail: "test", rounds: 4, limit: 16 })} -->\n任务已暂停。`;
+    const model = render(() => [reasoning(), answer(text)]);
+    const group = model.chatRows.value.find((row) => row.kind === "auxActivityGroup")!;
+    expect(group).toMatchObject({ status: "paused", elapsedLive: false });
+    expect(getChatRowPresentation(group).status).toBe("warning");
+    const message = model.chatRows.value.find((row) => row.kind === "assistant")!;
+    expect(getChatRowPresentation(message).status).toBe("warning");
   });
 
   it("never promotes reasoning-only or explicit commentary into an answer", () => {

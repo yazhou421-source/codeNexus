@@ -94,7 +94,7 @@ function validateUpstreamBaseUrl(value, modelId) {
 
 export function routeForModel(config, requestedModel) {
   if (!requestedModel) {
-    return defaultRoute(config);
+    return withToolContinuationDefaults(config, defaultRoute(config));
   }
   const requested = String(requestedModel || "").trim();
   const normalized = normalizeModelName(requested);
@@ -102,7 +102,7 @@ export function routeForModel(config, requestedModel) {
     modelNameAliases(model).some((alias) => alias === normalized),
   );
   if (route) {
-    return route;
+    return withToolContinuationDefaults(config, route);
   }
   const available = config.models
     .flatMap((model) => [model.id, model.displayName, model.model])
@@ -114,6 +114,20 @@ export function routeForModel(config, requestedModel) {
   error.statusCode = 404;
   error.code = "model_not_configured";
   throw error;
+}
+
+function withToolContinuationDefaults(config, route) {
+  if (route.api !== "chat_completions") return route;
+  return {
+    ...route,
+    maxToolContinuationTurns:
+      route.maxToolContinuationTurns ??
+      route.max_tool_continuation_turns ??
+      config.providerToolContinuationLimits?.[
+        route.provider || route.providerId
+      ] ??
+      config.maxToolContinuationTurns,
+  };
 }
 
 function defaultRoute(config) {
