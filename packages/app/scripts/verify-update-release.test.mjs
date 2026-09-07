@@ -66,7 +66,8 @@ it("keeps release publishing gated behind all checks, draft-only and tag-only", 
   const job = workflow.jobs["macos-arm64"];
   expect(job.if).toContain("github.repository == 'yazhou421-source/codeNexus'");
   const steps = job.steps;
-  expect(steps.findIndex((s) => s.run === "pnpm ci")).toBeLessThan(
+  expect(steps.find((s) => s.name === "Full verification")?.run).toBe("pnpm run ci");
+  expect(steps.findIndex((s) => s.run === "pnpm run ci")).toBeLessThan(
     steps.findIndex((s) => s.name?.startsWith("Create draft"))
   );
   expect(steps.find((s) => s.name?.startsWith("Create draft")).with.script).toContain("draft: true");
