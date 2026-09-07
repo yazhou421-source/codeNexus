@@ -112,13 +112,7 @@ const parseDiffGitHeader = (line: string) => {
 
 const countAddedDeletedLines = (diffText: string) => {
   const parsed = getParsedDiffCached(diffText);
-  let add = 0;
-  let del = 0;
-  for (const line of parsed.lines) {
-    if (line.kind === "add") add += 1;
-    else if (line.kind === "del") del += 1;
-  }
-  return { add, del, truncated: parsed.truncated };
+  return { ...parsed.stats, truncated: parsed.truncated };
 };
 
 const splitDiffSections = (diffText: string) => {
@@ -157,6 +151,7 @@ const summarizeSection = (sectionText: string, index: number): DiffFileSummary =
 
   for (const rawLine of lines) {
     const line = String(rawLine ?? "");
+    if (line.startsWith("@@")) break;
     if (line.startsWith("rename from ")) renameFrom = normalizePath(line.slice("rename from ".length));
     else if (line.startsWith("rename to ")) renameTo = normalizePath(line.slice("rename to ".length));
     else if (line.startsWith("new file mode ")) isAdd = true;

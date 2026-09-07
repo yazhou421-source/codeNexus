@@ -1,0 +1,14 @@
+[
+  {
+    "focus": "Configured + Available",
+    "key": "Tab"
+  },
+  {
+    "focus": "搜索模型",
+    "key": "Shift+Tab"
+  },
+  {
+    "focus": "选择模型: available-model; 思考程度: 标准",
+    "key": "Escape"
+  }
+]

@@ -27,7 +27,9 @@
             </div>
 
             <ChatPane
-              v-else
+              v-if="!isTimelineLoading"
+              v-show="!shouldShowCenterEmptyState"
+              @content-presence="hasVisibleChatContent = $event"
               :contentEvents="contentTimelineEvents"
               :contentRevision="timelineContentRevision"
               :workspaceRoot="workspaceRoot"
@@ -172,6 +174,7 @@ import { isPendingThreadId } from "../../shared/threadCreateDebug";
 import { useAppShellStore } from "../../stores/appShell.store";
 import { useConfigStore } from "../../stores/config.store";
 import { useMessageQueueStore } from "../../stores/messageQueue.store";
+import { useAccountStatusStore } from "../../stores/accountStatus.store";
 import { useModelCatalogStore } from "../../stores/modelCatalog.store";
 import { useRuntimeStore, type SandboxMode } from "../../stores/runtime.store";
 import { useSkillsUiStore } from "../../stores/skillsUi.store";
@@ -179,6 +182,7 @@ import { useThreadStore } from "../../stores/thread.store";
 import { useTimelineStore } from "../../stores/timeline.store";
 import { CENTER_TIMELINE_SOFT_MIN_WIDTH_PX } from "../../domain/layoutWidthBudget";
 import { buildModelPickerOptions } from "@codenexus/shared/modelCatalog";
+import { useProviderRegistryStore } from "../../stores/providerRegistry.store";
 import { showToast } from "../../ui/toast";
 
 const { t } = useI18n();
@@ -219,6 +223,7 @@ const appShellStore = useAppShellStore();
 const configStore = useConfigStore();
 const messageQueueStore = useMessageQueueStore();
 const modelCatalogStore = useModelCatalogStore();
+const providerRegistryStore = useProviderRegistryStore();
 const skillsUiStore = useSkillsUiStore();
 
 const centerContentRef = ref<HTMLElement | null>(null);
@@ -309,12 +314,30 @@ const emptyStateMode = computed<"default" | "pendingThread">(() => {
   if (isPendingThreadId(tid)) return "pendingThread";
   return "default";
 });
-const modelOptions = computed(() =>
-  buildModelPickerOptions({
+const modelOptions = computed(() => {
+  const ids = buildModelPickerOptions({
     customIds: modelCatalogStore.customIds,
+    codexIds: modelCatalogStore.remoteIds,
+    providerIds: providerRegistryStore.pickerModelIds,
     current: runtimeStore.model,
-  })
-);
+  });
+  return ids.map((id) => {
+    const provider = providerRegistryStore.providers.find((p) => p.models.some((model) => model.id === id));
+    const knownProviderModel = Boolean(provider);
+    const available = knownProviderModel
+      ? providerRegistryStore.isAvailableProviderModel(id)
+      : !modelCatalogStore.isRemoteModelUnavailable(id);
+    const baseLabel = providerRegistryStore.modelLabels[id] || id;
+    return {
+      value: id,
+      label: !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
+      disabled: !available,
+      description: provider
+        ? `${provider.displayName} · ${provider.models.find((model) => model.id === id)?.contextWindow || "—"} tokens`
+        : "",
+    };
+  });
+});
 
 const sandboxRiskText = computed(() => {
   if (runtimeStore.sandboxMode === "danger-full-access") return t("composer.dangerFullAccessRisk");
@@ -363,12 +386,11 @@ const shouldShowComposerPanel = computed(() => {
   return true;
 });
 const shouldShowQueueTray = computed(() => shouldShowComposerPanel.value && queueItems.value.length > 0);
-const shouldShowCenterEmptyState = computed(() => {
-  if (contentTimelineEvents.value.length > 0) return false;
-  if (emptyStateMode.value === "pendingThread") return true;
-  if (currentThreadId.value) return false;
-  return emptyStateHistoryItems.value.length > 0;
+const hasVisibleChatContent = ref(false);
+watch(timelineKey, () => {
+  hasVisibleChatContent.value = false;
 });
+const shouldShowCenterEmptyState = computed(() => !hasVisibleChatContent.value);
 const composerDockSpacePx = computed(() => {
   if (!shouldShowComposerPanel.value) return 12;
   const dockHeight = composerDockHeightPx.value > 0 ? composerDockHeightPx.value : COMPOSER_DOCK_FALLBACK_HEIGHT_PX;
@@ -402,6 +424,7 @@ const isTimelineCompact = computed(() => {
 const timelinePaneClass = computed(() => {
   if (skillsUiStore.managerOpen) return ["timeline-pane--skills-page"];
   const classes = ["timeline-pane--chat"];
+  if (shouldShowCenterEmptyState.value && emptyStateMode.value === "default") classes.push("is-new-task");
   if (runtimeStore.timelineDebugEnabled) classes.push("is-debug-open");
   if (isTimelineCompact.value) classes.push("is-compact");
   return classes;
@@ -1171,6 +1194,26 @@ async function onEmptyStateSwitchThread(threadId: string) {
 }
 
 watch(
+  () => useAccountStatusStore().status,
+  (status) => {
+    void modelCatalogStore.accountStatusChanged(status);
+  },
+  { immediate: true }
+);
+
+watch(
+  () => modelCatalogStore.remoteLoadState,
+  (state) => {
+    if (state === "error" && modelCatalogStore.retryAttempt <= 1)
+      showToast({ kind: "error", message: t("globalConfig.remoteModels.error"), timeoutMs: 8000 });
+  }
+);
+
+function refreshAccountModelChoices() {
+  void modelCatalogStore.ensureRemoteModels();
+}
+
+watch(
   () => runtimeStore.composerFocusSeq,
   () => {
     nextTick(() => composerInputRef.value?.focus());
@@ -1321,6 +1364,7 @@ onMounted(() => {
   window.addEventListener("resize", onWindowLayoutChange);
   window.addEventListener("scroll", onWindowViewportChange, true);
   window.addEventListener("keydown", onWindowKeydown);
+  window.addEventListener("focus", refreshAccountModelChoices);
   scheduleTimelineViewportStateUpdate();
 });
 
@@ -1328,6 +1372,8 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", onWindowLayoutChange);
   window.removeEventListener("scroll", onWindowViewportChange, true);
   window.removeEventListener("keydown", onWindowKeydown);
+  window.removeEventListener("focus", refreshAccountModelChoices);
+  modelCatalogStore.cancelRetry();
   window.removeEventListener("keydown", onComposeLightboxWindowKeydown, true);
   if (pendingSlashPopoverPlacementRafId != null) cancelAnimationFrame(pendingSlashPopoverPlacementRafId);
   if (centerContentResizeObserver) {

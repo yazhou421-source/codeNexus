@@ -33,9 +33,15 @@ export type CodexEnsureInstalledResult = {
 };
 
 export type CodexDiagnosticsResult = {
-  codex: { ok: boolean; details?: string };
-  node: { ok: boolean; details?: string };
-  npm: { ok: boolean; details?: string };
+  selfContained: boolean;
+  codex: {
+    ok: boolean;
+    details?: string;
+    source?: "bundled" | "explicit-dev" | "system-dev";
+    version?: string;
+  };
+  node: { ok: boolean; required?: boolean; details?: string };
+  npm: { ok: boolean; required?: boolean; details?: string };
 };
 
 /*
@@ -511,6 +517,7 @@ export type SystemPowerShutdownResult =
   | { ok: false; reason: "unsupported" | "failed"; message?: string };
 
 export type AppUpdateStatus =
+  | "unconfigured"
   | "unsupported"
   | "idle"
   | "checking"
@@ -614,6 +621,52 @@ export type CodexProviderTestResult = {
   elapsedMs: number | null;
 };
 
+export type RouterProviderModelStatus = {
+  id: string;
+  displayName: string;
+  upstreamModel: string;
+  contextWindow: number;
+  inputModalities: ("text" | "image")[];
+  selected: boolean;
+};
+
+export type RouterProviderStatus = {
+  id: string;
+  displayName: string;
+  baseUrl: string;
+  api: "responses" | "chat_completions";
+  requiresApiKey: boolean;
+  defaultModelId: string;
+  configured: boolean;
+  enabled: boolean;
+  verification?: {
+    state: "untested" | "testing" | "verified" | "failed";
+    verifiedAt: string | null;
+    errorCode: string | null;
+  };
+  models: RouterProviderModelStatus[];
+};
+
+export type RouterProviderRegistrySnapshot = {
+  secureStorageAvailable: boolean;
+  runtimeRevision: number;
+  providers: RouterProviderStatus[];
+};
+
+export type SafeAccountStatus = {
+  state: "logged_in" | "logged_out" | "expired";
+  credentialHome?: "default" | "environment";
+  credentialStorage?: "file" | "keyring" | "auto" | "unknown";
+  checkedAt?: number;
+  email: string | null;
+  planType: string | null;
+  requiresOpenaiAuth: boolean;
+};
+
+export type SafeAccountLoginCompleted = {
+  success: boolean;
+};
+
 export type CodexSkillRootsSnapshot = {
   path: string;
   exists: boolean;
@@ -628,6 +681,12 @@ export type CodexSkillRootsMutationResult = {
 
 export type CodexDesktopAppApi = {
   openExternal(args: { url: string }): Promise<{ ok: true }>;
+  readAccount(): Promise<SafeAccountStatus>;
+  startChatGptLogin(): Promise<{ ok: true }>;
+  cancelChatGptLogin(): Promise<{ ok: true }>;
+  onAccountLoginCompleted(
+    cb: (payload: SafeAccountLoginCompleted) => void,
+  ): () => void;
   readTextFile(args: { path: string }): Promise<{
     ok: true;
     content: string;
@@ -642,6 +701,7 @@ export type CodexDesktopAppApi = {
   deleteFile(args: { path: string }): Promise<{ ok: true }>;
   readDirectory(args: {
     path: string;
+    workspaceRoot?: string;
   }): Promise<{ ok: true; entries: AppDirectoryEntry[] }>;
   getFileMetadata(args: {
     path: string;
@@ -691,6 +751,22 @@ export type CodexDesktopAppApi = {
   prepareDeepSeekProxy(args: {
     upstreamBaseUrl: string;
   }): Promise<{ ok: true; baseUrl: string }>;
+  listRouterProviders(): Promise<RouterProviderRegistrySnapshot>;
+  saveRouterProviderApiKey(args: {
+    providerId: string;
+    apiKey: string;
+  }): Promise<RouterProviderRegistrySnapshot>;
+  deleteRouterProviderApiKey(args: {
+    providerId: string;
+  }): Promise<RouterProviderRegistrySnapshot>;
+  configureRouterProvider(args: {
+    providerId: string;
+    enabled: boolean;
+    modelIds: string[];
+  }): Promise<RouterProviderRegistrySnapshot>;
+  testRouterProviderConnection(args: {
+    providerId: string;
+  }): Promise<RouterProviderRegistrySnapshot>;
   readCodexSkillRoots(): Promise<CodexSkillRootsSnapshot>;
   setCodexSkillRootsForWorkspace(args: {
     workspacePath: string;
@@ -736,6 +812,9 @@ export type CodexDesktopCacheApi = {
 export type CodexDesktopCodexServerApi = {
   ensureInstalled(): Promise<CodexEnsureInstalledResult>;
   getDiagnostics(): Promise<CodexDiagnosticsResult>;
+  listAccountModels(): Promise<
+    import("@codenexus/generated/codex-app-server/v2/ModelListResponse").ModelListResponse
+  >;
   start(args: { cwd?: string; experimentalApi?: boolean }): Promise<{
     serverId: string;
     capabilities?: { experimentalApi?: boolean };
@@ -751,7 +830,15 @@ export type CodexDesktopCodexServerApi = {
   onEvent(cb: (payload: CodexEventPayload) => void): () => void;
 };
 
+export type WorkspaceGitDiffResult = {
+  status: "ok" | "not_git" | "unavailable";
+  diffText: string;
+  skipped: number;
+};
+
 export type CodexDesktopWorkspaceApi = {
+  activate(args: { cwd: string }): Promise<{ ok: boolean }>;
+  readGitDiff(args: { cwd: string }): Promise<WorkspaceGitDiffResult>;
   select(): Promise<string | null>;
   dryRunApplyReverseDiff(args: {
     cwd: string;

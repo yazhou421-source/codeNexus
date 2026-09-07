@@ -6,6 +6,7 @@ export const IPC_CODEX_CHANNELS = {
   // 环境探测：用于启动前确认 Codex/native 依赖是否可用。
   codexEnsureInstalled: "codex:ensureInstalled",
   codexDiagnostics: "codex:diagnostics",
+  codexListAccountModels: "codex:listAccountModels",
 
   // Server 生命周期：main process 负责按工作区启动、复用和停止 Codex server。
   codexServerStart: "codex:serverStart",

@@ -9,7 +9,7 @@
         <button type="button" class="cw-btn" @click="showConfig = !showConfig">
           {{ showConfig ? "返回对话" : "配置 Provider" }}
         </button>
-        <button type="button" class="cw-btn" @click="appShellStore.openModeChooser()">切换模式</button>
+        <button type="button" class="cw-btn" @click="appShellStore.openSettings('advanced')">高级设置</button>
       </div>
     </header>
 

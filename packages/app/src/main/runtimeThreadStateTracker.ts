@@ -72,6 +72,11 @@ export class RuntimeThreadStateTracker {
     };
   }
 
+  isServerBusy(serverIdValue: string): boolean {
+    const serverId = normalizeText(serverIdValue);
+    return Boolean(serverId && this.threadIdsByServer.get(serverId)?.size);
+  }
+
   observeEvent(payload: { serverId: string; msg: unknown }) {
     const serverId = normalizeText(payload.serverId);
     if (!serverId || !isRuntimeTrackedMessage(payload.msg)) return;

@@ -1,29 +1,54 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { discoverExistingCodexPaths } from "./codexNativeDiscovery";
+import { app } from "electron";
+import type { CodexDiagnosticsResult } from "@codenexus/shared/ipc/contracts";
+import { resolveCurrentCodexExecutable, type CodexExecutableSource } from "./codexExecutableResolver";
+import { logger } from "./utils/logger";
 
-export function detectCodexNative(): { ok: boolean; details?: string } {
-  // 在 Windows 环境通过 where.exe 检查 codex 是否已加入 PATH。
-  const res = spawnSync("where.exe", ["codex"], { encoding: "utf8" });
-  const paths = discoverExistingCodexPaths({
-    whereStdout: res.stdout,
-    appData: process.env.APPDATA,
-    exists: existsSync,
-  });
-  if (paths.length > 0) return { ok: true, details: paths.join("\n") };
+type ToolDiagnostic = { ok: boolean; required?: boolean; details?: string };
 
-  return { ok: false, details: (res.stderr || res.stdout || "").trim() };
+function detectPathTool(name: string): ToolDiagnostic {
+  const locator = process.platform === "win32" ? "where.exe" : "which";
+  const res = spawnSync(locator, [name], { encoding: "utf8" });
+  if (res.status === 0) return { ok: true, required: true, details: String(res.stdout ?? "").trim() };
+  return { ok: false, required: true, details: String(res.stderr || res.stdout || "").trim() };
 }
 
-export function detectNpmNative(): { ok: boolean; details?: string } {
-  // npm 通常随 Node.js 安装提供。
-  const res = spawnSync("where.exe", ["npm"], { encoding: "utf8" });
-  if (res.status === 0) return { ok: true, details: res.stdout.trim() };
-  return { ok: false, details: (res.stderr || res.stdout || "").trim() };
+export async function detectCodexNative(): Promise<{
+  ok: boolean;
+  details?: string;
+  source?: CodexExecutableSource;
+  version?: string;
+}> {
+  try {
+    const resolution = await resolveCurrentCodexExecutable();
+    return {
+      ok: true,
+      source: resolution.source,
+      version: resolution.version,
+      details: `${resolution.version} (${resolution.source})\n${resolution.path}`,
+    };
+  } catch (error) {
+    logger.error("codex-runtime", "runtime diagnostics failed", error);
+    return { ok: false, details: error instanceof Error ? error.message : String(error) };
+  }
 }
 
-export function detectNodeNative(): { ok: boolean; details?: string } {
-  const res = spawnSync("where.exe", ["node"], { encoding: "utf8" });
-  if (res.status === 0) return { ok: true, details: res.stdout.trim() };
-  return { ok: false, details: (res.stderr || res.stdout || "").trim() };
+export function detectNpmNative(): ToolDiagnostic {
+  return detectPathTool("npm");
+}
+
+export function detectNodeNative(): ToolDiagnostic {
+  return detectPathTool("node");
+}
+
+export async function getCodexDiagnostics(): Promise<CodexDiagnosticsResult> {
+  const codex = await detectCodexNative();
+  const selfContained = app.isPackaged;
+  const notRequired = { ok: true, required: false } as const;
+  return {
+    selfContained,
+    codex,
+    node: selfContained ? notRequired : detectNodeNative(),
+    npm: selfContained ? notRequired : detectNpmNative(),
+  };
 }

@@ -1,33 +1,35 @@
 <template>
-  <button
-    id="btn-window-minimize"
-    class="btn-icon"
-    type="button"
-    :aria-label="t('topbarExtra.minimize')"
-    @click="onWindowMinimize"
-  >
-    <Minus aria-hidden="true" />
-  </button>
-  <button
-    id="btn-window-maximize"
-    class="btn-icon"
-    type="button"
-    :aria-label="windowExpanded ? t('topbarExtra.restore') : t('topbarExtra.maximize')"
-    @click="onWindowToggleMaximize"
-  >
-    <Copy v-if="windowExpanded" aria-hidden="true" />
-    <Square v-else aria-hidden="true" />
-  </button>
-  <button
-    id="btn-window-close"
-    class="btn-icon danger"
-    type="button"
-    :disabled="closeInFlight || appClosingStore.visible"
-    :aria-label="t('topbarExtra.close')"
-    @click="onWindowClose"
-  >
-    <X aria-hidden="true" />
-  </button>
+  <template v-if="!isMac">
+    <button
+      id="btn-window-minimize"
+      class="btn-icon"
+      type="button"
+      :aria-label="t('topbarExtra.minimize')"
+      @click="onWindowMinimize"
+    >
+      <Minus aria-hidden="true" />
+    </button>
+    <button
+      id="btn-window-maximize"
+      class="btn-icon"
+      type="button"
+      :aria-label="windowExpanded ? t('topbarExtra.restore') : t('topbarExtra.maximize')"
+      @click="onWindowToggleMaximize"
+    >
+      <Copy v-if="windowExpanded" aria-hidden="true" />
+      <Square v-else aria-hidden="true" />
+    </button>
+    <button
+      id="btn-window-close"
+      class="btn-icon danger"
+      type="button"
+      :disabled="closeInFlight || appClosingStore.visible"
+      :aria-label="t('topbarExtra.close')"
+      @click="onWindowClose"
+    >
+      <X aria-hidden="true" />
+    </button>
+  </template>
 </template>
 
 <script setup lang="ts">
@@ -38,6 +40,7 @@ import { codexDesktop } from "../../../api/codexDesktopClient";
 import { useAppClosingStore } from "../../../stores/appClosing.store";
 import type { AppWindowState } from "@codenexus/shared/ipc/contracts";
 
+const isMac = /Mac/i.test(navigator.platform);
 const appClosingStore = useAppClosingStore();
 const { t } = useI18n();
 

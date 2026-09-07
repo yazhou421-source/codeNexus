@@ -1,0 +1,224 @@
+:root[data-theme] .timeline-pane--chat {
+  --chat-content-max-w: 800px;
+  --chat-row-gap-body: 22px;
+  --chat-row-gap-mixed: 14px;
+  --chat-user-bg: var(--surface-2);
+  --chat-user-border: transparent;
+  --chat-user-hover-bg: var(--workspace-selected);
+  --chat-row-border: var(--border);
+  --chat-row-shadow: none;
+  --chat-row-bg: var(--surface-1);
+  --chat-row-bg-strong: var(--surface-2);
+  --chat-aux-bg: transparent;
+  --chat-aux-border: transparent;
+  --chat-aux-bg-hover: var(--workspace-hover);
+  --chat-radius-lg: 14px;
+  --chat-radius-md: 10px;
+}
+:root[data-theme] .chat-row--assistant {
+  font-size: 14px;
+  line-height: 1.75;
+}
+:root[data-theme] .chat-row pre {
+  border-radius: 10px;
+  box-shadow: none;
+  max-width: 100%;
+  overflow-x: auto;
+}
+:root[data-theme] .chat-row {
+  overflow-wrap: anywhere;
+}
+.center-empty-state {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.new-task-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding-top: 0;
+}
+.new-task-heading .brand-logo {
+  width: 42px;
+  height: 42px;
+}
+.new-task-heading h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 550;
+  letter-spacing: -0.6px;
+}
+:root[data-theme] .is-new-task > .composer {
+  bottom: clamp(70px, 19vh, 190px);
+}
+:root[data-theme] .composer {
+  --composer-radius: 18px;
+  --composer-control-radius: 7px;
+  --composer-padding: 12px;
+}
+:root[data-theme] .composer-shell {
+  box-shadow: 0 2px 6px rgb(from var(--theme-seed-shadow-source) r g b / 0.05);
+}
+:root[data-theme] .composer-shell.is-focused {
+  border-color: var(--theme-border-strong);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+:root[data-theme] .composer-toolbar {
+  border-top: 0;
+  padding-top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+:root[data-theme] .composer-toolbar-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+:root[data-theme] .composer-toolbar-actions {
+  margin-left: auto;
+  gap: 8px;
+}
+:root[data-theme] .composer-mode-group {
+  box-shadow: none;
+  border: 0;
+  border-radius: 7px;
+  background: var(--surface-1);
+}
+:root[data-theme] .composer-mode-thumb {
+  background: var(--workspace-selected);
+  box-shadow: none;
+  border: 0;
+}
+:root[data-theme] :is(.composer-model-reasoning-trigger, .composer-sandbox-trigger, .composer-icon-button) {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+:root[data-theme] :is(.composer-model-reasoning-trigger, .composer-sandbox-trigger, .composer-icon-button):hover {
+  background: var(--workspace-hover);
+  color: var(--text);
+}
+:root[data-theme] .composer-send-button {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--bg);
+  border: 0;
+  box-shadow: none;
+}
+:root[data-theme] .composer-stop-button {
+  background: var(--text);
+  color: var(--bg);
+}
+:root[data-theme] .composer-send-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text) 85%, var(--bg));
+}
+:root[data-theme] .composer-send-label,
+:root[data-theme] .composer-send-ping {
+  display: none;
+}
+:root[data-theme] .composer-send-button:hover .composer-send-icon {
+  transform: none;
+}
+:root[data-theme] .composer-model-reasoning-popover,
+:root[data-theme] .composer-sandbox-popover {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--floating-shadow);
+}
+:root[data-theme] .composer-model-reasoning-option.is-selected {
+  background: var(--workspace-selected);
+  color: var(--text);
+}
+@container composer (max-width: 480px) {
+  :root[data-theme] .composer-toolbar-main {
+    flex-basis: 100%;
+  }
+}
+:root[data-theme] .new-task-heading .topbar-workspace-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+}
+.new-task-heading .topbar-workspace-select__icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Keep identifiers readable; compact the meter without removing its exact values. */
+:root[data-theme] .composer-model-reasoning-option-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+  line-height: 1.45;
+}
+:root[data-theme] .composer-model-reasoning-option {
+  height: auto;
+  min-height: 36px;
+  padding-block: 8px;
+}
+:root[data-theme] .composer-model-reasoning-option:is(:hover, .is-active) {
+  background: var(--workspace-hover);
+  color: var(--text);
+  box-shadow: none;
+}
+:root[data-theme] .composer-model-reasoning-option.is-selected {
+  background: var(--workspace-selected);
+}
+:root[data-theme] .composer-model-reasoning-chevron {
+  opacity: 0.65;
+}
+:root[data-theme] .composer-context {
+  cursor: help;
+}
+:root[data-theme] .composer-context-copy {
+  display: none;
+}
+:root[data-theme] .composer-service-tier {
+  background: var(--surface-1);
+  border-color: var(--border);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+:root[data-theme] .center-workbench-sash {
+  background: var(--bg);
+}
+:root[data-theme] .center-workbench-sash::after {
+  width: 1px;
+  background: var(--border);
+  opacity: 1;
+}
+:root[data-theme] .center-workbench-sash:is(:hover, :focus-visible)::after {
+  width: 3px;
+  background: var(--accent);
+}
+
+:root[data-theme] .composer:not(.composer--inline) .composer-toolbar-main {
+  width: auto;
+}
+:root[data-theme] .composer:not(.composer--inline) .composer-toolbar-actions {
+  width: auto;
+  display: flex;
+}
+@container composer (max-width: 480px) {
+  :root[data-theme] .composer:not(.composer--inline) .composer-toolbar-main {
+    width: 100%;
+  }
+  :root[data-theme] .composer:not(.composer--inline) .composer-toolbar-actions {
+    width: 100%;
+  }
+}

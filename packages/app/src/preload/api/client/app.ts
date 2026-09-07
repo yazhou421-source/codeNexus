@@ -6,6 +6,14 @@ export function createAppApi(ipcRenderer: IpcRenderer): CodexDesktopApi["app"] {
   return {
     // 打开外部链接：交给系统浏览器处理。
     openExternal: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appOpenExternal, args),
+    readAccount: () => ipcRenderer.invoke(IPC_APP_CHANNELS.appAccountRead),
+    startChatGptLogin: () => ipcRenderer.invoke(IPC_APP_CHANNELS.appAccountLoginStart),
+    cancelChatGptLogin: () => ipcRenderer.invoke(IPC_APP_CHANNELS.appAccountLoginCancel),
+    onAccountLoginCompleted: (cb) => {
+      const listener = (_evt: unknown, payload: any) => cb(payload);
+      ipcRenderer.on(IPC_APP_CHANNELS.appAccountLoginCompleted, listener);
+      return () => ipcRenderer.off(IPC_APP_CHANNELS.appAccountLoginCompleted, listener);
+    },
     // 读取文本文件：由主进程统一访问磁盘。
     readTextFile: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appReadTextFile, args),
     // 写入文本文件：用于工作区编辑与本地持久化。
@@ -72,6 +80,11 @@ export function createAppApi(ipcRenderer: IpcRenderer): CodexDesktopApi["app"] {
     testCodexProvider: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appCodexProviderTest, args),
     // 准备 DeepSeek 本地适配代理：返回 Codex 可写入的本地 base_url。
     prepareDeepSeekProxy: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appDeepSeekProxyPrepare, args),
+    listRouterProviders: () => ipcRenderer.invoke(IPC_APP_CHANNELS.appRouterProvidersList),
+    saveRouterProviderApiKey: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appRouterProviderSaveApiKey, args),
+    deleteRouterProviderApiKey: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appRouterProviderDeleteApiKey, args),
+    configureRouterProvider: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appRouterProviderConfigure, args),
+    testRouterProviderConnection: (args) => ipcRenderer.invoke(IPC_APP_CHANNELS.appRouterProviderTestConnection, args),
     // 读取 skill roots：获取当前启用的技能根目录。
     readCodexSkillRoots: () => ipcRenderer.invoke(IPC_APP_CHANNELS.appCodexSkillRootsRead),
     // 为当前工作区设置 skill roots：联动工作区与技能配置。

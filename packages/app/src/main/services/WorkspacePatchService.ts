@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
+import { readWorkspaceGitDiff } from "./workspaceGitDiff";
 
 type DiffHunkLine = { kind: "context" | "add" | "remove"; text: string };
 
@@ -283,6 +284,9 @@ async function fileExists(path: string): Promise<boolean> {
 }
 
 export class WorkspacePatchService {
+  readGitDiff(args: { cwd: string }) {
+    return readWorkspaceGitDiff(args?.cwd);
+  }
   async dryRunApplyReverseDiff(args: { cwd: string; diffText: string }): Promise<WorkspaceReverseDiffResult> {
     try {
       const { files } = await this.applyReverseDiffInternal(args, { dryRun: true });

@@ -5,15 +5,16 @@
         v-if="open"
         class="global-config-drawer-overlay"
         :class="{ 'is-settings': isSettings }"
-        role="dialog"
-        aria-modal="true"
+        :data-settings-section="section"
+        :role="isSettings ? 'region' : 'dialog'"
+        :aria-modal="isSettings ? undefined : true"
         :aria-label="t('globalConfig.title')"
         @click.self="onOverlayClick"
       >
         <div v-if="!isSettings" class="global-config-drawer-backdrop" @click="onRequestClose"></div>
         <section class="global-config-drawer-panel" @click.stop>
           <header class="global-config-drawer-head">
-            <div class="panel-title">{{ t("globalConfig.title") }}</div>
+            <div class="panel-title">{{ sectionTitle }}</div>
             <div class="row global-config-head-actions">
               <div class="global-config-status global-config-status--inline" :class="['is-' + globalConfigStatusKind]">
                 <span class="global-config-status-text">{{ globalConfigStatusText }}</span>
@@ -52,7 +53,10 @@
               </div>
             </div>
 
-            <section class="global-config-guide-entry global-config-local-entry">
+            <section
+              v-if="section === 'all' || section === 'appearance'"
+              class="global-config-guide-entry global-config-local-entry"
+            >
               <div class="guide-entry-text">
                 <div class="guide-entry-title">{{ t("globalConfig.typographyTitle") }}</div>
                 <div class="guide-entry-desc">{{ t("globalConfig.typographyDesc") }}</div>
@@ -81,7 +85,10 @@
               </div>
             </section>
 
-            <section class="global-config-guide-entry global-config-local-entry">
+            <section
+              v-if="section === 'all' || section === 'appearance'"
+              class="global-config-guide-entry global-config-local-entry"
+            >
               <div class="guide-entry-text">
                 <div class="guide-entry-title">{{ t("globalConfig.languageTitle") }}</div>
                 <div class="guide-entry-desc">{{ t("globalConfig.languageDesc") }}</div>
@@ -100,8 +107,8 @@
               </div>
             </section>
 
-            <div class="global-config-grid">
-              <section class="global-config-section">
+            <div v-show="section !== 'appearance'" class="global-config-grid">
+              <section v-show="section !== 'permissions'" class="global-config-section">
                 <label class="global-row" :class="{ 'is-dirty': isGlobalConfigFieldDirty('model') }">
                   <span class="context-label dim">{{ t("globalConfig.model") }}</span>
                   <div class="global-field-stack">
@@ -228,7 +235,7 @@
                 </div>
               </section>
 
-              <section class="global-config-section">
+              <section v-show="section !== 'permissions'" class="global-config-section">
                 <div class="global-row">
                   <span class="context-label dim">{{ t("globalConfig.contextPreset") }}</span>
                   <div class="global-field-stack">
@@ -292,233 +299,237 @@
                 >
                   {{ configRequirementsSummaryText }}
                 </div>
-                <label class="global-row" :class="{ 'is-dirty': isGlobalConfigFieldDirty('modelReasoningEffort') }">
-                  <span class="context-label dim">{{ t("globalConfig.reasoningEffort") }}</span>
-                  <div class="global-field-stack">
-                    <SelectDropdown
-                      id="sel-global-reasoning-effort"
-                      v-model="configStore.draft.modelReasoningEffort"
-                      class="context-input mono"
-                      :disabled="globalControlsDisabled"
-                      :options="OFFICIAL_REASONING_EFFORT_OPTIONS"
-                    />
-                  </div>
-                </label>
-                <label class="global-row" :class="{ 'is-dirty': isGlobalConfigFieldDirty('modelReasoningSummary') }">
-                  <span class="context-label dim">{{ t("globalConfig.reasoningSummary") }}</span>
-                  <div class="global-field-stack">
-                    <SelectDropdown
-                      id="sel-global-reasoning-summary"
-                      v-model="configStore.draft.modelReasoningSummary"
-                      class="context-input mono"
-                      :disabled="globalControlsDisabled"
-                      :options="OFFICIAL_REASONING_SUMMARY_OPTIONS"
-                    />
-                  </div>
-                </label>
-                <label class="global-row" :class="{ 'is-dirty': isGlobalConfigFieldDirty('approvalPolicy') }">
-                  <span class="context-label dim">{{ t("globalConfig.approvalPolicy") }}</span>
-                  <div class="global-field-stack">
-                    <SelectDropdown
-                      id="sel-global-approval-policy"
-                      :modelValue="approvalPolicySelectValue"
-                      class="context-input mono"
-                      :disabled="approvalPolicySelectDisabled"
-                      :options="approvalPolicyOptions"
-                      @update:modelValue="onApprovalPolicyChanged"
-                    />
-                    <div v-if="approvalPolicyHintText" class="global-model-manage-hint">
-                      {{ approvalPolicyHintText }}
+                <div v-show="section !== 'permissions'">
+                  <label class="global-row" :class="{ 'is-dirty': isGlobalConfigFieldDirty('modelReasoningEffort') }">
+                    <span class="context-label dim">{{ t("globalConfig.reasoningEffort") }}</span>
+                    <div class="global-field-stack">
+                      <SelectDropdown
+                        id="sel-global-reasoning-effort"
+                        v-model="configStore.draft.modelReasoningEffort"
+                        class="context-input mono"
+                        :disabled="globalControlsDisabled"
+                        :options="OFFICIAL_REASONING_EFFORT_OPTIONS"
+                      />
                     </div>
-                    <div v-if="approvalPolicySelectValue === 'granular'" class="global-toggle-list">
-                      <label class="global-toggle-row">
-                        <div class="global-toggle-copy">
-                          <span class="global-toggle-title">{{ t("globalConfig.granularSandboxApproval") }}</span>
-                          <span class="global-toggle-note mono">sandbox_approval</span>
-                        </div>
-                        <span class="skill-switch">
-                          <input
-                            class="skill-switch-input"
-                            type="checkbox"
-                            :checked="granularApprovalPolicy.granular.sandbox_approval"
-                            :disabled="globalControlsDisabled"
-                            @change="onGranularApprovalFlagChanged('sandbox_approval', $event)"
-                          />
-                          <span class="skill-switch-track" aria-hidden="true"
-                            ><span class="skill-switch-thumb"></span
-                          ></span>
-                        </span>
-                      </label>
-                      <label class="global-toggle-row">
-                        <div class="global-toggle-copy">
-                          <span class="global-toggle-title">{{ t("globalConfig.granularRules") }}</span>
-                          <span class="global-toggle-note mono">rules</span>
-                        </div>
-                        <span class="skill-switch">
-                          <input
-                            class="skill-switch-input"
-                            type="checkbox"
-                            :checked="granularApprovalPolicy.granular.rules"
-                            :disabled="globalControlsDisabled"
-                            @change="onGranularApprovalFlagChanged('rules', $event)"
-                          />
-                          <span class="skill-switch-track" aria-hidden="true"
-                            ><span class="skill-switch-thumb"></span
-                          ></span>
-                        </span>
-                      </label>
-                      <label class="global-toggle-row">
-                        <div class="global-toggle-copy">
-                          <span class="global-toggle-title">{{ t("globalConfig.granularSkillApproval") }}</span>
-                          <span class="global-toggle-note mono">skill_approval</span>
-                        </div>
-                        <span class="skill-switch">
-                          <input
-                            class="skill-switch-input"
-                            type="checkbox"
-                            :checked="granularApprovalPolicy.granular.skill_approval"
-                            :disabled="globalControlsDisabled"
-                            @change="onGranularApprovalFlagChanged('skill_approval', $event)"
-                          />
-                          <span class="skill-switch-track" aria-hidden="true"
-                            ><span class="skill-switch-thumb"></span
-                          ></span>
-                        </span>
-                      </label>
-                      <label class="global-toggle-row">
-                        <div class="global-toggle-copy">
-                          <span class="global-toggle-title">{{ t("globalConfig.granularRequestPermissions") }}</span>
-                          <span class="global-toggle-note mono">request_permissions</span>
-                        </div>
-                        <span class="skill-switch">
-                          <input
-                            class="skill-switch-input"
-                            type="checkbox"
-                            :checked="granularApprovalPolicy.granular.request_permissions"
-                            :disabled="globalControlsDisabled"
-                            @change="onGranularApprovalFlagChanged('request_permissions', $event)"
-                          />
-                          <span class="skill-switch-track" aria-hidden="true"
-                            ><span class="skill-switch-thumb"></span
-                          ></span>
-                        </span>
-                      </label>
-                      <label class="global-toggle-row">
-                        <div class="global-toggle-copy">
-                          <span class="global-toggle-title">{{ t("globalConfig.granularMcpElicitations") }}</span>
-                          <span class="global-toggle-note mono">mcp_elicitations</span>
-                        </div>
-                        <span class="skill-switch">
-                          <input
-                            class="skill-switch-input"
-                            type="checkbox"
-                            :checked="granularApprovalPolicy.granular.mcp_elicitations"
-                            :disabled="globalControlsDisabled"
-                            @change="onGranularApprovalFlagChanged('mcp_elicitations', $event)"
-                          />
-                          <span class="skill-switch-track" aria-hidden="true"
-                            ><span class="skill-switch-thumb"></span
-                          ></span>
-                        </span>
-                      </label>
+                  </label>
+                  <label class="global-row" :class="{ 'is-dirty': isGlobalConfigFieldDirty('modelReasoningSummary') }">
+                    <span class="context-label dim">{{ t("globalConfig.reasoningSummary") }}</span>
+                    <div class="global-field-stack">
+                      <SelectDropdown
+                        id="sel-global-reasoning-summary"
+                        v-model="configStore.draft.modelReasoningSummary"
+                        class="context-input mono"
+                        :disabled="globalControlsDisabled"
+                        :options="OFFICIAL_REASONING_SUMMARY_OPTIONS"
+                      />
                     </div>
-                  </div>
-                </label>
-                <label class="global-row" :class="{ 'is-dirty': isGlobalConfigFieldDirty('approvalsReviewer') }">
-                  <span class="context-label dim">{{ t("globalConfig.approvalsReviewer") }}</span>
-                  <div class="global-field-stack">
-                    <SelectDropdown
-                      id="sel-global-approvals-reviewer"
-                      v-model="configStore.draft.approvalsReviewer"
-                      class="context-input mono"
-                      :disabled="approvalsReviewerSelectDisabled"
-                      :options="approvalsReviewerOptions"
-                    />
-                    <div v-if="approvalsReviewerHintText" class="global-model-manage-hint">
-                      {{ approvalsReviewerHintText }}
+                  </label>
+                </div>
+                <div v-show="section !== 'defaults'">
+                  <label class="global-row" :class="{ 'is-dirty': isGlobalConfigFieldDirty('approvalPolicy') }">
+                    <span class="context-label dim">{{ t("globalConfig.approvalPolicy") }}</span>
+                    <div class="global-field-stack">
+                      <SelectDropdown
+                        id="sel-global-approval-policy"
+                        :modelValue="approvalPolicySelectValue"
+                        class="context-input mono"
+                        :disabled="approvalPolicySelectDisabled"
+                        :options="approvalPolicyOptions"
+                        @update:modelValue="onApprovalPolicyChanged"
+                      />
+                      <div v-if="approvalPolicyHintText" class="global-model-manage-hint">
+                        {{ approvalPolicyHintText }}
+                      </div>
+                      <div v-if="approvalPolicySelectValue === 'granular'" class="global-toggle-list">
+                        <label class="global-toggle-row">
+                          <div class="global-toggle-copy">
+                            <span class="global-toggle-title">{{ t("globalConfig.granularSandboxApproval") }}</span>
+                            <span class="global-toggle-note mono">sandbox_approval</span>
+                          </div>
+                          <span class="skill-switch">
+                            <input
+                              class="skill-switch-input"
+                              type="checkbox"
+                              :checked="granularApprovalPolicy.granular.sandbox_approval"
+                              :disabled="globalControlsDisabled"
+                              @change="onGranularApprovalFlagChanged('sandbox_approval', $event)"
+                            />
+                            <span class="skill-switch-track" aria-hidden="true"
+                              ><span class="skill-switch-thumb"></span
+                            ></span>
+                          </span>
+                        </label>
+                        <label class="global-toggle-row">
+                          <div class="global-toggle-copy">
+                            <span class="global-toggle-title">{{ t("globalConfig.granularRules") }}</span>
+                            <span class="global-toggle-note mono">rules</span>
+                          </div>
+                          <span class="skill-switch">
+                            <input
+                              class="skill-switch-input"
+                              type="checkbox"
+                              :checked="granularApprovalPolicy.granular.rules"
+                              :disabled="globalControlsDisabled"
+                              @change="onGranularApprovalFlagChanged('rules', $event)"
+                            />
+                            <span class="skill-switch-track" aria-hidden="true"
+                              ><span class="skill-switch-thumb"></span
+                            ></span>
+                          </span>
+                        </label>
+                        <label class="global-toggle-row">
+                          <div class="global-toggle-copy">
+                            <span class="global-toggle-title">{{ t("globalConfig.granularSkillApproval") }}</span>
+                            <span class="global-toggle-note mono">skill_approval</span>
+                          </div>
+                          <span class="skill-switch">
+                            <input
+                              class="skill-switch-input"
+                              type="checkbox"
+                              :checked="granularApprovalPolicy.granular.skill_approval"
+                              :disabled="globalControlsDisabled"
+                              @change="onGranularApprovalFlagChanged('skill_approval', $event)"
+                            />
+                            <span class="skill-switch-track" aria-hidden="true"
+                              ><span class="skill-switch-thumb"></span
+                            ></span>
+                          </span>
+                        </label>
+                        <label class="global-toggle-row">
+                          <div class="global-toggle-copy">
+                            <span class="global-toggle-title">{{ t("globalConfig.granularRequestPermissions") }}</span>
+                            <span class="global-toggle-note mono">request_permissions</span>
+                          </div>
+                          <span class="skill-switch">
+                            <input
+                              class="skill-switch-input"
+                              type="checkbox"
+                              :checked="granularApprovalPolicy.granular.request_permissions"
+                              :disabled="globalControlsDisabled"
+                              @change="onGranularApprovalFlagChanged('request_permissions', $event)"
+                            />
+                            <span class="skill-switch-track" aria-hidden="true"
+                              ><span class="skill-switch-thumb"></span
+                            ></span>
+                          </span>
+                        </label>
+                        <label class="global-toggle-row">
+                          <div class="global-toggle-copy">
+                            <span class="global-toggle-title">{{ t("globalConfig.granularMcpElicitations") }}</span>
+                            <span class="global-toggle-note mono">mcp_elicitations</span>
+                          </div>
+                          <span class="skill-switch">
+                            <input
+                              class="skill-switch-input"
+                              type="checkbox"
+                              :checked="granularApprovalPolicy.granular.mcp_elicitations"
+                              :disabled="globalControlsDisabled"
+                              @change="onGranularApprovalFlagChanged('mcp_elicitations', $event)"
+                            />
+                            <span class="skill-switch-track" aria-hidden="true"
+                              ><span class="skill-switch-thumb"></span
+                            ></span>
+                          </span>
+                        </label>
+                      </div>
                     </div>
-                  </div>
-                </label>
-                <label class="global-row" :class="{ 'is-dirty': isGlobalConfigFieldDirty('sandboxMode') }">
-                  <span class="context-label dim">{{ t("globalConfig.sandboxMode") }}</span>
-                  <div class="global-field-stack">
-                    <SelectDropdown
-                      id="sel-global-sandbox-mode"
-                      v-model="configStore.draft.sandboxMode"
-                      class="context-input mono"
-                      :disabled="sandboxModeSelectDisabled"
-                      :options="sandboxModeOptions"
-                    />
-                    <div v-if="sandboxModeHintText" class="global-model-manage-hint">{{ sandboxModeHintText }}</div>
-                  </div>
-                </label>
+                  </label>
+                  <label class="global-row" :class="{ 'is-dirty': isGlobalConfigFieldDirty('approvalsReviewer') }">
+                    <span class="context-label dim">{{ t("globalConfig.approvalsReviewer") }}</span>
+                    <div class="global-field-stack">
+                      <SelectDropdown
+                        id="sel-global-approvals-reviewer"
+                        v-model="configStore.draft.approvalsReviewer"
+                        class="context-input mono"
+                        :disabled="approvalsReviewerSelectDisabled"
+                        :options="approvalsReviewerOptions"
+                      />
+                      <div v-if="approvalsReviewerHintText" class="global-model-manage-hint">
+                        {{ approvalsReviewerHintText }}
+                      </div>
+                    </div>
+                  </label>
+                  <label class="global-row" :class="{ 'is-dirty': isGlobalConfigFieldDirty('sandboxMode') }">
+                    <span class="context-label dim">{{ t("globalConfig.sandboxMode") }}</span>
+                    <div class="global-field-stack">
+                      <SelectDropdown
+                        id="sel-global-sandbox-mode"
+                        v-model="configStore.draft.sandboxMode"
+                        class="context-input mono"
+                        :disabled="sandboxModeSelectDisabled"
+                        :options="sandboxModeOptions"
+                      />
+                      <div v-if="sandboxModeHintText" class="global-model-manage-hint">{{ sandboxModeHintText }}</div>
+                    </div>
+                  </label>
 
-                <div class="global-toggle-list global-advanced-body">
-                  <label
-                    class="global-toggle-row"
-                    :class="{ 'is-dirty': isGlobalConfigFieldDirty('windowsElevatedSandboxEnabled') }"
-                  >
-                    <div class="global-toggle-copy">
-                      <span class="global-toggle-title">{{ t("globalConfig.elevatedSandbox") }}</span>
-                      <span class="global-toggle-note mono">{{ t("globalConfig.elevatedSandboxNote") }}</span>
-                    </div>
-                    <span class="skill-switch">
-                      <input
-                        v-model="configStore.draft.windowsElevatedSandboxEnabled"
-                        class="skill-switch-input"
-                        type="checkbox"
-                        :disabled="globalControlsDisabled"
-                      />
-                      <span class="skill-switch-track" aria-hidden="true"
-                        ><span class="skill-switch-thumb"></span
-                      ></span>
-                    </span>
-                  </label>
-                  <label
-                    class="global-toggle-row"
-                    :class="{ 'is-dirty': isGlobalConfigFieldDirty('unifiedExecEnabled') }"
-                  >
-                    <div class="global-toggle-copy">
-                      <span class="global-toggle-title">{{ t("globalConfig.unifiedExec") }}</span>
-                      <span class="global-toggle-note mono">{{ t("globalConfig.unifiedExecNote") }}</span>
-                    </div>
-                    <span class="skill-switch">
-                      <input
-                        v-model="configStore.draft.unifiedExecEnabled"
-                        class="skill-switch-input"
-                        type="checkbox"
-                        :disabled="globalControlsDisabled"
-                      />
-                      <span class="skill-switch-track" aria-hidden="true"
-                        ><span class="skill-switch-thumb"></span
-                      ></span>
-                    </span>
-                  </label>
-                  <label
-                    class="global-toggle-row"
-                    :class="{ 'is-dirty': isGlobalConfigFieldDirty('applyPatchStreamingEventsEnabled') }"
-                  >
-                    <div class="global-toggle-copy">
-                      <span class="global-toggle-title">{{ t("globalConfig.patchStream") }}</span>
-                      <span class="global-toggle-note mono">{{ t("globalConfig.patchStreamNote") }}</span>
-                    </div>
-                    <span class="skill-switch">
-                      <input
-                        v-model="configStore.draft.applyPatchStreamingEventsEnabled"
-                        class="skill-switch-input"
-                        type="checkbox"
-                        :disabled="globalControlsDisabled"
-                      />
-                      <span class="skill-switch-track" aria-hidden="true"
-                        ><span class="skill-switch-thumb"></span
-                      ></span>
-                    </span>
-                  </label>
+                  <div class="global-toggle-list global-advanced-body">
+                    <label
+                      class="global-toggle-row"
+                      :class="{ 'is-dirty': isGlobalConfigFieldDirty('windowsElevatedSandboxEnabled') }"
+                    >
+                      <div class="global-toggle-copy">
+                        <span class="global-toggle-title">{{ t("globalConfig.elevatedSandbox") }}</span>
+                        <span class="global-toggle-note mono">{{ t("globalConfig.elevatedSandboxNote") }}</span>
+                      </div>
+                      <span class="skill-switch">
+                        <input
+                          v-model="configStore.draft.windowsElevatedSandboxEnabled"
+                          class="skill-switch-input"
+                          type="checkbox"
+                          :disabled="globalControlsDisabled"
+                        />
+                        <span class="skill-switch-track" aria-hidden="true"
+                          ><span class="skill-switch-thumb"></span
+                        ></span>
+                      </span>
+                    </label>
+                    <label
+                      class="global-toggle-row"
+                      :class="{ 'is-dirty': isGlobalConfigFieldDirty('unifiedExecEnabled') }"
+                    >
+                      <div class="global-toggle-copy">
+                        <span class="global-toggle-title">{{ t("globalConfig.unifiedExec") }}</span>
+                        <span class="global-toggle-note mono">{{ t("globalConfig.unifiedExecNote") }}</span>
+                      </div>
+                      <span class="skill-switch">
+                        <input
+                          v-model="configStore.draft.unifiedExecEnabled"
+                          class="skill-switch-input"
+                          type="checkbox"
+                          :disabled="globalControlsDisabled"
+                        />
+                        <span class="skill-switch-track" aria-hidden="true"
+                          ><span class="skill-switch-thumb"></span
+                        ></span>
+                      </span>
+                    </label>
+                    <label
+                      class="global-toggle-row"
+                      :class="{ 'is-dirty': isGlobalConfigFieldDirty('applyPatchStreamingEventsEnabled') }"
+                    >
+                      <div class="global-toggle-copy">
+                        <span class="global-toggle-title">{{ t("globalConfig.patchStream") }}</span>
+                        <span class="global-toggle-note mono">{{ t("globalConfig.patchStreamNote") }}</span>
+                      </div>
+                      <span class="skill-switch">
+                        <input
+                          v-model="configStore.draft.applyPatchStreamingEventsEnabled"
+                          class="skill-switch-input"
+                          type="checkbox"
+                          :disabled="globalControlsDisabled"
+                        />
+                        <span class="skill-switch-track" aria-hidden="true"
+                          ><span class="skill-switch-thumb"></span
+                        ></span>
+                      </span>
+                    </label>
+                  </div>
                 </div>
               </section>
             </div>
 
-            <div class="global-config-actions">
+            <div v-show="section !== 'appearance'" class="global-config-actions">
               <div class="global-config-actions-meta">
                 <div class="global-config-actions-summary">{{ globalConfigActionsSummary }}</div>
                 <div class="global-config-actions-hint">{{ globalConfigActionsHint }}</div>
@@ -566,19 +577,29 @@ import {
 } from "../../../domain/serverInterop";
 import type { GlobalConfigDraft } from "../../../domain/types";
 import { useModelCatalogStore } from "../../../stores/modelCatalog.store";
+import { useProviderRegistryStore } from "../../../stores/providerRegistry.store";
 import { type UiLanguage } from "@codenexus/shared/localSettings";
 import { DEFAULT_MODEL_NAME, buildModelPickerOptions, normalizeModelId } from "@codenexus/shared/modelCatalog";
 
 const runtime = getRuntimeOrchestrator();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const runtimeStore = useRuntimeStore();
 const appShellStore = useAppShellStore();
 const configStore = useConfigStore();
 const configRequirementsStore = useConfigRequirementsStore();
 const typographyStore = useTypographyStore();
 const modelCatalogStore = useModelCatalogStore();
+const providerRegistryStore = useProviderRegistryStore();
 
-const props = defineProps<{ mode?: "drawer" | "settings" }>();
+const props = defineProps<{ mode?: "drawer" | "settings"; section?: "appearance" | "defaults" | "permissions" }>();
+const section = computed(() => props.section || "all");
+const sectionTitle = computed(() =>
+  section.value === "all"
+    ? t("globalConfig.title")
+    : locale.value.startsWith("zh")
+      ? { appearance: "外观与语言", defaults: "默认模型", permissions: "权限" }[section.value]
+      : { appearance: "Appearance", defaults: "Default Model", permissions: "Permissions" }[section.value]
+);
 const isSettings = computed(() => props.mode === "settings");
 const open = computed(() => (isSettings.value ? true : appShellStore.globalConfigDrawerOpen));
 const closeBtnRef = ref<HTMLButtonElement | null>(null);
@@ -776,9 +797,11 @@ const approvalPolicyLabels = computed<Record<string, string>>(() => ({
 }));
 
 const sandboxModeLabels = computed<Record<string, string>>(() => ({
-  "read-only": t("globalConfig.sandboxReadOnly"),
-  "workspace-write": t("globalConfig.sandboxWorkspaceWrite"),
-  "danger-full-access": t("globalConfig.sandboxDangerFullAccess"),
+  "read-only": locale.value.startsWith("zh") ? "只读 — 只能查看项目" : "Read Only — View files",
+  "workspace-write": locale.value.startsWith("zh") ? "工作区 — 可修改当前工作区" : "Workspace — Edit workspace files",
+  "danger-full-access": locale.value.startsWith("zh")
+    ? "完全访问 — 文件、命令与网络"
+    : "Full Access — Files, commands and network",
 }));
 
 const buildRestrictedSelectState = (
@@ -1126,12 +1149,26 @@ const onResetGlobalConfig = () => {
   runtime.resetGlobalConfig();
 };
 
-const globalModelOptions = computed(() =>
-  buildModelPickerOptions({
+const globalModelOptions = computed(() => {
+  const ids = buildModelPickerOptions({
     customIds: modelCatalogStore.customIds,
+    codexIds: modelCatalogStore.remoteIds,
+    providerIds: providerRegistryStore.pickerModelIds,
     current: configStore.draft.model,
-  })
-);
+  });
+  return ids.map((id) => {
+    const knownProviderModel = providerRegistryStore.isKnownProviderModel(id);
+    const available = knownProviderModel
+      ? providerRegistryStore.isAvailableProviderModel(id)
+      : !modelCatalogStore.isRemoteModelUnavailable(id);
+    const baseLabel = providerRegistryStore.modelLabels[id] || id;
+    return {
+      value: id,
+      label: !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
+      disabled: !available,
+    };
+  });
+});
 
 const onModelChanged = (nextRaw: string) => {
   const next = normalizeModelId(nextRaw);
@@ -1161,20 +1198,14 @@ const remoteModelPickExists = computed(() => {
   const next = normalizedRemoteModelPick.value;
   return Boolean(next) && modelCatalogStore.availableModelIds.includes(next);
 });
-const canRefreshRemoteModels = computed(
-  () => Boolean(runtimeStore.serverId) && modelCatalogStore.remoteLoadState !== "loading"
-);
+const canRefreshRemoteModels = computed(() => modelCatalogStore.remoteLoadState !== "loading");
 const canAddRemoteModel = computed(
   () => Boolean(normalizedRemoteModelPick.value) && !remoteModelPickExists.value && !modelCatalogControlsDisabled.value
 );
 const remoteModelSelectDisabled = computed(
-  () =>
-    !runtimeStore.serverId ||
-    modelCatalogStore.remoteLoadState === "loading" ||
-    modelCatalogStore.remoteIds.length === 0
+  () => modelCatalogStore.remoteLoadState === "loading" || modelCatalogStore.remoteIds.length === 0
 );
 const remoteModelStatusText = computed(() => {
-  if (!runtimeStore.serverId) return t("globalConfig.remoteModels.connectFirst");
   if (modelCatalogStore.remoteLoadState === "loading") return t("globalConfig.remoteModels.loading");
   if (modelCatalogStore.remoteLoadState === "error") return t("globalConfig.remoteModels.error");
   if (modelCatalogStore.remoteIds.length > 0) {
@@ -1183,13 +1214,11 @@ const remoteModelStatusText = computed(() => {
   return t("globalConfig.remoteModels.refreshHint");
 });
 const remoteModelDropdownOptions = computed(() => {
-  const hasServer = Boolean(runtimeStore.serverId);
   const loading = modelCatalogStore.remoteLoadState === "loading";
   const errored = modelCatalogStore.remoteLoadState === "error";
   const ids = modelCatalogStore.remoteIds;
   let placeholder = t("globalConfig.remoteModels.notLoaded");
-  if (!hasServer) placeholder = t("globalConfig.remoteModels.disconnected");
-  else if (loading) placeholder = t("globalConfig.remoteModels.loadingShort");
+  if (loading) placeholder = t("globalConfig.remoteModels.loadingShort");
   else if (errored) placeholder = t("globalConfig.remoteModels.errorShort");
   else if (ids.length === 0) placeholder = t("globalConfig.remoteModels.notLoaded");
   else placeholder = t("globalConfig.remoteModels.choose");

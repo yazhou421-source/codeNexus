@@ -1,0 +1,18 @@
+Calmnova Code Third-Party Notices
+=================================
+
+Calmnova Code is an independent product and is not affiliated with or endorsed
+by OpenAI.
+
+This product contains software derived from CodeNexus, distributed under the
+MIT License. The complete CodeNexus license text is included in
+CodeNexus-LICENSE.txt.
+
+This product contains the embedded routing runtime derived from CodexBridge,
+distributed under the MIT License. The complete CodexBridge license text is
+included in CodexBridge-LICENSE.txt.
+
+This product bundles OpenAI Codex. Its license and notice are included in
+OpenAI-Codex-LICENSE.txt and OpenAI-Codex-NOTICE.txt.
+
+All trademarks are the property of their respective owners.

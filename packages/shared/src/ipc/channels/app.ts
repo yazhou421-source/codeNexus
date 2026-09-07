@@ -28,12 +28,26 @@ export const IPC_APP_CHANNELS = {
   appCodexProviderTest: "app:codexProvider:test",
   appDeepSeekProxyPrepare: "app:deepSeekProxy:prepare",
 
+  // Embedded Router Provider Registry。密钥只允许写入或删除，不提供明文读取频道。
+  appRouterProvidersList: "app:routerProviders:list",
+  appRouterProviderSaveApiKey: "app:routerProviders:saveApiKey",
+  appRouterProviderDeleteApiKey: "app:routerProviders:deleteApiKey",
+  appRouterProviderConfigure: "app:routerProviders:configure",
+  appRouterProviderTestConnection: "app:routerProviders:testConnection",
+
+  // 首次启动账号流程。主进程只返回去敏后的账号状态，并代为打开 OAuth 页面。
+  appAccountRead: "app:account:read",
+  appAccountLoginStart: "app:account:loginStart",
+  appAccountLoginCancel: "app:account:loginCancel",
+  appAccountLoginCompleted: "app:account:loginCompleted",
+
   // Codex 工作区附加配置：技能根目录和配置切换器都和当前机器上的文件状态有关。
   appCodexSkillRootsRead: "app:codexSkillRoots:read",
   appCodexSkillRootsSetForWorkspace: "app:codexSkillRoots:setForWorkspace",
   appCodexConfigSwitcherRead: "app:codexConfigSwitcher:read",
   appCodexConfigSwitcherSave: "app:codexConfigSwitcher:save",
-  appCodexConfigSwitcherActivateProfile: "app:codexConfigSwitcher:activateProfile",
+  appCodexConfigSwitcherActivateProfile:
+    "app:codexConfigSwitcher:activateProfile",
   appCodexConfigSwitcherImportCurrent: "app:codexConfigSwitcher:importCurrent",
   appCodexConfigSwitcherRestoreBackup: "app:codexConfigSwitcher:restoreBackup",
 

@@ -33,6 +33,7 @@
           contenteditable="true"
           role="textbox"
           aria-multiline="true"
+          :aria-label="inputPlaceholder || t('composer.inputPlaceholder')"
           spellcheck="false"
           :data-placeholder="inputPlaceholder || t('composer.inputPlaceholder')"
           @keydown="onComposerKeydown"
@@ -94,14 +95,19 @@
                 class="btn-mini composer-mode-button"
                 type="button"
                 :class="['is-agent', composeMode === 'default' ? 'is-active' : '']"
+                :aria-pressed="composeMode === 'default'"
+                :title="t('composer.execute')"
                 @click="emit('set-compose-mode', 'default')"
               >
-                <Bot class="composer-mode-icon" aria-hidden="true" /><span>{{ t("composer.execute") }}</span>
+                <Bot class="composer-mode-icon" aria-hidden="true" /><span>Agent</span>
               </button>
               <button
                 class="btn-mini composer-mode-button"
                 type="button"
                 :class="['is-plan', composeMode === 'plan' ? 'is-active' : '']"
+                :aria-label="t('composer.plan')"
+                :title="t('composer.plan')"
+                :aria-pressed="composeMode === 'plan'"
                 @click="emit('set-compose-mode', 'plan')"
               >
                 <ListTodo class="composer-mode-icon" aria-hidden="true" /><span>{{ t("composer.plan") }}</span>
@@ -146,7 +152,13 @@
               <ImagePlus class="composer-icon-button-icon" />
             </button>
 
-            <div v-if="variant !== 'inline'" class="composer-context">
+            <div
+              v-if="variant !== 'inline'"
+              class="composer-context"
+              :title="contextUsageTooltip"
+              :aria-label="contextUsageTooltip"
+              tabindex="0"
+            >
               <WaterBallProgress
                 class="composer-context-ball"
                 :percent="contextUsagePercent"
@@ -172,7 +184,7 @@
               @click="emit('send')"
             >
               <div v-if="!sendDisabled && !isTurnRunning" class="composer-send-ping"></div>
-              <SendHorizontal class="composer-send-icon" />
+              <ArrowUp class="composer-send-icon" />
               <span class="composer-send-label">{{ t("composer.send") }}</span>
             </button>
             <button
@@ -198,7 +210,7 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
-import { Bot, ImagePlus, ListTodo, SendHorizontal, Square } from "lucide-vue-next";
+import { ArrowUp, Bot, ImagePlus, ListTodo, Square } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 import type { CollaborationModeKind, ComposeImageAttachment, ComposeWorkspaceFileMention } from "../../../domain/types";
 import {
@@ -223,6 +235,7 @@ const ApprovalDock = defineAsyncComponent(() => import("../../approval/ApprovalD
 type SelectOption = {
   value: string;
   label: string;
+  disabled?: boolean;
 };
 
 type ElementRefBinder<T extends Element> = (el: T | null) => void;
@@ -248,7 +261,7 @@ const props = defineProps<{
   model: string;
   reasoningEffort: string;
   sandboxMode: SandboxMode;
-  modelOptions: readonly string[];
+  modelOptions: readonly (string | SelectOption)[];
   reasoningEffortOptions: readonly SelectOption[];
   sandboxModeOptions: readonly SelectOption[];
   sandboxRiskText: string;

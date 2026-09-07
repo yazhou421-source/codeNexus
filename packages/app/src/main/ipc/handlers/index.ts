@@ -1,4 +1,6 @@
-import { BrowserWindow } from "electron";
+import { app, BrowserWindow, dialog } from "electron";
+import { WorkspaceAccessService } from "../../services/WorkspaceAccessService";
+import { IPC_APP_CHANNELS } from "@codenexus/shared/ipc/channels";
 import type { CodexIncomingMessage } from "@codenexus/shared/codex-protocol";
 import { CodexServerManager } from "../../services/CodexServerManager";
 import { type HistoryThread } from "../../historyStore";
@@ -16,9 +18,12 @@ import type { ThreadTitleOverrideService } from "../../services/ThreadTitleOverr
 import type { UpdateService } from "../../services/UpdateService";
 import type { DeepSeekResponsesProxyService } from "../../services/DeepSeekResponsesProxyService";
 import type { CustomAgentService } from "../../services/CustomAgentService";
+import type { ProviderRuntimeService } from "../../services/ProviderRuntimeService";
+import type { CodexAccountService } from "../../services/CodexAccountService";
 import { WorkspacePatchService } from "../../services/WorkspacePatchService";
 import { registerAppHandlers } from "./app.handlers";
 import { registerAgentHandlers } from "./agent.handlers";
+import { registerAccountHandlers } from "./account.handlers";
 import { registerCacheHandlers } from "./cache.handlers";
 import { registerCodexHandlers } from "./codex.handlers";
 import { registerFlowchartHandlers } from "./flowchart.handlers";
@@ -26,6 +31,7 @@ import { registerHistoryHandlers } from "./history.handlers";
 import { registerImageGenerationHandlers } from "./image-generation.handlers";
 import { registerWorkspaceHandlers } from "./workspace.handlers";
 import { registerWindowHandlers } from "./window.handlers";
+import { registerProviderHandlers } from "./provider.handlers";
 import { CacheRegistryService } from "../../services/CacheRegistryService";
 import type { CustomAgentStreamEvent, HistoryThreadRunningStateResult } from "@codenexus/shared/ipc/contracts";
 
@@ -54,10 +60,32 @@ export type IpcHandlersDeps = {
   customAgentService: CustomAgentService;
   sendAgentEvent: (payload: CustomAgentStreamEvent) => void;
   cacheRegistryService: CacheRegistryService;
+  providerRuntimeService: ProviderRuntimeService;
+  accountService: CodexAccountService;
 };
 
 export function registerAllHandlers(deps: IpcHandlersDeps) {
+  const workspaceAccess = new WorkspaceAccessService(
+    () => deps.getMainWindow()?.webContents ?? null,
+    async (root) => {
+      const win = deps.getMainWindow();
+      if (!win || win.isDestroyed()) return false;
+      const zh = app.getLocale().startsWith("zh");
+      const result = await dialog.showMessageBox(win, {
+        type: "question",
+        title: zh ? "打开工作区" : "Open workspace",
+        message: zh ? "允许访问此项目文件夹？" : "Allow access to this project folder?",
+        detail: root,
+        buttons: zh ? ["取消", "打开"] : ["Cancel", "Open"],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+      });
+      return result.response === 1;
+    }
+  );
   registerAppHandlers({
+    workspaceAccess,
     getMainWindow: deps.getMainWindow,
     localSettingsService: deps.localSettingsService,
     codexProfileService: deps.codexProfileService,
@@ -65,6 +93,15 @@ export function registerAllHandlers(deps: IpcHandlersDeps) {
     codexConfigSwitcherService: deps.codexConfigSwitcherService,
     updateService: deps.updateService,
     deepSeekResponsesProxyService: deps.deepSeekResponsesProxyService,
+  });
+  registerProviderHandlers({ providerRuntimeService: deps.providerRuntimeService });
+  registerAccountHandlers({
+    accountService: deps.accountService,
+    sendLoginCompleted: (payload) => {
+      const win = deps.getMainWindow();
+      if (!win || win.isDestroyed()) return;
+      win.webContents.send(IPC_APP_CHANNELS.appAccountLoginCompleted, payload);
+    },
   });
   registerImageGenerationHandlers({
     localSettingsService: deps.localSettingsService,
@@ -88,5 +125,5 @@ export function registerAllHandlers(deps: IpcHandlersDeps) {
     decorateItems: deps.decorateHistoryItems,
     onThreadDeleted: deps.onHistoryThreadDeleted,
   });
-  registerWorkspaceHandlers({ workspacePatchService: deps.workspacePatchService });
+  registerWorkspaceHandlers({ workspacePatchService: deps.workspacePatchService, workspaceAccess });
 }

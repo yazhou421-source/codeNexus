@@ -17,6 +17,7 @@ import type { CancelLoginAccountResponse } from "@codenexus/generated/codex-app-
 import type { ConfigReadResponse } from "@codenexus/generated/codex-app-server/v2/ConfigReadResponse";
 import type { ConfigRequirementsReadResponse } from "@codenexus/generated/codex-app-server/v2/ConfigRequirementsReadResponse";
 import type { ConfigWriteResponse } from "@codenexus/generated/codex-app-server/v2/ConfigWriteResponse";
+import type { CurrentTimeReadResponse } from "@codenexus/generated/codex-app-server/v2/CurrentTimeReadResponse";
 import type { ExperimentalFeatureEnablementSetResponse } from "@codenexus/generated/codex-app-server/v2/ExperimentalFeatureEnablementSetResponse";
 import type { EnvironmentAddResponse } from "@codenexus/generated/codex-app-server/v2/EnvironmentAddResponse";
 import type { ListMcpServerStatusResponse } from "@codenexus/generated/codex-app-server/v2/ListMcpServerStatusResponse";
@@ -113,7 +114,6 @@ import type { ThreadSetNameResponse } from "@codenexus/generated/codex-app-serve
 import type { ThreadSettingsUpdateResponse } from "@codenexus/generated/codex-app-server/v2/ThreadSettingsUpdateResponse";
 import type { ThreadShellCommandResponse } from "@codenexus/generated/codex-app-server/v2/ThreadShellCommandResponse";
 import type { ThreadStartResponse } from "@codenexus/generated/codex-app-server/v2/ThreadStartResponse";
-import type { ThreadTurnsItemsListResponse } from "@codenexus/generated/codex-app-server/v2/ThreadTurnsItemsListResponse";
 import type { ThreadTurnsListResponse } from "@codenexus/generated/codex-app-server/v2/ThreadTurnsListResponse";
 import type { ThreadUnarchiveResponse } from "@codenexus/generated/codex-app-server/v2/ThreadUnarchiveResponse";
 import type { ThreadUnsubscribeResponse } from "@codenexus/generated/codex-app-server/v2/ThreadUnsubscribeResponse";
@@ -251,7 +251,6 @@ type SupportedCodexRpcResultMap = {
   "account/sendAddCreditsNudgeEmail": SendAddCreditsNudgeEmailResponse;
   "account/read": GetAccountResponse;
   "thread/turns/list": ThreadTurnsListResponse;
-  "thread/turns/items/list": ThreadTurnsItemsListResponse;
   "thread/inject_items": ThreadInjectItemsResponse;
 };
 
@@ -272,6 +271,7 @@ type SupportedCodexServerRequestResultMap = {
   "item/tool/call": DynamicToolCallResponse;
   "account/chatgptAuthTokens/refresh": ChatgptAuthTokensRefreshResponse;
   "attestation/generate": AttestationGenerateResponse;
+  "currentTime/read": CurrentTimeReadResponse;
 };
 
 /** 官方 method 集合与当前项目明确不支持的 legacy method。 */
@@ -284,9 +284,59 @@ export type UnsupportedLegacyCodexRpcMethod =
   | "getConversationSummary"
   | "gitDiffToRemote"
   | "getAuthStatus";
+/** 0.153.2 methods that CodeNexus does not call yet. Keeping this explicit makes future protocol drift fail typecheck. */
+export type UnsupportedNewCodexRpcMethod =
+  | "account/bedrock/discover"
+  | "account/bedrock/setup"
+  | "account/rateLimitResetCredit/consume"
+  | "account/usage/read"
+  | "account/workspaceMessages/read"
+  | "app/installed"
+  | "app/read"
+  | "environment/info"
+  | "environment/status"
+  | "externalAgentConfig/import/readHistories"
+  | "externalAgentConfig/import/recordHistory"
+  | "mcpServer/event/stream/start"
+  | "mcpServer/event/stream/stop"
+  | "plugin/reconcile"
+  | "plugin/search"
+  | "project/create"
+  | "project/delete"
+  | "project/import"
+  | "project/list"
+  | "project/move"
+  | "project/read"
+  | "project/update"
+  | "remoteControl/client/list"
+  | "remoteControl/client/revoke"
+  | "remoteControl/pairing/start"
+  | "remoteControl/pairing/status"
+  | "server/diagnostics"
+  | "skills/extraRoots/set"
+  | "thread/backgroundTerminals/list"
+  | "thread/backgroundTerminals/terminate"
+  | "thread/delete"
+  | "thread/items/list"
+  | "thread/queue/add"
+  | "thread/queue/delete"
+  | "thread/queue/list"
+  | "thread/queue/reorder"
+  | "thread/queue/start"
+  | "thread/queue/update"
+  | "thread/realtime/appendSpeech"
+  | "thread/revert"
+  | "thread/searchOccurrences"
+  | "thread/section/move"
+  | "thread/timeline/list"
+  | "threadSection/create"
+  | "threadSection/delete"
+  | "threadSection/list"
+  | "threadSection/update"
+  | "turn/settings/update";
 export type CodexRpcMethod = Exclude<
   CodexOfficialRpcMethod,
-  UnsupportedLegacyCodexRpcMethod
+  UnsupportedLegacyCodexRpcMethod | UnsupportedNewCodexRpcMethod
 >;
 export type CodexClientNotificationMethod = ClientNotification["method"];
 export type CodexServerRequestMethod = ServerRequest["method"];
@@ -322,6 +372,10 @@ type UnknownUnsupportedLegacyCodexRpcMethods = Exclude<
   UnsupportedLegacyCodexRpcMethod,
   CodexOfficialRpcMethod
 >;
+type UnknownUnsupportedNewCodexRpcMethods = Exclude<
+  UnsupportedNewCodexRpcMethod,
+  CodexOfficialRpcMethod
+>;
 type MissingCodexServerRequestResultMethods = Exclude<
   SupportedCodexServerRequestMethod,
   keyof SupportedCodexServerRequestResultMap
@@ -340,6 +394,8 @@ type _AssertNoExtraCodexRpcResultMethods =
   AssertNever<ExtraCodexRpcResultMethods>;
 type _AssertNoUnknownUnsupportedLegacyCodexRpcMethods =
   AssertNever<UnknownUnsupportedLegacyCodexRpcMethods>;
+type _AssertNoUnknownUnsupportedNewCodexRpcMethods =
+  AssertNever<UnknownUnsupportedNewCodexRpcMethods>;
 type _AssertNoMissingCodexServerRequestResultMethods =
   AssertNever<MissingCodexServerRequestResultMethods>;
 type _AssertNoExtraCodexServerRequestResultMethods =
@@ -350,6 +406,7 @@ export type _CodexProtocolTypeAssertions = [
   _AssertNoMissingCodexRpcResultMethods,
   _AssertNoExtraCodexRpcResultMethods,
   _AssertNoUnknownUnsupportedLegacyCodexRpcMethods,
+  _AssertNoUnknownUnsupportedNewCodexRpcMethods,
   _AssertNoMissingCodexServerRequestResultMethods,
   _AssertNoExtraCodexServerRequestResultMethods,
   _AssertNoUnknownUnsupportedLegacyCodexServerRequestMethods,

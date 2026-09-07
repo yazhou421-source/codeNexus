@@ -1,3 +1,5 @@
+import { stripLeadingMessageContext } from "@codenexus/shared/messageContext";
+import { InterruptedTurnStore } from "./services/InterruptedTurnStore";
 import { createReadStream } from "node:fs";
 import { appendFile, mkdir, open, readdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -889,7 +891,7 @@ async function parseSessionFile(filePath: string, fileSnapshot?: FileSnapshot): 
       }
 
       if (!title) {
-        const userText = extractUserMessageText(entry);
+        const userText = stripLeadingMessageContext(extractUserMessageText(entry) ?? "");
         if (userText && !isBootstrapUserMessage(userText)) {
           title = shortTitle(userText);
         }
@@ -1018,7 +1020,10 @@ export class HistoryStore {
   private refreshPromise: Promise<HistoryThread[]> | null = null;
   private refreshSeq = 0;
 
+  readonly interruptedTurns: InterruptedTurnStore;
+
   constructor(cachePath: string, sessionsRoot?: string) {
+    this.interruptedTurns = new InterruptedTurnStore(join(dirname(cachePath), "interrupted-turns"));
     this.cachePath = cachePath;
     this.sessionsRoot = sessionsRoot ?? join(homedir(), ".codex", "sessions");
   }
@@ -1292,6 +1297,7 @@ export class HistoryStore {
     const sessionPath = current?.sessionPath ? String(current.sessionPath) : "";
     if (!sessionPath) {
       // 磁盘上没有可删除的会话目录；但若缓存快照中仍存在，仍需移除。
+      this.interruptedTurns.removeThread(id);
       this.updateSnapshot(this.snapshot.filter((item) => item.id !== id));
       this.threadEventsCache.delete(threadEventsCacheKey(id, true));
       this.threadEventsCache.delete(threadEventsCacheKey(id, false));
@@ -1316,6 +1322,7 @@ export class HistoryStore {
       if (error?.code !== "ENOENT") throw error;
     }
 
+    this.interruptedTurns.removeThread(id);
     this.updateSnapshot(this.snapshot.filter((item) => item.id !== id));
     this.sessionSummaryCache.delete(sessionPath);
     this.sessionSummaryCache.delete(sessionAbs);
@@ -1417,7 +1424,11 @@ export class HistoryStore {
       }
 
       const cached = this.sessionSummaryCache.get(filePath);
-      if (cached && sameFileSnapshot(cached, fileSnapshot)) {
+      if (
+        cached &&
+        sameFileSnapshot(cached, fileSnapshot) &&
+        !/^<(recommended_plugins|environment_context)>/i.test(cached.thread.title)
+      ) {
         stats.cacheHit += 1;
         return toHistoryThread(cached.thread, "disk");
       }
@@ -1748,6 +1759,16 @@ export class HistoryStore {
       auxSignature = auxResult.signature;
       aux = auxResult.events;
     }
+    const interrupted = this.interruptedTurns.read(threadId);
+    auxSignature += JSON.stringify(interrupted);
+    aux.push(
+      ...interrupted.map((payload) => ({
+        lineNo: 0,
+        timestamp: payload.stoppedAt,
+        type: "calmnova_interrupted_turn",
+        payload,
+      }))
+    );
     const cached = this.threadEventsCache.get(cacheKey);
     if (
       cached &&

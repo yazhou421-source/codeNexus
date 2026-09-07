@@ -7,11 +7,6 @@
   align-items: center;
 }
 
-.topbar-right-stack.is-layout-animating {
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-}
-
 .topbar-right-stack .btn-icon svg {
   width: 15px;
   height: 15px;

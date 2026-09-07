@@ -1,47 +1,76 @@
-appId: com.codenexus.desktop
-productName: CodeNexus
+appId: com.calmnova.code
+productName: Calmnova Code
+executableName: Calmnova Code
 
-publish:
-  provider: github
-  owner: QinQinChina
-  repo: codeNexus
-  releaseType: release
-  channel: latest
+# No online update feed is configured for this local trial.
+publish: null
 
 directories:
   buildResources: build
   output: release
 
 asar: true
+beforePack: scripts/electron-builder-before-pack.mjs
 
+# Main/preload and renderer are fully bundled. Do not ship their source dependencies twice.
 files:
   - from: .
     to: .
     filter:
       - package.json
+      - "!node_modules{,/**/*}"
   - from: dist
     to: dist
     filter:
       - "**/*"
+      - "!**/*.map"
 
 extraResources:
+  - from: codex-runtime-manifest.json
+    to: codex/codex-runtime-manifest.json
+  - from: build/codex-runtime/${os}-${arch}
+    to: codex/${os}-${arch}
+    filter:
+      - "**/*"
+  - from: licenses/OpenAI-Codex-LICENSE.txt
+    to: licenses/OpenAI-Codex-LICENSE.txt
+  - from: licenses/OpenAI-Codex-NOTICE.txt
+    to: licenses/OpenAI-Codex-NOTICE.txt
+  - from: ../router/LICENSE
+    to: licenses/CodexBridge-LICENSE.txt
+  - from: ../../LICENSE
+    to: licenses/CodeNexus-LICENSE.txt
+  - from: licenses/Calmnova-Code-THIRD-PARTY-NOTICES.txt
+    to: licenses/Calmnova-Code-THIRD-PARTY-NOTICES.txt
   - from: music
     to: music
     filter:
       - "**/*"
-  - from: build/icon.ico
-    to: icon.ico
+  - from: build/branding/app-icon-1024.png
+    to: branding/app-icon.png
 
-win:
-  icon: build/icon.ico
-  artifactName: "${productName}-Setup-${version}.${ext}"
-  signAndEditExecutable: true
+mac:
+  icon: build/icon.icns
+  artifactName: "Calmnova-Code-${version}-${arch}.${ext}"
   target:
-    - target: nsis
+    - target: dmg
       arch:
-        - x64
+        - arm64
+    - target: zip
+      arch:
+        - arm64
 
-nsis:
-  oneClick: false
-  perMachine: false
-  allowToChangeInstallationDirectory: true
+dmg:
+  title: "Calmnova Code ${version}"
+  icon: build/icon.icns
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 140
+      y: 190
+      type: file
+    - x: 400
+      y: 190
+      type: link
+      path: /Applications

@@ -43,6 +43,7 @@
   <ChatAuxActivityGroup
     v-else-if="renderedRow.kind === 'auxActivityGroup'"
     :id="renderedRow.id"
+    :workspace-root="workspaceRoot"
     :items="renderedRow.items"
     :summaryItems="renderedRow.summaryItems"
     :summaryText="renderedRow.summaryText"

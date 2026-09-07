@@ -58,7 +58,7 @@ type SelectOption = {
 
 const props = defineProps<{
   draft: ChatInlineRewriteDraft;
-  modelOptions: readonly string[];
+  modelOptions: readonly (string | SelectOption)[];
   reasoningEffortOptions: readonly SelectOption[];
   sandboxModeOptions: readonly SelectOption[];
   sendDisabled?: boolean;

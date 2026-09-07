@@ -1,19 +1,19 @@
 # Contributing
 
-感谢关注 CodeNexus。本项目是面向 Windows 的非官方 Codex 桌面 GUI，贡献前请先确认改动符合项目定位：桌面端、Electron/Vue、以 Codex app-server 协议为核心。
+感谢关注 Calmnova Code。本项目是 AI 编程桌面工作台，贡献前请先确认改动符合项目定位：桌面端、Electron/Vue、以 Codex app-server 协议为核心。
 
 ## 开发环境
 
-| 项目      | 要求                                       |
-| --------- | ------------------------------------------ |
-| 操作系统  | Windows 10/11                              |
-| Node.js   | 建议使用 Node.js 22 LTS                    |
-| 包管理器  | `pnpm@10.32.1`                             |
-| Codex CLI | 当前协议生成基线为 `@openai/codex@0.130.0` |
+| 项目          | 要求                               |
+| ------------- | ---------------------------------- |
+| 操作系统      | Windows 10/11                      |
+| Node.js       | 建议使用 Node.js 22 LTS            |
+| 包管理器      | `pnpm@10.32.1`                     |
+| Codex Runtime | 当前内置与协议生成基线为 `0.153.2` |
 
 ```powershell
-npm i -g @openai/codex@0.130.0
 pnpm install
+pnpm codex:runtime:fetch -- --platform win-x64
 pnpm run dev
 ```
 

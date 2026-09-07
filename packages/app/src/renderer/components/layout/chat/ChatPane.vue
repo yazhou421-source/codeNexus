@@ -107,11 +107,15 @@
     </div>
 
     <div
-      v-if="showTrailingThinkingEvent && trailingThinkingEvent"
+      v-if="
+        showTrailingThinkingEvent &&
+        trailingThinkingEvent &&
+        !chatRenderedRows.some((row) => row.kind === 'auxActivityGroup' && row.elapsedLive)
+      "
       :class="[CHAT_ROW_BASE_CLASS, 'chat-row--tail', 'chat-row--thinking']"
     >
       <div class="chat-thinking-line flex w-full max-w-full items-center justify-start pr-2.5">
-        <WaveText class="mono dim" :text="trailingThinkingEvent.paramsText" />
+        <StatusIndicator state="thinking" :label="trailingThinkingEvent.paramsText" />
       </div>
     </div>
 
@@ -175,7 +179,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
+import StatusIndicator from "../../ui/StatusIndicator.vue";
 import { useI18n } from "vue-i18n";
 import { Download, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-vue-next";
 import ChatTimelineViewport from "./ChatTimelineViewport.vue";
@@ -193,6 +198,7 @@ import { useMcpResourceStore } from "../../../stores/mcpResource.store";
 import { useMcpStore } from "../../../stores/mcp.store";
 import { useRuntimeStore } from "../../../stores/runtime.store";
 import { useModelCatalogStore } from "../../../stores/modelCatalog.store";
+import { useProviderRegistryStore } from "../../../stores/providerRegistry.store";
 import { useViewPrefsStore } from "../../../stores/viewPrefs.store";
 import { useAgentMarkdownRenderer } from "../../../features/timeline/useAgentMarkdownRenderer";
 import { buildMcpToolDefinitionIndex } from "../../../features/timeline/renderModel/buildTimelineNodes";
@@ -234,6 +240,7 @@ const mcpResourceStore = useMcpResourceStore();
 const runtimeStore = useRuntimeStore();
 const viewPrefs = useViewPrefsStore();
 const modelCatalogStore = useModelCatalogStore();
+const providerRegistryStore = useProviderRegistryStore();
 const localViewportAdapter = ref<TimelineViewportAdapter | null>(null);
 const pinnedUserRowId = ref("");
 const pinnedPromptTransitionDirection = ref<"up" | "down">("up");
@@ -500,7 +507,39 @@ const sandboxModeOptions = computed(
       { value: "danger-full-access", label: t("composer.dangerFullAccessShort") },
     ] as const
 );
-const modelOptions = computed(() =>
-  buildModelPickerOptions({ customIds: modelCatalogStore.customIds, current: runtimeStore.model })
+const modelOptions = computed(() => {
+  const ids = buildModelPickerOptions({
+    customIds: modelCatalogStore.customIds,
+    providerIds: providerRegistryStore.pickerModelIds,
+    current: runtimeStore.model,
+  });
+  return ids.map((id) => {
+    const knownProviderModel = providerRegistryStore.isKnownProviderModel(id);
+    const available = providerRegistryStore.isAvailableProviderModel(id);
+    const baseLabel = providerRegistryStore.modelLabels[id] || id;
+    return {
+      value: id,
+      label: knownProviderModel && !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
+      disabled: knownProviderModel && !available,
+    };
+  });
+});
+const emit = defineEmits<{ "content-presence": [visible: boolean] }>();
+watch(
+  () =>
+    [
+      props.timelineKey,
+      chatRenderedRows.value.length,
+      Boolean(props.trailingThinkingEvent),
+      Boolean(props.trailingContextCompactionEvent),
+    ] as const,
+  () =>
+    emit(
+      "content-presence",
+      chatRenderedRows.value.length > 0 ||
+        Boolean(props.trailingThinkingEvent) ||
+        Boolean(props.trailingContextCompactionEvent)
+    ),
+  { immediate: true }
 );
 </script>

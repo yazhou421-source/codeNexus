@@ -58,7 +58,10 @@ function isFinalAnswerAgentMessageEvent(event: TimelineEventItem): boolean {
   if (event.method !== "item/agentMessage/delta") return false;
   const params = toEventParamsObject(event);
   const item = params.item && typeof params.item === "object" ? (params.item as Record<string, any>) : null;
-  return String(item?.phase ?? "").trim() === "final_answer";
+  const phase = String(item?.phase ?? "").trim();
+  // MessagePhase is optional in Codex and absent from Chat Completions adapters.
+  // An unphased agentMessage is ordinary assistant text, not reasoning/commentary.
+  return phase === "final_answer" || phase === "";
 }
 
 function isIntermediateAgentMessageEvent(event: TimelineEventItem): boolean {
@@ -66,7 +69,7 @@ function isIntermediateAgentMessageEvent(event: TimelineEventItem): boolean {
   const params = toEventParamsObject(event);
   const item = params.item && typeof params.item === "object" ? (params.item as Record<string, any>) : null;
   const phase = String(item?.phase ?? "").trim();
-  return phase === "commentary" || phase === "";
+  return phase === "commentary";
 }
 
 function paramsObjectSignature(value: unknown): string {
@@ -443,6 +446,15 @@ export function useChatRenderModel(
 
       if (node.kind === "event") {
         const e = node.event;
+        if (e.method === "local/turnInterrupted") {
+          pushRow({
+            id: `interrupted:${turnKey}`,
+            turnKey,
+            kind: "system",
+            text: translate("runtime.turnInterrupted"),
+          });
+          continue;
+        }
         if (isLocalUserEvent(e)) {
           pushRow({ id: `u:${e.id}`, turnKey, kind: "user", event: e });
           continue;

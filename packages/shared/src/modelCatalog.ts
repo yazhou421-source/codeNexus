@@ -56,21 +56,28 @@ export function normalizeCustomModelIds(value: unknown): string[] {
   return ids;
 }
 
-/** 可选模型列表始终以内置模型开头，再追加有效自定义模型。 */
+/** 桌面传入 Codex 账户目录时以其为准；未传入的旧调用保留内置候选。 */
 export function buildAvailableModelIds(
   customIds: readonly string[] | null | undefined,
+  providerIds: readonly string[] | null | undefined = [],
+  codexIds?: readonly string[] | null,
 ): string[] {
-  const ids: string[] = [...BUILTIN_MODEL_IDS];
-  for (const item of normalizeCustomModelIds(customIds ?? [])) ids.push(item);
+  const ids: string[] = codexIds == null ? [...BUILTIN_MODEL_IDS] : normalizeModelIdList(codexIds);
+  for (const item of [...normalizeModelIdList(providerIds), ...normalizeCustomModelIds(customIds ?? [])]) {
+    if (codexIds != null && !ids.includes(item) && !providerIds?.includes(item)) continue;
+    if (!ids.includes(item)) ids.push(item);
+  }
   return ids;
 }
 
 /** 当前模型即使不在候选列表里也会临时置顶，保证旧线程或外部模型能回显。 */
 export function buildModelPickerOptions(args?: {
   customIds?: readonly string[] | null;
+  providerIds?: readonly string[] | null;
   current?: unknown;
+  codexIds?: readonly string[] | null;
 }): string[] {
-  const available = buildAvailableModelIds(args?.customIds);
+  const available = buildAvailableModelIds(args?.customIds, args?.providerIds, args?.codexIds);
   const current = normalizeModelId(args?.current);
   if (!current) return available;
   if (available.includes(current)) return available;

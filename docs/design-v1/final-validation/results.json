@@ -1,0 +1,83 @@
+{
+  "tests": {
+    "exit": 0,
+    "seconds": 3.45,
+    "command": [
+      "pnpm",
+      "test",
+      "packages/app/src/main/services/workspaceGitDiff.accuracy.test.ts",
+      "packages/app/src/main/services/WorkspacePatchService.diff.test.ts",
+      "packages/app/src/renderer/workspaceDiffIntegration.test.ts",
+      "packages/app/src/renderer/stores/providerRegistry.store.test.ts",
+      "packages/app/src/main/services/ProviderRuntimeService.test.ts",
+      "packages/app/src/renderer/stores/modelCatalog.store.test.ts",
+      "packages/app/src/renderer/components/chat/taskProgress.test.ts",
+      "packages/app/src/renderer/components/layout/composables/useChatRenderModel.test.ts",
+      "packages/app/src/main/ipc/handlers/account.handlers.test.ts",
+      "packages/app/src/main/ipc/handlers/workspace.handlers.test.ts",
+      "packages/app/src/main/ipc/handlers/provider.handlers.test.ts",
+      "packages/app/src/main/ipc/handlers/codex-models.handlers.test.ts"
+    ],
+    "initialSandboxAttempt": {
+      "exit": 1,
+      "reason": "2 localhost fixture servers failed to bind: listen EPERM; 86 tests passed."
+    },
+    "files": 12,
+    "passed": 102,
+    "log": "tests-final.log"
+  },
+  "lint": {
+    "exit": 0,
+    "seconds": 5.56,
+    "command": [
+      "pnpm",
+      "lint"
+    ],
+    "log": "lint-final.log"
+  },
+  "typecheck": {
+    "exit": 0,
+    "seconds": 5.54,
+    "command": [
+      "pnpm",
+      "typecheck"
+    ],
+    "log": "typecheck-final.log"
+  },
+  "branding": {
+    "exit": 0,
+    "seconds": 0.47,
+    "command": [
+      "pnpm",
+      "branding:verify"
+    ]
+  },
+  "diff-check": {
+    "exit": 0,
+    "seconds": 0.04,
+    "command": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "log": "diff-check-final.log"
+  },
+  "build": {
+    "command": [
+      "pnpm",
+      "build"
+    ],
+    "exit": 0,
+    "log": "build.log"
+  },
+  "providerMatrixFinal": {
+    "command": [
+      "pnpm",
+      "test",
+      "packages/app/src/renderer/stores/providerRegistry.store.test.ts"
+    ],
+    "exit": 0,
+    "log": "provider-matrix-final.log"
+  },
+  "recordedAt": "2026-09-07T09:08:35.618096+08:00"
+}

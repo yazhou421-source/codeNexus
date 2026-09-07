@@ -3,66 +3,71 @@
     <header class="topbar">
       <div class="topbar-left row">
         <TopBarWorkspaceButton />
-        <div
-          class="topbar-mainview-switch"
-          :class="{
-            'is-chat': appShellStore.mainView === 'chat',
-            'is-image': appShellStore.mainView === 'image',
-            'is-flowchart': appShellStore.mainView === 'flowchart',
-            'is-paper': appShellStore.mainView === 'paper',
-          }"
-          :aria-label="t('topbar.mainView')"
-        >
-          <button
-            class="topbar-mainview-btn"
-            :class="{ 'is-active': appShellStore.mainView === 'chat' }"
-            type="button"
-            :aria-label="t('topbar.chat')"
-            @click="onSetMainView('chat')"
-          >
-            <MessageSquare class="topbar-mainview-icon" aria-hidden="true" />
-            <span>{{ t("topbar.chat") }}</span>
-          </button>
-          <button
-            class="topbar-mainview-btn"
-            :class="{ 'is-active': appShellStore.mainView === 'image' }"
-            type="button"
-            :aria-label="t('topbar.image')"
-            @click="onSetMainView('image')"
-          >
-            <ImageIcon class="topbar-mainview-icon" aria-hidden="true" />
-            <span>{{ t("topbar.image") }}</span>
-          </button>
-          <button
-            class="topbar-mainview-btn"
-            :class="{ 'is-active': appShellStore.mainView === 'flowchart' }"
-            type="button"
-            :aria-label="t('topbar.flowchart')"
-            @click="onSetMainView('flowchart')"
-          >
-            <Workflow class="topbar-mainview-icon" aria-hidden="true" />
-            <span>{{ t("topbar.flowchart") }}</span>
-          </button>
-          <button
-            class="topbar-mainview-btn"
-            :class="{ 'is-active': appShellStore.mainView === 'paper' }"
-            type="button"
-            :aria-label="t('topbar.paper')"
-            @click="onSetMainView('paper')"
-          >
-            <BookOpen class="topbar-mainview-icon" aria-hidden="true" />
-            <span>{{ t("topbar.paper") }}</span>
-          </button>
-        </div>
+        <details ref="viewMenuRef" class="topbar-view-menu" @keydown.esc="closeViewMenu">
+          <summary class="topbar-view-trigger">
+            <span>{{ t("topbar.mainView") }}</span
+            ><ChevronDown aria-hidden="true" />
+          </summary>
+          <div class="topbar-view-options">
+            <button
+              class="topbar-mainview-btn"
+              :class="{ 'is-active': appShellStore.mainView === 'chat' }"
+              type="button"
+              :aria-label="t('topbar.chat')"
+              @click="onSetMainView('chat')"
+            >
+              <MessageSquare class="topbar-mainview-icon" aria-hidden="true" />
+              <span>{{ t("topbar.chat") }}</span>
+            </button>
+            <button
+              class="topbar-mainview-btn"
+              :class="{ 'is-active': appShellStore.mainView === 'image' }"
+              type="button"
+              :aria-label="t('topbar.image')"
+              @click="onSetMainView('image')"
+            >
+              <ImageIcon class="topbar-mainview-icon" aria-hidden="true" />
+              <span>{{ t("topbar.image") }}</span>
+            </button>
+            <button
+              class="topbar-mainview-btn"
+              :class="{ 'is-active': appShellStore.mainView === 'flowchart' }"
+              type="button"
+              :aria-label="t('topbar.flowchart')"
+              @click="onSetMainView('flowchart')"
+            >
+              <Workflow class="topbar-mainview-icon" aria-hidden="true" />
+              <span>{{ t("topbar.flowchart") }}</span>
+            </button>
+            <button
+              class="topbar-mainview-btn"
+              :class="{ 'is-active': appShellStore.mainView === 'paper' }"
+              type="button"
+              :aria-label="t('topbar.paper')"
+              @click="onSetMainView('paper')"
+            >
+              <BookOpen class="topbar-mainview-icon" aria-hidden="true" />
+              <span>{{ t("topbar.paper") }}</span>
+            </button>
+          </div>
+        </details>
       </div>
 
       <div class="topbar-center-stack">
+        <div class="topbar-task-title" :title="taskTitle">{{ taskTitle }}</div>
         <TopBarGoalSummary />
         <TopBarPlanSummary />
       </div>
 
-      <div ref="rightStackRef" class="topbar-right-stack">
+      <div class="topbar-right-stack">
         <div class="row topbar-controls topbar-controls--sleek">
+          <div
+            v-if="hasWorkspace && !appShellStore.settingsOpen && appShellStore.mainView === 'chat'"
+            ref="diffMenuRef"
+            class="relative"
+          >
+            <TopBarTurnDiffMenu :open="diffOpen" @toggle="diffOpen = !diffOpen" @close="diffOpen = false" />
+          </div>
           <div class="control-group control-group-panes" :aria-label="t('topbar.panels')">
             <button
               id="btn-toggle-thread-pane"
@@ -104,6 +109,7 @@
           </div>
           <div class="topbar-control-divider" aria-hidden="true"></div>
           <div class="control-group control-group-actions">
+            <TopBarAccountStatus />
             <TopBarUpdateNotice />
             <TopBarThemeSwitch />
           </div>
@@ -118,9 +124,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import {
+  ChevronDown,
   Image as ImageIcon,
   BookOpen,
   MessageSquare,
@@ -135,9 +142,12 @@ import TopBarWorkspaceButton from "./topbar/TopBarWorkspaceButton.vue";
 import TopBarGoalSummary from "./topbar/TopBarGoalSummary.vue";
 import TopBarPlanSummary from "./topbar/TopBarPlanSummary.vue";
 import TopBarThemeSwitch from "./topbar/TopBarThemeSwitch.vue";
+import TopBarAccountStatus from "./topbar/TopBarAccountStatus.vue";
 import TopBarUpdateNotice from "./topbar/TopBarUpdateNotice.vue";
 import TopBarWindowControls from "./topbar/TopBarWindowControls.vue";
+import TopBarTurnDiffMenu from "./topbar/TopBarTurnDiffMenu.vue";
 import { useAppShellStore } from "../../stores/appShell.store";
+import { useThreadStore } from "../../stores/thread.store";
 import { useRuntimeStore } from "../../stores/runtime.store";
 import { useWorkspaceFilesStore } from "../../stores/workspaceFiles.store";
 import { isFeatureMainView } from "../../features/registry";
@@ -145,14 +155,52 @@ import "./topbar/topbar.css";
 import type { MainView } from "@codenexus/shared/localSettings";
 
 const appShellStore = useAppShellStore();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const runtimeStore = useRuntimeStore();
 const workspaceFilesStore = useWorkspaceFilesStore();
-const rightStackRef = ref<HTMLElement | null>(null);
-
-const reducedMotionQuery = typeof window !== "undefined" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
-let rightStackAnimationFrame = 0;
-let rightStackAnimationTimer = 0;
+const threadStore = useThreadStore();
+const taskTitle = computed(() => {
+  if (appShellStore.settingsOpen) return t("settings.pageAria");
+  if (appShellStore.mainView !== "chat") return t(`topbar.${appShellStore.mainView}`);
+  const id = runtimeStore.currentThreadId || threadStore.currentThreadId;
+  if (!id) return t("threadHistory.newThread");
+  const item =
+    threadStore.threadHistory.find((item) => item.id === id) || threadStore.localThreads.find((item) => item.id === id);
+  return (
+    threadStore.displayThreadTitle(id, item?.title) ||
+    (locale.value.startsWith("zh") ? "当前对话" : "Current conversation")
+  );
+});
+const diffMenuRef = ref<HTMLElement | null>(null);
+const diffOpen = ref(false);
+const viewMenuRef = ref<HTMLDetailsElement | null>(null);
+function closeViewMenu() {
+  if (viewMenuRef.value) viewMenuRef.value.open = false;
+}
+function closeViewOutside(event: PointerEvent) {
+  if (!viewMenuRef.value?.contains(event.target as Node)) closeViewMenu();
+}
+function closeDiffOutside(event: PointerEvent) {
+  if ((event.target as HTMLElement)?.closest?.(".panel-dialog")) return;
+  if (!diffMenuRef.value?.contains(event.target as Node)) diffOpen.value = false;
+}
+function closeDiffOnEscape(event: KeyboardEvent) {
+  if (event.key === "Escape") {
+    diffOpen.value = false;
+    closeViewMenu();
+  }
+}
+onMounted(() => {
+  document.addEventListener("pointerdown", closeDiffOutside);
+  document.addEventListener("pointerdown", closeViewOutside);
+  document.addEventListener("keydown", closeDiffOnEscape);
+});
+watch(
+  () => [runtimeStore.workspacePath, appShellStore.settingsOpen, appShellStore.mainView],
+  () => {
+    diffOpen.value = false;
+  }
+);
 
 const hasWorkspace = computed(() => Boolean(String(runtimeStore.workspacePath ?? "").trim()));
 const filesPaneVisible = computed(
@@ -186,69 +234,14 @@ const filesPaneTitle = computed(() => {
   return filesPaneVisible.value ? t("topbar.closeFilesPanel") : t("topbar.openFilesPanel");
 });
 
-function prefersReducedMotion() {
-  return Boolean(reducedMotionQuery?.matches);
-}
-
-function clearRightStackLayoutAnimation() {
-  if (rightStackAnimationFrame) {
-    window.cancelAnimationFrame(rightStackAnimationFrame);
-    rightStackAnimationFrame = 0;
-  }
-  if (rightStackAnimationTimer) {
-    window.clearTimeout(rightStackAnimationTimer);
-    rightStackAnimationTimer = 0;
-  }
-
-  const rightStack = rightStackRef.value;
-  if (!rightStack) return;
-  rightStack.classList.remove("is-layout-animating");
-  rightStack.style.transition = "";
-  rightStack.style.transform = "";
-}
-
-watch(
-  () => runtimeStore.workspacePath,
-  async () => {
-    const rightStack = rightStackRef.value;
-    if (!rightStack || prefersReducedMotion()) return;
-
-    const previousLeft = rightStack.getBoundingClientRect().left;
-    await nextTick();
-
-    const updatedRightStack = rightStackRef.value;
-    if (!updatedRightStack) return;
-
-    const nextLeft = updatedRightStack.getBoundingClientRect().left;
-    const deltaX = previousLeft - nextLeft;
-    if (Math.abs(deltaX) < 1) return;
-
-    clearRightStackLayoutAnimation();
-    updatedRightStack.style.transition = "none";
-    updatedRightStack.style.transform = `translateX(${deltaX}px)`;
-    void updatedRightStack.offsetWidth;
-
-    rightStackAnimationFrame = window.requestAnimationFrame(() => {
-      rightStackAnimationFrame = 0;
-      updatedRightStack.classList.add("is-layout-animating");
-      updatedRightStack.style.transition = "";
-      updatedRightStack.style.transform = "translateX(0)";
-      rightStackAnimationTimer = window.setTimeout(() => {
-        rightStackAnimationTimer = 0;
-        updatedRightStack.classList.remove("is-layout-animating");
-        updatedRightStack.style.transition = "";
-        updatedRightStack.style.transform = "";
-      }, 240);
-    });
-  },
-  { flush: "pre" }
-);
-
 onBeforeUnmount(() => {
-  clearRightStackLayoutAnimation();
+  document.removeEventListener("pointerdown", closeDiffOutside);
+  document.removeEventListener("pointerdown", closeViewOutside);
+  document.removeEventListener("keydown", closeDiffOnEscape);
 });
 
 function onSetMainView(next: MainView) {
+  closeViewMenu();
   if (isFeatureMainView(next)) {
     appShellStore.openFeatureWorkbench(next);
     return;

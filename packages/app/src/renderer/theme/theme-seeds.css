@@ -22,20 +22,20 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --theme-seed-bg: rgb(243 247 250);
-  --theme-seed-surface-1: rgb(249 251 253);
-  --theme-seed-surface-2: rgb(234 241 246);
-  --theme-seed-surface-3: rgb(225 235 242);
+  --theme-seed-bg: rgb(255 255 255);
+  --theme-seed-surface-1: #f8f9fb;
+  --theme-seed-surface-2: #f3f5f8;
+  --theme-seed-surface-3: #e2e6ec;
   --theme-seed-elevated: rgb(255 255 255);
-  --theme-seed-text: rgb(43 55 70);
-  --theme-seed-text-muted: rgb(100 115 131);
-  --theme-seed-border-source: rgb(43 55 70);
-  --theme-seed-shadow-source: rgb(43 55 70);
-  --theme-seed-accent: rgb(7 126 156);
+  --theme-seed-text: #111827;
+  --theme-seed-text-muted: #4b5563;
+  --theme-seed-border-source: #111827;
+  --theme-seed-shadow-source: #111827;
+  --theme-seed-accent: #6366f1;
   --theme-seed-accent-contrast: rgb(255 255 255);
-  --theme-seed-success: rgb(17 121 90);
-  --theme-seed-warning: rgb(166 88 24);
-  --theme-seed-danger: rgb(174 32 68);
+  --theme-seed-success: #10b981;
+  --theme-seed-warning: #f59e0b;
+  --theme-seed-danger: #ef4444;
 }
 
 :root[data-theme="pink"] {

@@ -66,7 +66,8 @@ export type ThreadCreationRuntimeDeps = {
   }) => ThreadStartBuildResult;
   rememberThreadStartConfigOverrides: (
     threadId: string,
-    overrides: ThreadStartConfigOverrides | null | undefined
+    overrides: ThreadStartConfigOverrides | null | undefined,
+    model?: string
   ) => void;
   markThreadResumed: (threadId: string) => void;
   flushQueueForThread: (threadId: string) => Promise<void>;
@@ -270,7 +271,7 @@ export function createThreadCreationRuntime(deps: ThreadCreationRuntimeDeps): Th
       if (!result) throw new Error("thread/start failed");
       const id = String(result.thread?.id ?? "").trim();
       if (!id) throw new Error("thread/start did not return thread id");
-      rememberThreadStartConfigOverrides(id, modelConfigOverrides);
+      rememberThreadStartConfigOverrides(id, modelConfigOverrides, newThreadComposeSeed.model);
       bindThreadCreateAttemptToThread(attemptId, id);
       appendDebugLog("thread.create", "thread/start rpc resolved", {
         attemptId,

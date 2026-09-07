@@ -23,7 +23,12 @@
               >*</span
             >
           </button>
-          <button class="workspace-editor-tab__close" type="button" @click.stop="onCloseTab(tab.path)">
+          <button
+            class="workspace-editor-tab__close"
+            type="button"
+            :aria-label="`${t('common.close')} ${basenameFromPath(tab.path)}`"
+            @click.stop="onCloseTab(tab.path)"
+          >
             <X class="workspace-editor-tab__close-icon" aria-hidden="true" />
           </button>
         </div>

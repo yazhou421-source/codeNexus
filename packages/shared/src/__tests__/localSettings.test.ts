@@ -3,6 +3,7 @@ import {
   normalizeUserLocalSettings,
   mergeUserLocalSettings,
   normalizeUiLanguage,
+  migrateUserLocalSettingsForOnboarding,
   resolveUiFontSizeZoomFactor,
   DEFAULT_USER_LOCAL_SETTINGS,
 } from "../localSettings";
@@ -169,8 +170,8 @@ describe("localSettings", () => {
   });
 
   describe("runtimeMode", () => {
-    it("defaults to null (unchosen → show launch chooser)", () => {
-      expect(normalizeUserLocalSettings({}).ui.runtimeMode).toBeNull();
+    it("defaults new users to the Codex Agent mode", () => {
+      expect(normalizeUserLocalSettings({}).ui.runtimeMode).toBe("codex");
     });
 
     it("accepts codex and custom; rejects anything else", () => {
@@ -185,10 +186,10 @@ describe("localSettings", () => {
       expect(
         normalizeUserLocalSettings({ ui: { runtimeMode: "nope" } }).ui
           .runtimeMode,
-      ).toBeNull();
+      ).toBe("codex");
     });
 
-    it("can be set and cleared via merge", () => {
+    it("can be set and null falls back to the product default", () => {
       const chosen = mergeUserLocalSettings(
         {},
         { ui: { runtimeMode: "custom" } },
@@ -197,7 +198,96 @@ describe("localSettings", () => {
       const cleared = mergeUserLocalSettings(chosen, {
         ui: { runtimeMode: null },
       });
-      expect(cleared.ui.runtimeMode).toBeNull();
+      expect(cleared.ui.runtimeMode).toBe("codex");
+    });
+  });
+
+  describe("onboarding", () => {
+    it("starts a fresh profile at the welcome step", () => {
+      expect(normalizeUserLocalSettings({}).onboarding).toEqual({
+        version: 1,
+        step: "welcome",
+        completedAt: null,
+        selectedService: null,
+        projectSelected: false,
+        projectPath: null,
+      });
+    });
+
+    it("persists an interrupted step without storing credentials", () => {
+      const settings = mergeUserLocalSettings(
+        {},
+        {
+          onboarding: { step: "account", selectedService: "deepseek" },
+        },
+      );
+      expect(settings.onboarding).toMatchObject({
+        step: "account",
+        selectedService: "deepseek",
+      });
+      expect(JSON.stringify(settings.onboarding)).not.toMatch(
+        /key|token|secret/i,
+      );
+    });
+
+    it("migrates an existing settings profile once and preserves custom mode", () => {
+      const first = migrateUserLocalSettingsForOnboarding(
+        {
+          ui: { runtimeMode: "custom" },
+          customProviders: { workspaceRoot: "/project" },
+        },
+        {
+          settingsFileExists: true,
+          legacyUserDataExists: true,
+          now: "2026-09-04T00:00:00.000Z",
+        },
+      );
+      expect(first.migrated).toBe(true);
+      expect(first.settings.ui.runtimeMode).toBe("custom");
+      expect(first.settings.onboarding).toMatchObject({
+        step: "complete",
+        completedAt: "2026-09-04T00:00:00.000Z",
+        projectSelected: true,
+        projectPath: "/project",
+      });
+
+      const second = migrateUserLocalSettingsForOnboarding(first.settings, {
+        settingsFileExists: true,
+        legacyUserDataExists: true,
+        now: "2027-01-01T00:00:00.000Z",
+      });
+      expect(second.migrated).toBe(false);
+      expect(second.settings.onboarding.completedAt).toBe(
+        "2026-09-04T00:00:00.000Z",
+      );
+    });
+
+    it("does not skip onboarding for a genuinely fresh profile", () => {
+      const result = migrateUserLocalSettingsForOnboarding(
+        {},
+        {
+          settingsFileExists: false,
+          legacyUserDataExists: false,
+        },
+      );
+      expect(result.migrated).toBe(false);
+      expect(result.settings.onboarding.completedAt).toBeNull();
+    });
+
+    it("preserves a future onboarding version for forward-compatible state", () => {
+      const settings = normalizeUserLocalSettings({
+        onboarding: { version: 2, step: "project", selectedService: "qwen" },
+      });
+      expect(settings.onboarding).toMatchObject({
+        version: 2,
+        step: "project",
+        selectedService: "qwen",
+      });
+      expect(
+        mergeUserLocalSettings(settings, {
+          onboarding: { projectSelected: true },
+        }).onboarding.version,
+      ).toBe(2);
     });
   });
 

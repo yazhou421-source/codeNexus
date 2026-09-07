@@ -1,150 +1,110 @@
 <template>
-  <div
-    class="center-empty-state flex flex-col w-full max-w-[860px] mx-auto pt-[8vh] pb-10 px-6 max-[1500px]:max-w-[720px] max-[1500px]:pt-[6vh] animate-enter-pop"
-  >
-    <div v-if="loading" class="mono dim flex w-full items-center justify-center gap-3 my-12">
-      <span class="running-indicator is-muted" aria-hidden="true"></span>
-      <span class="text-sm">{{ t("centerEmpty.loadingMemory") }}</span>
+  <div class="center-empty-state native-home">
+    <div v-if="loading || mode === 'pendingThread'" class="native-home-pending" role="status" aria-live="polite">
+      <StatusIndicator
+        state="loading"
+        :label="loading ? t('centerEmpty.loadingMemory') : t('centerEmpty.creatingThread')"
+      />
+      <p>{{ t("centerEmpty.initializingContext") }}</p>
     </div>
-
     <template v-else>
-      <div v-if="mode === 'pendingThread'" class="center-thread-create-state" role="status" aria-live="polite">
-        <span class="running-indicator is-accent center-thread-create-state__spinner" aria-hidden="true"></span>
-        <div class="center-thread-create-state__copy">
-          <LoadingDots
-            class="center-thread-create-state__title"
-            :baseText="t('centerEmpty.creatingThread')"
-            :intervalMs="360"
-            :maxDots="3"
-            as="div"
-            :ariaLabel="t('centerEmpty.creatingThread')"
-          />
-          <div class="center-thread-create-state__meta">{{ t("centerEmpty.initializingContext") }}</div>
-        </div>
+      <div class="native-home-heading">
+        <BrandLogo kind="symbol" />
+        <h1>{{ projectName || "Calmnova Code" }}</h1>
+        <StatusIndicator v-if="projectName" state="success" :label="zh ? '项目已就绪' : 'Project ready'" />
+        <p v-else class="native-home-greeting">{{ greeting }}</p>
+        <p>
+          {{
+            projectName
+              ? zh
+                ? "从一个问题开始，探索你的项目。"
+                : "Start with a question about your project."
+              : zh
+                ? "准备好了，今天想做些什么？"
+                : "Ready when you are."
+          }}
+        </p>
+        <span v-if="projectName" class="native-home-path" :title="workspacePath">{{ workspacePath }}</span>
       </div>
-
-      <div
-        v-else-if="historyItems.length > 0"
-        class="center-empty-history w-full animate-enter-slide-up"
-        style="animation-delay: 100ms"
-      >
-        <div class="flex items-center justify-between mb-4 px-1">
-          <h2 class="text-sm max-[1500px]:text-[13px] font-bold text-[var(--text-muted)] flex items-center gap-2">
-            <History class="w-4 h-4" /> {{ t("centerEmpty.history") }}
-          </h2>
-          <span class="text-[12px] max-[1500px]:text-[11px] text-[var(--text-muted)] opacity-60">{{
-            t("centerEmpty.recentCount", { count: historyItems.length })
-          }}</span>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 max-[1500px]:gap-2.5">
-          <button
-            v-for="(item, index) in historyItems"
-            :key="item.id"
-            type="button"
-            :style="{ animationDelay: `${index * 40 + 150}ms` }"
-            class="group flex flex-col items-start justify-center h-[72px] max-[1500px]:h-[64px] px-4 max-[1500px]:px-3 rounded-xl border border-[var(--border)] bg-[var(--surface-1)]/50 hover:bg-[var(--surface-1)] text-left transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[color:var(--border-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/30 active:scale-[0.98] opacity-0 animate-enter-slide-up"
-            @click="$emit('switch-thread', item.id)"
-          >
-            <span
-              class="title font-medium text-[14px] max-[1500px]:text-[13px] text-[var(--text)] group-hover:text-[var(--accent)] transition-colors w-full truncate mb-1"
-            >
-              {{ item.title }}
-            </span>
-            <span
-              class="text-[11px] max-[1500px]:text-[10px] text-[var(--text-muted)] font-mono opacity-70 flex items-center gap-1"
-            >
-              <MessageSquareText class="w-3 h-3" /> {{ t("centerEmpty.chatThread") }}
-            </span>
-          </button>
-        </div>
+      <div class="native-home-actions">
+        <button class="native-home-action is-primary" type="button" @click="runtime.selectWorkspace()">
+          <FolderOpen aria-hidden="true" /><strong>{{ zh ? "打开项目" : "Open Project" }}</strong>
+          <span>{{ zh ? "选择工作区" : "Choose a workspace" }}</span>
+        </button>
+        <button class="native-home-action" type="button" @click="focusComposer">
+          <SquarePen aria-hidden="true" /><strong>{{ zh ? "开始任务" : "Start a Task" }}</strong>
+          <span>{{ zh ? "描述你想做的事" : "Describe your task" }}</span>
+        </button>
+        <button
+          class="native-home-action"
+          type="button"
+          :aria-expanded="examplesOpen"
+          @click="examplesOpen = !examplesOpen"
+        >
+          <Lightbulb aria-hidden="true" /><strong>{{ zh ? "探索示例" : "Explore Examples" }}</strong>
+          <span>{{ zh ? "寻找任务灵感" : "Find a starting point" }}</span>
+        </button>
+      </div>
+      <div v-if="examplesOpen" class="native-home-examples">
+        <button v-for="example in examples" :key="example" type="button" @click="useExample(example)">
+          {{ example }}<ArrowUpRight aria-hidden="true" />
+        </button>
       </div>
     </template>
   </div>
 </template>
-
 <script setup lang="ts">
-import type { ThreadHistoryItem } from "../../domain/types";
-import LoadingDots from "../ui/LoadingDots.vue";
-import { History, MessageSquareText } from "lucide-vue-next";
+import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
-
-defineProps<{
-  loading: boolean;
-  historyItems: ThreadHistoryItem[];
-  mode: "default" | "pendingThread";
-}>();
-
-defineEmits<{
-  (event: "switch-thread", threadId: string): void;
-}>();
-
-const { t } = useI18n();
+import { ArrowUpRight, FolderOpen, Lightbulb, SquarePen } from "lucide-vue-next";
+import type { ThreadHistoryItem } from "../../domain/types";
+import { getRuntimeOrchestrator } from "../../domain/runtimeOrchestrator";
+import { useRuntimeStore } from "../../stores/runtime.store";
+import BrandLogo from "../brand/BrandLogo.vue";
+import StatusIndicator from "../ui/StatusIndicator.vue";
+defineProps<{ loading: boolean; historyItems: ThreadHistoryItem[]; mode: "default" | "pendingThread" }>();
+defineEmits<{ (event: "switch-thread", threadId: string): void }>();
+const { t, locale } = useI18n();
+const runtime = getRuntimeOrchestrator();
+const runtimeStore = useRuntimeStore();
+const zh = computed(() => locale.value.startsWith("zh"));
+const workspacePath = computed(() => String(runtimeStore.workspacePath || ""));
+const projectName = computed(() => workspacePath.value.split(/[\\/]/).filter(Boolean).at(-1) || "");
+const examplesOpen = ref(false);
+const greeting = computed(() => {
+  const hour = new Date().getHours();
+  return zh.value
+    ? hour < 12
+      ? "早上好"
+      : hour < 18
+        ? "下午好"
+        : "晚上好"
+    : hour < 12
+      ? "Good morning"
+      : hour < 18
+        ? "Good afternoon"
+        : "Good evening";
+});
+const examples = computed(() =>
+  zh.value
+    ? ["请分析这个项目的结构，不修改文件。", "帮我梳理这个项目的启动和测试方法。", "审查当前改动，指出潜在问题。"]
+    : [
+        "Explain this project's structure without changing files.",
+        "Explain how to run and test this project.",
+        "Review the current changes for potential issues.",
+      ]
+);
+function focusComposer() {
+  document.getElementById("input")?.focus();
+}
+function useExample(text: string) {
+  const input = document.getElementById("input");
+  if (!input || input.textContent?.trim()) {
+    focusComposer();
+    return;
+  }
+  input.textContent = text;
+  input.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
+  focusComposer();
+}
 </script>
-
-<style scoped>
-.center-thread-create-state {
-  width: min(100%, 360px);
-  min-height: 64px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  margin: 10vh auto 0;
-  padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--border) 82%, var(--accent) 18%);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
-  box-shadow: 0 10px 30px color-mix(in srgb, var(--theme-seed-shadow-source) 14%, transparent);
-  animation: center-thread-create-enter 160ms ease-out both;
-}
-
-.center-thread-create-state__spinner {
-  width: 16px;
-  height: 16px;
-  border-width: 2px;
-}
-
-.center-thread-create-state__copy {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.center-thread-create-state__title {
-  min-width: 0;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.35;
-  white-space: nowrap;
-}
-
-.center-thread-create-state__meta {
-  min-width: 0;
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@keyframes center-thread-create-enter {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 4px, 0);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .center-thread-create-state {
-    animation: none;
-  }
-}
-</style>

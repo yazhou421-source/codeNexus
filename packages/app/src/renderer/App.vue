@@ -1,7 +1,28 @@
 <template>
   <div class="app-shell">
     <TopBar key="topbar" />
-    <main ref="mainRef" class="main" :class="mainClass" :style="mainStyle">
+    <main ref="mainRef" class="main" :class="mainClass" :style="mainStyle" @keydown.esc="closeDrawers">
+      <NavigationRail v-if="showNavigationRail" />
+      <button
+        v-if="hasDrawer"
+        class="workspace-drawer-backdrop"
+        type="button"
+        :aria-label="t('common.close')"
+        @click="closeDrawers"
+      />
+      <div
+        v-if="isSinglePane && showEditorPane"
+        class="workspace-mobile-tabs"
+        role="tablist"
+        :aria-label="t('topbar.panels')"
+      >
+        <button type="button" role="tab" :aria-selected="mobilePane === 'chat'" @click="mobilePane = 'chat'">
+          {{ t("topbar.chat") }}
+        </button>
+        <button type="button" role="tab" :aria-selected="mobilePane === 'editor'" @click="mobilePane = 'editor'">
+          {{ locale.startsWith("zh") ? "编辑器" : "Editor" }}
+        </button>
+      </div>
       <Transition :name="leftPaneTransitionName" mode="out-in">
         <component
           :is="featureWorkspaceSidebar"
@@ -9,7 +30,13 @@
           :key="`${mainView}-workspace`"
           class="tasks-pane-host"
         />
-        <LeftSidebar v-else-if="showLeftSidebar" key="threads" class="tasks-pane-host" />
+        <LeftSidebar
+          v-else-if="showLeftSidebar"
+          v-workspace-drawer="historyIsOverlay ? closeDrawers : null"
+          key="threads"
+          class="tasks-pane-host"
+          :class="{ 'workspace-drawer': historyIsOverlay }"
+        />
       </Transition>
 
       <Transition :name="mainViewTransitionName" mode="out-in">
@@ -22,12 +49,17 @@
         <div v-else-if="activeFeature" :key="activeFeature.mainView" class="center-content-host">
           <component :is="activeFeature.workbenchComponent" />
         </div>
-        <div v-else key="chat" class="center-content-host">
+        <div
+          v-else
+          key="chat"
+          class="center-content-host"
+          v-show="!isSinglePane || mobilePane === 'chat' || !showEditorPane"
+        >
           <CenterPane />
         </div>
       </Transition>
       <div
-        v-if="!settingsOpen && showEditorPane"
+        v-if="!settingsOpen && showEditorPane && !isSinglePane"
         class="center-workbench-sash"
         role="separator"
         aria-orientation="vertical"
@@ -40,6 +72,7 @@
       <WorkspaceEditorPane
         v-if="!settingsOpen && showEditorPane"
         class="workspace-editor-pane-host"
+        v-show="!isSinglePane || mobilePane === 'editor'"
         :class="{ 'is-compact': isEditorCompact }"
       />
       <Transition name="side-pane-switch" mode="out-in">
@@ -50,14 +83,20 @@
           class="files-pane-host"
         />
         <DebugTimelineSidebar v-else-if="showDebugSidebar" key="debug" class="files-pane-host" />
-        <WorkspaceFilesSidebar v-else-if="showFilesSidebar" key="files" class="files-pane-host" />
+        <WorkspaceFilesSidebar
+          v-else-if="showFilesSidebar"
+          v-workspace-drawer="filesIsOverlay ? closeDrawers : null"
+          key="files"
+          class="files-pane-host"
+          :class="{ 'workspace-drawer': filesIsOverlay }"
+        />
       </Transition>
     </main>
     <BottomBar />
     <div class="app-overlays">
       <AppClosingOverlay v-if="showAppClosingOverlay" />
       <GoalShutdownCountdownOverlay v-if="showGoalShutdownOverlay" />
-      <RuntimeModeChooser v-if="showModeChooser" />
+      <OnboardingFlow v-if="onboardingStore.visible" />
     </div>
   </div>
 </template>
@@ -65,10 +104,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { workspaceDrawer as vWorkspaceDrawer } from "./components/ui/workspaceDrawer";
+import NavigationRail from "./components/layout/NavigationRail.vue";
 import TopBar from "./components/layout/TopBar.vue";
 import CenterPane from "./components/layout/CenterPane.vue";
 import BottomBar from "./components/layout/BottomBar.vue";
-import RuntimeModeChooser from "./components/custom/RuntimeModeChooser.vue";
+import OnboardingFlow from "./components/onboarding/OnboardingFlow.vue";
 import CustomWorkbench from "./components/custom/CustomWorkbench.vue";
 import {
   AppClosingOverlay,
@@ -92,6 +133,7 @@ import { useGoalShutdownStore } from "./stores/goalShutdown.store";
 import { useNotificationSoundStore } from "./stores/notificationSound.store";
 import { useRuntimeStore } from "./stores/runtime.store";
 import { useModelCatalogStore } from "./stores/modelCatalog.store";
+import { useOnboardingStore } from "./stores/onboarding.store";
 import { useWorkspaceFilesStore } from "./stores/workspaceFiles.store";
 import type { AppWindowState } from "@codenexus/shared/ipc/contracts";
 import {
@@ -106,13 +148,15 @@ import {
 } from "./domain/layoutWidthBudget";
 
 const appShellStore = useAppShellStore();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const appClosingStore = useAppClosingStore();
 const goalShutdownStore = useGoalShutdownStore();
 const runtimeStore = useRuntimeStore();
 const notificationSoundStore = useNotificationSoundStore();
 const modelCatalogStore = useModelCatalogStore();
 const workspaceFilesStore = useWorkspaceFilesStore();
+const onboardingStore = useOnboardingStore();
+if (/Mac/i.test(navigator.platform)) document.documentElement.dataset.platform = "mac";
 appShellStore.initLocalSettings();
 runtimeStore.initLocalDraftState();
 notificationSoundStore.initLocalSettings();
@@ -126,7 +170,6 @@ const showAppClosingOverlay = computed(() => appClosingStore.visible);
 const showGoalShutdownOverlay = computed(() => goalShutdownStore.visible);
 const mainView = computed(() => appShellStore.mainView);
 const isCustomMode = computed(() => appShellStore.runtimeMode === "custom");
-const showModeChooser = computed(() => appShellStore.runtimeMode === null || appShellStore.modeChooserOpen);
 const activeFeature = computed(() => getFeatureByMainView(mainView.value));
 const featureWorkspaceSidebar = computed(() => {
   if (isCustomMode.value || settingsOpen.value || !appShellStore.leftSidebarVisible) return null;
@@ -192,10 +235,82 @@ watch(
   }
 );
 
-const UNIFIED_SIDEBAR_WIDTH_PX = 300;
+const UNIFIED_SIDEBAR_WIDTH_PX = 220;
 const CENTER_EDITOR_KEYBOARD_STEP_PX = 20;
 
 const mainRef = ref<HTMLElement | null>(null);
+const mainWidthPx = ref(window.innerWidth);
+const isChatWorkspace = computed(() => !settingsOpen.value && !isCustomMode.value && mainView.value === "chat");
+const isSinglePane = computed(() => isChatWorkspace.value && mainWidthPx.value < 700);
+const historyIsOverlay = computed(() => isChatWorkspace.value && mainWidthPx.value < 1200);
+const filesIsOverlay = computed(() => isChatWorkspace.value && mainWidthPx.value < 951);
+const showNavigationRail = computed(
+  () => isChatWorkspace.value && Boolean(runtimeStore.workspacePath) && mainWidthPx.value >= 951
+);
+const mobilePane = ref<"chat" | "editor">("chat");
+const hasDrawer = computed(
+  () => (historyIsOverlay.value && showLeftSidebar.value) || (filesIsOverlay.value && showFilesSidebar.value)
+);
+function closeDrawers() {
+  if (historyIsOverlay.value) appShellStore.setLeftSidebarVisible(false, { save: false });
+  if (filesIsOverlay.value) appShellStore.setFilesSidebarVisible(false, { save: false });
+}
+const dockedHistoryVisible = ref(appShellStore.leftSidebarVisible);
+const dockedFilesVisible = ref(appShellStore.filesSidebarVisible);
+watch(
+  [historyIsOverlay, filesIsOverlay],
+  ([historyOverlay, filesOverlay], previous) => {
+    if (historyOverlay) appShellStore.setLeftSidebarVisible(false, { save: false });
+    else if (previous?.[0]) appShellStore.setLeftSidebarVisible(dockedHistoryVisible.value, { save: false });
+    if (filesOverlay) appShellStore.setFilesSidebarVisible(false, { save: false });
+    else if (previous?.[1]) appShellStore.setFilesSidebarVisible(dockedFilesVisible.value, { save: false });
+  },
+  { immediate: true }
+);
+watch(
+  () => runtimeStore.workspacePath,
+  (path, previous) => {
+    if (path && path !== previous && isChatWorkspace.value) appShellStore.setLeftSidebarVisible(false, { save: false });
+  }
+);
+const editorWidthCustomized = ref(false);
+watch(
+  () => workspaceFilesStore.activeFilePath,
+  () => {
+    mobilePane.value = "editor";
+    if (filesIsOverlay.value) appShellStore.setFilesSidebarVisible(false, { save: false });
+  }
+);
+watch(
+  () => runtimeStore.currentThreadId,
+  () => {
+    mobilePane.value = "chat";
+    if (historyIsOverlay.value) appShellStore.setLeftSidebarVisible(false, { save: false });
+  }
+);
+watch(
+  () => appShellStore.leftSidebarVisible,
+  (visible) => {
+    if (!historyIsOverlay.value) dockedHistoryVisible.value = visible;
+    if (visible && historyIsOverlay.value && filesIsOverlay.value)
+      appShellStore.setFilesSidebarVisible(false, { save: false });
+  }
+);
+watch(
+  () => appShellStore.filesSidebarVisible,
+  (visible) => {
+    if (!filesIsOverlay.value) dockedFilesVisible.value = visible;
+    if (visible && filesIsOverlay.value) appShellStore.setLeftSidebarVisible(false, { save: false });
+  }
+);
+let mainResizeObserver: ResizeObserver | null = null;
+onMounted(() => {
+  if (!mainRef.value) return;
+  mainResizeObserver = new ResizeObserver(([entry]) => {
+    if (entry) mainWidthPx.value = entry.contentRect.width;
+  });
+  mainResizeObserver.observe(mainRef.value);
+});
 const mainViewTransitionName = ref("main-view-fade");
 const leftPaneTransitionName = ref("left-pane-switch-forward");
 const editorResizeState = ref<{
@@ -234,6 +349,18 @@ const centerHardMinWidthPx = computed(() => {
 });
 
 const resolvedShellWidths = computed(() => {
+  if (isChatWorkspace.value) {
+    const leftWidth = showLeftPane.value && !historyIsOverlay.value ? UNIFIED_SIDEBAR_WIDTH_PX : 0;
+    const filesWidth =
+      (showFilesSidebar.value || showDebugSidebar.value) && !filesIsOverlay.value ? UNIFIED_SIDEBAR_WIDTH_PX : 0;
+    const railWidth = showNavigationRail.value ? 48 : 0;
+    return {
+      leftWidth,
+      filesWidth,
+      rightWidth: 0,
+      centerWidth: Math.max(0, getMainWidthPx() - leftWidth - filesWidth - railWidth),
+    };
+  }
   return resolveShellWidths({
     containerWidth: getMainWidthPx(),
     leftVisible: showLeftPane.value,
@@ -264,6 +391,13 @@ const resolvedCenterWidths = computed(() => {
 });
 
 const effectiveEditorWidthPx = computed(() => {
+  if (isSinglePane.value) return mainWidthPx.value;
+  if (isChatWorkspace.value && !editorResizeState.value && !editorWidthCustomized.value) {
+    return Math.max(
+      CENTER_EDITOR_HARD_MIN_WIDTH_PX,
+      resolvedShellWidths.value.centerWidth - 380 - CENTER_EDITOR_SASH_WIDTH_PX
+    );
+  }
   return resolvedCenterWidths.value.editorWidth;
 });
 
@@ -287,11 +421,30 @@ const mainClass = computed(() => ({
   "has-image-sidebar": mainView.value === "image" && Boolean(featureSettingsSidebar.value),
   "has-paper-sidebar": mainView.value === "paper" && Boolean(featureSettingsSidebar.value),
   "has-settings": settingsOpen.value,
+  "is-chat-workspace": isChatWorkspace.value,
+  "has-navigation-rail": showNavigationRail.value,
+  "is-single-pane": isSinglePane.value,
+  "has-mobile-tabs": isSinglePane.value && showEditorPane.value,
 }));
 
 const mainStyle = computed(
   () =>
     ({
+      ...(isChatWorkspace.value
+        ? {
+            gridTemplateAreas: isSinglePane.value
+              ? showEditorPane.value
+                ? '"mobile-tabs" "center"'
+                : '"center"'
+              : showEditorPane.value
+                ? '"rail tasks files center editor-sash editor"'
+                : '"rail tasks files center"',
+            gridTemplateColumns: isSinglePane.value
+              ? "minmax(0, 1fr)"
+              : `${showNavigationRail.value ? 48 : 0}px ${effectiveLeftSidebarWidthPx.value}px ${effectiveFilesSidebarWidthPx.value}px minmax(0, 1fr)${showEditorPane.value ? ` ${CENTER_EDITOR_SASH_WIDTH_PX}px ${effectiveEditorWidthPx.value}px` : ""}`,
+            gridTemplateRows: isSinglePane.value && showEditorPane.value ? "32px minmax(0, 1fr)" : "minmax(0, 1fr)",
+          }
+        : {}),
       "--left-sidebar-w": `${Math.max(0, Math.round(effectiveLeftSidebarWidthPx.value))}px`,
       "--files-sidebar-w": `${Math.max(0, Math.round(effectiveFilesSidebarWidthPx.value))}px`,
       "--center-editor-w": `${Math.max(0, Math.round(effectiveEditorWidthPx.value))}px`,
@@ -299,7 +452,7 @@ const mainStyle = computed(
     }) as Record<string, string>
 );
 
-const getMainWidthPx = () => mainRef.value?.getBoundingClientRect().width ?? window.innerWidth;
+const getMainWidthPx = () => mainWidthPx.value;
 
 const clampEditorPreferredWidthPx = (value: number) => {
   const totalWidth = resolvedShellWidths.value.centerWidth;
@@ -356,12 +509,14 @@ const onEditorSashPointerUp = () => {
   editorResizeState.value = null;
   teardownEditorResizeListeners();
   if (!state) return;
+  editorWidthCustomized.value = true;
   appShellStore.setCenterEditorWidthPx(clampEditorPreferredWidthPx(state.previewWidthPx), { save: true });
 };
 
 const onEditorSashKeydown = (event: KeyboardEvent) => {
   if (!showEditorPane.value) return;
   if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+  editorWidthCustomized.value = true;
   const delta = event.key === "ArrowLeft" ? CENTER_EDITOR_KEYBOARD_STEP_PX : -CENTER_EDITOR_KEYBOARD_STEP_PX;
   appShellStore.setCenterEditorWidthPx(clampEditorPreferredWidthPx(effectiveEditorWidthPx.value + delta), {
     save: true,
@@ -370,6 +525,7 @@ const onEditorSashKeydown = (event: KeyboardEvent) => {
 };
 
 onBeforeUnmount(() => {
+  mainResizeObserver?.disconnect();
   try {
     stopWindowStateListener?.();
   } catch {}

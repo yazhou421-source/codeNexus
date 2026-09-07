@@ -5,6 +5,7 @@
     role="tree"
     :aria-label="t('workspaceFiles.treeAria')"
     @wheel="onTreeSurfaceWheel"
+    @keydown="onTreeKeydown"
   >
     <div v-if="!workspaceFilesStore.hasWorkspace" class="workspace-files-placeholder">
       {{ t("workspaceFiles.chooseWorkspaceFirst") }}
@@ -90,10 +91,12 @@ const props = withDefaults(
   defineProps<{
     filterText?: string;
     allowContextMenu?: boolean;
+    showSystemFiles?: boolean;
   }>(),
   {
     filterText: "",
     allowContextMenu: false,
+    showSystemFiles: false,
   }
 );
 
@@ -191,6 +194,8 @@ const treeRows = computed<TreeRow[]>(() => {
       }
 
       for (const entry of entries) {
+        if (!props.showSystemFiles && [".git", "node_modules", ".DS_Store", ".pnpm-store"].includes(entry.fileName))
+          continue;
         if (entry.isDirectory) {
           const nestedRows = appendDirectory(entry.path, entry.fileName, depth + 1);
           if (nestedRows.length > 0) {
@@ -366,4 +371,27 @@ watch(
   },
   { flush: "post" }
 );
+function onTreeKeydown(event: KeyboardEvent) {
+  if (!["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const rows = Array.from(treeSurfaceRef.value?.querySelectorAll<HTMLButtonElement>('[role="treeitem"]') || []);
+  const current = event.target as HTMLButtonElement;
+  const index = rows.indexOf(current);
+  if (index < 0) return;
+  event.preventDefault();
+  if (event.key === "ArrowRight" && current.getAttribute("aria-expanded") === "false") {
+    current.click();
+    return;
+  }
+  if (event.key === "ArrowLeft" && current.getAttribute("aria-expanded") === "true") {
+    current.click();
+    return;
+  }
+  const next =
+    event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? rows.length - 1
+        : Math.max(0, Math.min(rows.length - 1, index + (["ArrowUp", "ArrowLeft"].includes(event.key) ? -1 : 1)));
+  rows[next]?.focus();
+}
 </script>

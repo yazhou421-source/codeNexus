@@ -3,7 +3,7 @@
     <div class="mode-chooser__panel">
       <header class="mode-chooser__head">
         <h1>选择运行模式</h1>
-        <p>CodeNexus 正在逐步脱离 codex-app-server。你可以继续使用稳定的旧版，或体验直连自定义 provider 的新版。</p>
+        <p>Calmnova Code 正在逐步完善新的模型接入方式。你可以继续使用稳定模式，或体验直连自定义 Provider。</p>
       </header>
       <div class="mode-chooser__cards">
         <button type="button" class="mode-card" @click="choose('codex')">

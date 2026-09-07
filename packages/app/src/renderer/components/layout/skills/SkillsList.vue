@@ -17,6 +17,7 @@
             class="skill-switch-input"
             type="checkbox"
             :checked="skill.enabled"
+            :aria-label="skill.name"
             :disabled="!skill.configurable || isSkillPending(skill)"
             @click.stop
             @change="onSkillCheckboxChanged(skill, $event)"

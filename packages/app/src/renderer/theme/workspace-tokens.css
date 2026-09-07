@@ -1,0 +1,121 @@
+/* Calmnova desktop design values; theme selection and status semantics stay intact. */
+:root[data-theme] {
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
+  --topbar-h: 44px;
+  --bottombar-h: 28px;
+  --workspace-hover: color-mix(in srgb, var(--text) 5%, transparent);
+  --workspace-selected: var(--accent-soft);
+  --theme-page-bg-image: none;
+  --shell-bg: var(--surface-1);
+  --shell-chrome-bg: var(--bg);
+  --pane-bg: var(--bg);
+  --panel-surface-bg: var(--surface-elevated);
+  --chat-surface-bg: var(--bg);
+  --composer-surface-bg: var(--surface-elevated);
+  --topbar-bg: var(--bg);
+  --sidebar-bg: var(--surface-1);
+  --center-bg: var(--bg);
+  --control-surface: var(--surface-elevated);
+  --control-surface-hover: var(--workspace-hover);
+  --control-surface-active: var(--workspace-selected);
+  --control-border-hover: var(--theme-border-strong);
+  --shadow-soft: 0 2px 6px rgb(from var(--theme-seed-shadow-source) r g b / 0.06);
+  --panel-shadow: var(--shadow-soft);
+  --floating-bg: var(--surface-elevated);
+  --floating-border: var(--border);
+  --floating-shadow: 0 8px 24px rgb(from var(--theme-seed-shadow-source) r g b / 0.12);
+  --floating-item-bg: transparent;
+  --floating-item-bg-hover: var(--workspace-hover);
+  --floating-backdrop-filter: none;
+  --topbar-hover-bg: var(--workspace-hover);
+  --topbar-active-bg: var(--workspace-selected);
+  --topbar-btn-active-bg: var(--workspace-selected);
+  --topbar-btn-active-text: var(--text);
+  --topbar-dropdown-shadow: var(--floating-shadow);
+  --ui-history-row-bg: transparent;
+  --ui-history-active-shadow: none;
+  --ui-timeline-card-bg: var(--surface-1);
+  --ui-timeline-card-shadow: none;
+  --ui-code-bg: var(--surface-1);
+  --ui-code-border: var(--border);
+  --bubble-shadow: none;
+  --composer-shell-shadow: none;
+  --composer-shell-backdrop: none;
+  --composer-agent-bg: var(--surface-elevated);
+  --composer-agent-border: var(--border);
+  --composer-plan-bg: var(--surface-elevated);
+  --composer-plan-border: var(--border);
+  --composer-mode-active-text: var(--text);
+  --composer-mode-active-bg: var(--workspace-selected);
+  --composer-mode-active-border: transparent;
+  --composer-mode-group-bg: transparent;
+  --composer-mode-group-border: transparent;
+  --ui-cta-bg: var(--workspace-selected);
+  --ui-cta-bg-hover: var(--workspace-hover);
+  --ui-cta-text: var(--text);
+}
+:root[data-theme] {
+  --diff-hunk-bg: var(--surface-2);
+  --diff-meta-bg: var(--surface-1);
+}
+
+/* V1 semantic aliases extend the existing theme; alternate themes remain supported. */
+:root[data-theme] {
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 20px;
+  --space-7: 24px;
+  --space-8: 32px;
+  --font-metadata: 11px;
+  --font-secondary: 12px;
+  --font-ui: 13px;
+  --font-body: 14px;
+  --font-emphasis: 15px;
+  --font-section: 16px;
+  --font-empty: 20px;
+  --radius-composer: 10px;
+  --nav-rail-w: 48px;
+  --workspace-sidebar-w: 220px;
+  --motion-hover: 120ms;
+  --motion-menu: 140ms;
+  --motion-panel: 200ms;
+  --bg-base: var(--bg);
+  --bg-subtle: var(--surface-1);
+  --bg-muted: var(--surface-2);
+  --bg-hover: var(--workspace-hover);
+  --bg-active: var(--workspace-selected);
+  --surface-primary: var(--bg);
+  --surface-secondary: var(--surface-1);
+  --border-subtle: color-mix(in srgb, var(--border) 60%, transparent);
+  --border-default: var(--border);
+  --border-strong: var(--theme-border-strong);
+  --text-primary: var(--text);
+  --text-secondary: var(--theme-seed-text-muted);
+  --text-tertiary: var(--text-muted);
+  --text-disabled: color-mix(in srgb, var(--text) 42%, var(--bg));
+  --accent-primary: var(--accent);
+  --accent-primary-hover: color-mix(in srgb, var(--accent) 90%, var(--text));
+  --info: var(--accent);
+  --nav-bg: #191d24;
+  --nav-text: #c2c8d4;
+  --system-ui-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, system-ui, sans-serif;
+  --mono: "SF Mono", "JetBrains Mono", Menlo, monospace;
+}
+:root[data-theme="light"] {
+  --theme-border: #e2e6ec;
+  --theme-border-strong: #d4d9e2;
+  --border-subtle: #eef0f4;
+  --text-muted: #8992a3;
+  --text-disabled: #b4bbc7;
+  --workspace-hover: #f0f2f6;
+  --workspace-selected: #ebeeff;
+  --accent-soft: #eef0ff;
+  --accent-primary-hover: #5558e8;
+}

@@ -2,7 +2,7 @@
 
 ## Runtime Baseline
 
-当前安全策略默认以 `@openai/codex@0.131.0` 作为 Codex CLI / app-server 协议基线。报告与 Codex CLI、app-server、动态工具、MCP 或协议事件相关的问题时，请尽量同时提供本机 `codex --version` 输出。
+当前安全策略默认以内置 Codex `0.153.2` 作为 Codex CLI / app-server 协议基线。报告与 Codex CLI、app-server、动态工具、MCP 或协议事件相关的问题时，请尽量同时提供环境检测页中的 Codex 版本。
 
 ## Reporting a Vulnerability
 
@@ -24,7 +24,7 @@
 
 ## Sensitive Data
 
-CodeNexus 不提供 OpenAI 账号、Token 或托管服务。用户本地配置、API Key、访问令牌、工作区文件和会话历史由使用者自行管理。
+Calmnova Code 不提供 OpenAI 账号、Token 或托管服务。用户本地配置、API Key、访问令牌、工作区文件和会话历史由使用者自行管理。
 
 贡献代码时请确认：
 

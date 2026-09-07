@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from "electron";
+import { app, autoUpdater as electronAutoUpdater, BrowserWindow, Menu } from "electron";
 import { readFile, rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -22,6 +22,7 @@ import { CodexConfigSwitcherService } from "./services/CodexConfigSwitcherServic
 import { ImageGenerationHistoryService } from "@codenexus/feature-imagegen/main/ImageGenerationHistoryService";
 import { ImageGenerationTaskService } from "@codenexus/feature-imagegen/main/ImageGenerationTaskService";
 import { FlowchartHistoryService } from "@codenexus/feature-flowchart/main/FlowchartHistoryService";
+import { EmbeddedRouterManager, loadConfig as loadRouterConfig, type RouterConfig } from "@codenexus/router";
 import { LocalSettingsService } from "./services/LocalSettingsService";
 import { CacheRegistryService } from "./services/CacheRegistryService";
 import { ThreadArtifactService } from "./services/ThreadArtifactService";
@@ -32,26 +33,90 @@ import { WorkspacePatchService } from "./services/WorkspacePatchService";
 import { DeepSeekResponsesProxyService } from "./services/DeepSeekResponsesProxyService";
 import { CustomAgentService } from "./services/CustomAgentService";
 import { createMainWindow } from "./windows/mainWindow";
+import {
+  externalRouterConfigAllowed,
+  routerStartAcquired,
+  shouldStopEmbeddedRouterOnWindowClose,
+  startEmbeddedRouterFailSoft,
+} from "./embeddedRouterLifecycle";
+import { createCodexRouterRuntime } from "./codexRouterRuntime";
+import { ProviderSecretStore, ElectronSafeStorageEncryption } from "./services/ProviderSecretStore";
+import { ProviderPreferencesStore } from "./services/ProviderPreferencesStore";
+import { ProviderRuntimeService } from "./services/ProviderRuntimeService";
+import { CodexAccountService } from "./services/CodexAccountService";
+import { CodexModelCatalogService } from "./services/CodexModelCatalogService";
+import { detectLegacyUserData } from "./services/OnboardingMigrationService";
+import { migrateProductUserDataFailSoft } from "./services/ProductUserDataMigrationService";
+import {
+  PRODUCT_BRAND,
+  PRODUCT_NAME,
+  configureLegacyProductIdentity,
+  configureProductIdentity,
+} from "./productIdentity";
+import {
+  decryptLegacyProviderSecretsWithHelper,
+  isLegacyProviderSecretHelper,
+  reencryptLegacyProviderSecrets,
+  runLegacyProviderSecretHelper,
+} from "./services/LegacyProviderSecretMigrationService";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
+const legacyProviderSecretHelper = isLegacyProviderSecretHelper(process.argv);
 
-app.setName("CodeNexus");
-if (process.platform === "win32") {
-  app.setAppUserModelId("com.codenexus.desktop");
+const productUserDataPaths = legacyProviderSecretHelper ? null : configureProductIdentity(app, process.argv);
+if (legacyProviderSecretHelper) {
+  configureLegacyProductIdentity(app, process.argv);
+} else {
+  const aboutIconPath = app.isPackaged
+    ? join(process.resourcesPath, "branding", "app-icon.png")
+    : join(app.getAppPath(), "build", "branding", "app-icon-1024.png");
+  app.setAboutPanelOptions({
+    applicationName: PRODUCT_NAME,
+    applicationVersion: app.getVersion(),
+    version: "AI Coding Workspace",
+    copyright: `Copyright © ${new Date().getFullYear()} ${PRODUCT_BRAND}`,
+    credits: "Includes software from CodeNexus, CodexBridge, and OpenAI Codex under their respective licenses.",
+    iconPath: aboutIconPath,
+  });
 }
 
 let mainWindow: BrowserWindow | null = null;
 let appCloseFlowPromise: Promise<void> | null = null;
 let allowMainWindowClose = false;
-let closeCleanupFinished = false;
+let windowCloseCleanupFinished = false;
+let embeddedRouterStopRequested = false;
 let appCloseFlowStartedAt = 0;
 let appCloseForceExitTimer: NodeJS.Timeout | null = null;
+let providerRuntimeService: ProviderRuntimeService | null = null;
+let routerModelCatalogPath: string | null = null;
+let managedRouterRuntimeActive = false;
 
-const codexServerManager = new CodexServerManager();
 const workspacePatchService = new WorkspacePatchService();
 const runtimeThreadStateTracker = new RuntimeThreadStateTracker();
 const cacheRegistryService = new CacheRegistryService();
 const deepSeekResponsesProxyService = new DeepSeekResponsesProxyService();
+const embeddedRouterManager = new EmbeddedRouterManager(
+  (level, message, error) => {
+    if (level === "error") logger.error("embedded-router", message, error);
+    else if (level === "warn") logger.warn("embedded-router", message, error);
+    else logger.info("embedded-router", message);
+  },
+  { resolveSecret: (secretRef) => providerRuntimeService?.resolveSecret(secretRef) }
+);
+const codexModelCatalogService = new CodexModelCatalogService();
+const codexServerManager = new CodexServerManager({
+  listAccountModels: async () => {
+    const data = await codexModelCatalogService.list();
+    if (managedRouterRuntimeActive && providerRuntimeService) await providerRuntimeService.syncCodexModels(data);
+    return { data, nextCursor: null };
+  },
+  resolveRuntimeConfig: () =>
+    createCodexRouterRuntime(embeddedRouterManager.ownedConnection, {
+      modelCatalogPath: routerModelCatalogPath,
+    }),
+  resolveRuntimeRevision: () => providerRuntimeService?.revision ?? 0,
+  isServerBusy: (serverId) => runtimeThreadStateTracker.isServerBusy(serverId),
+});
 
 const APP_CLOSE_OVERLAY_BOOT_MS = 56;
 const APP_CLOSE_PREPARE_MS = 200;
@@ -74,9 +139,12 @@ function sendToRenderer(channel: string, payload: unknown) {
   }
 }
 
-const updateService = new UpdateService((payload) => {
-  sendToRenderer(IPC_APP_CHANNELS.appUpdateState, payload);
-});
+const updateService = new UpdateService(
+  (payload) => {
+    sendToRenderer(IPC_APP_CHANNELS.appUpdateState, payload);
+  },
+  { canInstall: () => !codexServerManager.hasActiveTurns() }
+);
 
 function pushHistoryUpdate(items: HistoryThread[]) {
   sendToRenderer(IPC_EVENT_CHANNELS.historyUpdated, { items: runtimeThreadStateTracker.decorateHistoryItems(items) });
@@ -106,19 +174,51 @@ function pushWindowClosingState(phase: AppWindowClosingState["phase"]) {
   sendToRenderer(IPC_APP_CHANNELS.appWindowClosingState, payload);
 }
 
-function stopCodexServersForClose(_reason: string) {
-  if (closeCleanupFinished) return;
-  closeCleanupFinished = true;
-  try {
-    codexServerManager.stopAll();
-  } catch (error) {
-    logger.warn("app-close", "stop codex servers failed", error);
+function stopServicesForClose(_reason: string, options: { stopProcessServices: boolean }) {
+  if (!windowCloseCleanupFinished) {
+    windowCloseCleanupFinished = true;
+    try {
+      codexServerManager.stopAll();
+    } catch (error) {
+      logger.warn("app-close", "stop codex servers failed", error);
+    }
+    try {
+      deepSeekResponsesProxyService.stop();
+    } catch (error) {
+      logger.warn("app-close", "stop DeepSeek proxy failed", error);
+    }
   }
-  try {
-    deepSeekResponsesProxyService.stop();
-  } catch (error) {
-    logger.warn("app-close", "stop DeepSeek proxy failed", error);
+  if (options.stopProcessServices && !embeddedRouterStopRequested) {
+    embeddedRouterStopRequested = true;
+    void embeddedRouterManager.stop().catch((error) => {
+      logger.warn("app-close", "stop embedded Router failed", error);
+    });
   }
+}
+
+function embeddedRouterConfig(managedConfig: RouterConfig): { config: RouterConfig; source: string; managed: boolean } {
+  const configuredPath = String(process.env.CODENEXUS_ROUTER_CONFIG ?? "").trim();
+  if (configuredPath) {
+    if (!externalRouterConfigAllowed({ isDev, isPackaged: app.isPackaged })) {
+      logger.warn("embedded-router", "ignoring CODENEXUS_ROUTER_CONFIG outside unpackaged development");
+    } else {
+      return {
+        config: loadRouterConfig(configuredPath),
+        source: "development override",
+        managed: false,
+      };
+    }
+  }
+  return { config: managedConfig, source: "provider registry", managed: true };
+}
+
+async function startEmbeddedRouter(resolved: { config: RouterConfig; source: string }) {
+  return await startEmbeddedRouterFailSoft({
+    resolveConfig: () => resolved,
+    start: (config) => embeddedRouterManager.start(config),
+    info: (message) => logger.info("embedded-router", message),
+    warn: (message, error) => logger.warn("embedded-router", message, error),
+  });
 }
 
 function clearAppCloseForceExitWatchdog() {
@@ -131,7 +231,7 @@ function armAppCloseForceExitWatchdog() {
   clearAppCloseForceExitWatchdog();
   appCloseForceExitTimer = setTimeout(() => {
     logger.warn("app-close", "force exiting after close watchdog timeout");
-    stopCodexServersForClose("force-exit-watchdog");
+    stopServicesForClose("force-exit-watchdog", { stopProcessServices: true });
     app.exit(0);
   }, APP_CLOSE_FORCE_EXIT_MS);
   appCloseForceExitTimer.unref?.();
@@ -151,7 +251,9 @@ async function runAppCloseFlow(win: BrowserWindow): Promise<void> {
     await wait(APP_CLOSE_PREPARE_MS);
 
     pushWindowClosingState("stopping");
-    stopCodexServersForClose("window-close");
+    stopServicesForClose("window-close", {
+      stopProcessServices: shouldStopEmbeddedRouterOnWindowClose(process.platform),
+    });
 
     const remainingVisibleMs = APP_CLOSE_MIN_VISIBLE_MS - (Date.now() - appCloseFlowStartedAt);
     if (remainingVisibleMs > 0) await wait(remainingVisibleMs);
@@ -179,17 +281,35 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-  stopCodexServersForClose("before-quit");
+  allowMainWindowClose = true;
+  stopServicesForClose("before-quit", { stopProcessServices: true });
 });
 
-(app as any).on("before-quit-for-update", () => {
+electronAutoUpdater.on("before-quit-for-update", () => {
   allowMainWindowClose = true;
-  stopCodexServersForClose("before-quit-for-update");
+  stopServicesForClose("before-quit-for-update", {
+    stopProcessServices: true,
+  });
 });
+
+if (isDev) {
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => {
+      stopServicesForClose(`signal:${signal}`, { stopProcessServices: true });
+      app.quit();
+    });
+  }
+}
 
 app
   .whenReady()
   .then(async () => {
+    if (legacyProviderSecretHelper) {
+      await runLegacyProviderSecretHelper();
+      app.exit(0);
+      return;
+    }
+    if (!productUserDataPaths) throw new Error("product userData paths are unavailable");
     if (process.platform !== "darwin") {
       Menu.setApplicationMenu(null);
     }
@@ -198,10 +318,63 @@ app
       installContentSecurityPolicy();
     }
 
-    const historyCachePath = join(app.getPath("userData"), "thread-history-cache.json");
+    const userDataPath = app.getPath("userData");
+    const migration = await migrateProductUserDataFailSoft(
+      {
+        legacyPath: productUserDataPaths.legacyPath,
+        currentPath: productUserDataPaths.currentPath,
+        migrateProviderSecrets: async (legacyFilePath, currentFilePath) => {
+          await reencryptLegacyProviderSecrets({
+            currentFilePath,
+            encryption: new ElectronSafeStorageEncryption(),
+            decryptLegacySecrets: () =>
+              decryptLegacyProviderSecretsWithHelper({
+                sourcePath: legacyFilePath,
+                legacyUserDataPath: productUserDataPaths.legacyPath,
+                executablePath: process.execPath,
+                applicationPath: app.getAppPath(),
+                defaultApp: Boolean(process.defaultApp),
+              }),
+          });
+        },
+      },
+      (message, error) => logger.warn("user-data-migration", message, error)
+    );
+    if (migration.status === "complete" || migration.status === "partial") {
+      logger.info(
+        "user-data-migration",
+        `CodeNexus profile migration ${migration.status}: copied=${migration.marker.copiedFiles}, merged=${migration.marker.mergedFiles}, preserved=${migration.marker.preservedFiles}, failures=${migration.marker.failures.length}`
+      );
+    }
+    const legacyUserDataExists = await detectLegacyUserData(userDataPath);
+    const providerDataPath = join(userDataPath, "embedded-router");
+    providerRuntimeService = new ProviderRuntimeService(
+      new ProviderSecretStore(join(providerDataPath, "provider-secrets.json"), new ElectronSafeStorageEncryption()),
+      new ProviderPreferencesStore(join(providerDataPath, "provider-preferences.json")),
+      embeddedRouterManager,
+      join(providerDataPath, "model-catalog.json"),
+      (message, error) => logger.warn("provider-runtime", message, error)
+    );
+    providerRuntimeService.onRevisionChange(() => {
+      void codexServerManager.refreshForRuntimeRevision().catch((error) => {
+        logger.warn("codex-server", "provider runtime refresh scheduling failed", error);
+      });
+    });
+    const managedConfig = await providerRuntimeService.initialize();
+    const selectedRouterConfig = embeddedRouterConfig(managedConfig);
+    const routerStartResult = await startEmbeddedRouter(selectedRouterConfig);
+    managedRouterRuntimeActive =
+      selectedRouterConfig.managed && Boolean(routerStartResult && routerStartAcquired(routerStartResult.status));
+    providerRuntimeService.setRouterUpdatesEnabled(managedRouterRuntimeActive);
+    routerModelCatalogPath = managedRouterRuntimeActive ? providerRuntimeService.modelCatalogPath : null;
+
+    const historyCachePath = join(userDataPath, "thread-history-cache.json");
     const historyStore = new HistoryStore(historyCachePath);
     const historyService = new HistoryService(historyStore);
-    const localSettingsService = new LocalSettingsService(join(app.getPath("userData"), "user-settings.json"));
+    const localSettingsService = new LocalSettingsService(join(userDataPath, "user-settings.json"), {
+      legacyUserDataExists,
+    });
+    const accountService = new CodexAccountService(codexServerManager, userDataPath);
     const customAgentService = new CustomAgentService(localSettingsService);
     const codexProfileService = new CodexProfileService(join(app.getPath("userData"), "codex-profiles.json"));
     const codexSkillRootsService = new CodexSkillRootsService(join(app.getPath("userData"), "codex-skill-roots.json"));
@@ -270,6 +443,7 @@ app
       getMainWindow: () => mainWindow,
       serverManager: codexServerManager,
       sendCodexEvent: (payload) => {
+        if (historyStore.interruptedTurns.observe(payload.msg) === false) return;
         runtimeThreadStateTracker.observeEvent(payload);
         sendToRenderer(IPC_EVENT_CHANNELS.codexEvent, payload);
       },
@@ -298,6 +472,8 @@ app
       customAgentService,
       sendAgentEvent: (payload) => sendToRenderer(IPC_EVENT_CHANNELS.agentEvent, payload),
       cacheRegistryService,
+      providerRuntimeService,
+      accountService,
     });
 
     mainWindow = await createMainWindow({
@@ -325,12 +501,20 @@ app
       clearAppCloseForceExitWatchdog();
       mainWindow = null;
       allowMainWindowClose = false;
-      closeCleanupFinished = false;
+      windowCloseCleanupFinished = false;
       appCloseFlowStartedAt = 0;
       appCloseFlowPromise = null;
     });
   })
-  .catch((error) => {
+  .catch(async (error) => {
+    if (legacyProviderSecretHelper) {
+      process.stderr.write("Calmnova Code legacy credential migration helper failed.\n");
+      app.exit(2);
+      return;
+    }
     logger.error("main", "app bootstrap failed", error);
+    await embeddedRouterManager.stop().catch((stopError) => {
+      logger.warn("main", "embedded Router cleanup after bootstrap failure failed", stopError);
+    });
     app.exit(1);
   });

@@ -1146,6 +1146,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
     translate,
   });
   disposers.push(...runtimeStartupRuntime.startRuntime());
+  disposers.push(() => workspaceFilesStore.cancelWorkspaceRefresh());
 
   const runtimeDisposeRuntime = createRuntimeDisposeRuntime({
     flushPendingComposeStateSaves: () => runtimeStore.flushPendingComposeStateSaves(),

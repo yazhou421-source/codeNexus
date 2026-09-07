@@ -22,6 +22,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { Download, LoaderCircle, RotateCcw } from "lucide-vue-next";
+import { useAppShellStore } from "../../../stores/appShell.store";
 import { codexDesktop } from "../../../api/codexDesktopClient";
 import type { AppUpdateSnapshot } from "@codenexus/shared/ipc/contracts";
 
@@ -96,6 +97,8 @@ async function onClick() {
     if (updateState.status === "available") {
       applyState(await codexDesktop.app.downloadUpdate());
     }
+  } catch {
+    useAppShellStore().openSettings("update");
   } finally {
     actionRunning.value = false;
   }

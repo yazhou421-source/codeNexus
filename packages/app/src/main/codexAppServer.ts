@@ -1,10 +1,18 @@
 import { spawn } from "node:child_process";
 import * as readline from "node:readline";
-import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { app } from "electron";
-import { discoverExistingCodexPaths } from "./codexNativeDiscovery";
+import {
+  CodexRuntimeUnavailableError,
+  resolveCurrentCodexExecutable,
+  type CodexExecutableResolution,
+  type NativeCodexCommand,
+} from "./codexExecutableResolver";
+import {
+  applyCodexRouterModelProvider,
+  codexRouterModelProviderForModel,
+  type CodexAppServerRuntimeConfig,
+} from "./codexRouterRuntime";
 import { logger } from "./utils/logger";
 import type {
   CodexIncomingMessage,
@@ -44,6 +52,70 @@ type Pending = {
   timeout?: NodeJS.Timeout;
 };
 
+export type { NativeCodexCommand } from "./codexExecutableResolver";
+
+export type CodexSpawnCommand = {
+  command: string;
+  args: string[];
+  spawnCwd?: string;
+};
+
+function configArgs(overrides: readonly string[]): string[] {
+  return overrides.flatMap((override) => ["-c", override]);
+}
+
+export function buildCodexAppServerSpawnCommand(args: {
+  nativeCodex?: NativeCodexCommand;
+  cwd?: string;
+  globalConfigOverrides?: readonly string[];
+}): CodexSpawnCommand {
+  const appServerArgs = [...configArgs(args.globalConfigOverrides ?? []), "app-server", "--listen", "stdio://"];
+  if (args.nativeCodex?.kind === "cmd") {
+    const joined = appServerArgs.map(quoteWindowsCmdArgument).join(" ");
+    const cmdline = `""${args.nativeCodex.path}"${joined ? " " : ""}${joined}"`;
+    return { command: "cmd.exe", args: ["/d", "/s", "/c", cmdline], spawnCwd: args.cwd };
+  }
+  if (args.nativeCodex?.kind === "node") {
+    return {
+      command: args.nativeCodex.nodeExe,
+      args: [args.nativeCodex.script, ...appServerArgs],
+      spawnCwd: args.cwd,
+    };
+  }
+  return {
+    command: args.nativeCodex?.path ?? "codex",
+    args: appServerArgs,
+    spawnCwd: args.cwd,
+  };
+}
+
+function quoteWindowsCmdArgument(value: string): string {
+  if (!/[\s&|<>^()]/.test(value)) return value;
+  if (value.includes('"') || value.includes("%") || value.includes("!")) {
+    throw new Error("unsupported character in Windows Codex command argument");
+  }
+  return `"${value}"`;
+}
+
+export function redactCodexChildValue<T>(value: T, sensitiveValues: readonly string[]): T {
+  if (typeof value === "string") {
+    let result: string = value;
+    for (const secret of sensitiveValues) {
+      if (secret) result = result.split(secret).join("[REDACTED]");
+    }
+    return result as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => redactCodexChildValue(item, sensitiveValues)) as T;
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, redactCodexChildValue(item, sensitiveValues)])
+    ) as T;
+  }
+  return value;
+}
+
 function isJsonRpcId(value: unknown): value is JsonRpcId {
   if (typeof value === "string") return value.trim().length > 0;
   if (typeof value === "number") return Number.isFinite(value);
@@ -65,29 +137,33 @@ export class CodexAppServer {
   private readonly experimentalApiOptIn: boolean;
   private readonly mode: ServerMode;
   private readonly cwd?: string;
+  private readonly runtimeConfig: CodexAppServerRuntimeConfig | null;
   private proc?: ReturnType<typeof spawn>;
   private rl?: readline.Interface;
   private stopping = false;
   private nextId = 1;
   private readonly pending = new Map<JsonRpcId, Pending>();
+  private readonly threadModelProviders = new Map<string, string>();
   private onMessage?: (msg: CodexIncomingMessage) => void;
-  private nativeCodex?:
-    | { kind: "direct"; path: string }
-    | { kind: "node"; nodeExe: string; script: string }
-    | { kind: "cmd"; path: string };
+  private nativeCodex?: NativeCodexCommand;
+  private readonly resolveExecutable: () => Promise<CodexExecutableResolution>;
 
   constructor(opts: {
     id: string;
     mode: ServerMode;
     cwd?: string;
     experimentalApiOptIn?: boolean;
+    runtimeConfig?: CodexAppServerRuntimeConfig | null;
     onMessage?: (msg: CodexIncomingMessage) => void;
+    resolveExecutable?: () => Promise<CodexExecutableResolution>;
   }) {
     this.id = opts.id;
     this.mode = opts.mode;
     this.cwd = opts.cwd;
     this.experimentalApiOptIn = Boolean(opts.experimentalApiOptIn);
+    this.runtimeConfig = opts.runtimeConfig ?? null;
     this.onMessage = opts.onMessage;
+    this.resolveExecutable = opts.resolveExecutable ?? resolveCurrentCodexExecutable;
   }
 
   get running() {
@@ -101,7 +177,7 @@ export class CodexAppServer {
   async start(): Promise<void> {
     if (this.proc) throw new Error("server already started");
 
-    if (this.mode === "native") this.preflightNative();
+    if (this.mode === "native") await this.preflightNative();
 
     const { command, args, spawnCwd } = this.getSpawnCommand();
     if (spawnCwd) this.ensureSpawnCwd(spawnCwd);
@@ -110,6 +186,7 @@ export class CodexAppServer {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
       windowsVerbatimArguments: command.toLowerCase().endsWith("cmd.exe"),
+      env: { ...process.env, ...this.runtimeConfig?.childEnv },
     });
     this.stopping = false;
 
@@ -134,7 +211,7 @@ export class CodexAppServer {
     });
 
     this.proc.stderr?.on("data", (buf) => {
-      const text = buf.toString("utf8");
+      const text = redactCodexChildValue(buf.toString("utf8"), this.runtimeConfig?.sensitiveValues ?? []);
       this.onMessage?.({ kind: "local", method: "codex/stderr", params: { text } });
     });
 
@@ -146,9 +223,10 @@ export class CodexAppServer {
       if (!trimmed) return;
       let msg: any;
       try {
-        msg = JSON.parse(trimmed);
+        msg = redactCodexChildValue(JSON.parse(trimmed), this.runtimeConfig?.sensitiveValues ?? []);
       } catch {
-        this.onMessage?.({ kind: "local", method: "codex/parseError", params: { line: trimmed } });
+        const redactedLine = redactCodexChildValue(trimmed, this.runtimeConfig?.sensitiveValues ?? []);
+        this.onMessage?.({ kind: "local", method: "codex/parseError", params: { line: redactedLine } });
         return;
       }
       this.handleIncoming(msg);
@@ -218,10 +296,16 @@ export class CodexAppServer {
   ): Promise<CodexRpcResult<M>> {
     if (!isValidMethod(method)) throw new Error("invalid json-rpc method");
     if (!isValidParams(params)) throw new Error(`invalid json-rpc params for method: ${method}`);
+    await this.ensureRouterProviderForTurn(method, params, timeoutMs);
     const id: JsonRpcId = this.nextId++;
-    const req: JsonRpcRequest = { id, method: method.trim(), params };
+    const routedParams = applyCodexRouterModelProvider(method, params, this.runtimeConfig);
+    const req: JsonRpcRequest = {
+      id,
+      method: method.trim(),
+      params: routedParams,
+    };
     this.write(req);
-    return await new Promise<CodexRpcResult<M>>((resolve, reject) => {
+    const result = await new Promise<CodexRpcResult<M>>((resolve, reject) => {
       const pending: Pending = {
         resolve: (value) => resolve(value as CodexRpcResult<M>),
         reject,
@@ -232,6 +316,49 @@ export class CodexAppServer {
       };
       this.pending.set(id, pending);
     });
+    this.rememberThreadModelProvider(method, routedParams, result);
+    return result;
+  }
+
+  private async ensureRouterProviderForTurn(method: string, params: unknown, timeoutMs: number): Promise<void> {
+    if (method !== "turn/start" || !params || typeof params !== "object" || Array.isArray(params)) return;
+    const record = params as Record<string, unknown>;
+    const threadId = typeof record.threadId === "string" ? record.threadId.trim() : "";
+    const model = typeof record.model === "string" ? record.model.trim() : "";
+    const desiredProvider = codexRouterModelProviderForModel(model, this.runtimeConfig);
+    if (!threadId || !model || !desiredProvider || this.threadModelProviders.get(threadId) === desiredProvider) return;
+
+    let resumed = await this.request("thread/resume", { threadId, model }, timeoutMs);
+    if (resumed.modelProvider === desiredProvider) return;
+    // A loaded 0.153.2 thread is rejoined by resume; its provider overrides are
+    // ignored while subscribed. After unsubscribe, resume performs the idle
+    // thread shutdown/flush and reload atomically inside app-server.
+    if (resumed.thread.status.type === "active") {
+      throw new Error("Cannot switch model provider during an active turn. Stop or finish the turn first.");
+    }
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await this.request("thread/unsubscribe", { threadId }, timeoutMs);
+      // turn/completed can precede the core's idle transition. Only retry this
+      // local rebind, never a model request, and leave the subscription restored.
+      await new Promise((resolve) => setTimeout(resolve, 50 * 2 ** attempt));
+      resumed = await this.request("thread/resume", { threadId, model }, timeoutMs);
+      if (resumed.modelProvider === desiredProvider) return;
+      if (resumed.thread.status.type === "active") break;
+    }
+    throw new Error("Model provider switch did not take effect. No model request was sent.");
+  }
+
+  private rememberThreadModelProvider(method: string, params: unknown, result: unknown): void {
+    if (!["thread/start", "thread/resume", "thread/fork"].includes(method)) return;
+    const paramsRecord = params && typeof params === "object" ? (params as Record<string, unknown>) : {};
+    const resultRecord = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
+    const thread =
+      resultRecord.thread && typeof resultRecord.thread === "object"
+        ? (resultRecord.thread as Record<string, unknown>)
+        : {};
+    const threadId = String(thread.id ?? paramsRecord.threadId ?? "").trim();
+    const modelProvider = String(resultRecord.modelProvider ?? paramsRecord.modelProvider ?? "").trim();
+    if (threadId && modelProvider) this.threadModelProviders.set(threadId, modelProvider);
   }
 
   notify<M extends string>(method: M, params?: CodexNotifyParams<M>): void {
@@ -326,26 +453,12 @@ export class CodexAppServer {
     }
   }
 
-  private getSpawnCommand(): { command: string; args: string[]; spawnCwd?: string } {
-    if (this.nativeCodex?.kind === "cmd") {
-      const cmdline = this.cmdlineInvoke(this.nativeCodex.path, ["app-server", "--listen", "stdio://"]);
-      return { command: "cmd.exe", args: ["/d", "/s", "/c", cmdline], spawnCwd: this.cwd };
-    }
-    if (this.nativeCodex?.kind === "node") {
-      return {
-        command: this.nativeCodex.nodeExe,
-        args: [this.nativeCodex.script, "app-server", "--listen", "stdio://"],
-        spawnCwd: this.cwd,
-      };
-    }
-    if (this.nativeCodex?.kind === "direct") {
-      return { command: this.nativeCodex.path, args: ["app-server", "--listen", "stdio://"], spawnCwd: this.cwd };
-    }
-    return {
-      command: "codex",
-      args: ["app-server", "--listen", "stdio://"],
-      spawnCwd: this.cwd,
-    };
+  private getSpawnCommand(): CodexSpawnCommand {
+    return buildCodexAppServerSpawnCommand({
+      nativeCodex: this.nativeCodex,
+      cwd: this.cwd,
+      globalConfigOverrides: this.runtimeConfig?.globalConfigOverrides,
+    });
   }
 
   private ensureSpawnCwd(spawnCwd: string): void {
@@ -366,63 +479,26 @@ export class CodexAppServer {
     }
   }
 
-  private preflightNative(): void {
-    const found = spawnSync("where.exe", ["codex"], { encoding: "utf8" });
-    const paths = discoverExistingCodexPaths({
-      whereStdout: found.stdout,
-      appData: process.env.APPDATA,
-      exists: existsSync,
-    });
-
-    if (paths.length === 0) {
-      throw new Error(
-        "codex (native) was not detected. Install Node.js LTS (including npm), run: npm i -g @openai/codex, and make sure codex is available on PATH. Restart the terminal or this app if needed."
-      );
-    }
-
-    const exe = paths.find((p) => p.toLowerCase().endsWith(".exe"));
-    if (exe) {
-      this.nativeCodex = { kind: "direct", path: exe };
-      return;
-    }
-
-    const cmd = paths.find((p) => p.toLowerCase().endsWith(".cmd"));
-    if (cmd) {
-      const base = dirname(cmd);
-      const nodeExe = join(base, "node.exe");
-      const codexJs = join(base, "node_modules", "@openai", "codex", "bin", "codex.js");
-      if (existsSync(nodeExe) && existsSync(codexJs)) {
-        // 为避免 cmd.exe 转义/引号问题，直接以 node.exe 运行底层入口脚本。
-        this.nativeCodex = { kind: "node", nodeExe, script: codexJs };
-        return;
+  private async preflightNative(): Promise<void> {
+    try {
+      const resolution = await this.resolveExecutable();
+      this.nativeCodex = resolution.command;
+      logger.info("codex-runtime", `using ${resolution.source} Codex ${resolution.version} at ${resolution.path}`);
+    } catch (error) {
+      if (error instanceof CodexRuntimeUnavailableError) {
+        logger.error("codex-runtime", `${error.code}: ${error.technicalDetail}`);
+      } else {
+        logger.error("codex-runtime", "Codex runtime resolution failed", error);
       }
-      this.nativeCodex = { kind: "cmd", path: cmd };
-      return;
+      throw error;
     }
-
-    const bat = paths.find((p) => p.toLowerCase().endsWith(".bat"));
-    if (bat) {
-      this.nativeCodex = { kind: "cmd", path: bat };
-      return;
-    }
-
-    throw new Error(
-      `codex was found, but no executable entry (.exe/.cmd/.bat) was found. where.exe codex returned:\n${paths.join("\n")}\n\n` +
-        `Confirm that you can run this directly in PowerShell: codex --version`
-    );
-  }
-
-  private cmdlineInvoke(toolPath: string, args: string[]): string {
-    // cmd.exe 引号/转义规则：使用 `cmd /d /s /c ""C:\path\tool.cmd" arg1 arg2"` 形式最稳妥。
-    const joined = args.join(" ");
-    return `""${toolPath}"${joined ? " " : ""}${joined}"`;
   }
 
   private async initializeHandshake(): Promise<void> {
     const initializeParams = {
       clientInfo: {
-        name: "codex-electron-win",
-        title: null,
+        name: "calmnova-code",
+        title: "Calmnova Code",
         version: app.getVersion(),
       },
       capabilities: this.experimentalApiOptIn ? { experimentalApi: true, requestAttestation: false } : null,

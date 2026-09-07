@@ -23,16 +23,45 @@
 
         <div class="settings-row">
           <span class="context-label dim">{{ t("settingsUpdate.status") }}</span>
-          <span class="mono">{{ statusText }}</span>
+          <StatusIndicator
+            :state="
+              updateUnavailable
+                ? 'unavailable'
+                : updateState.status === 'error'
+                  ? 'error'
+                  : updateState.status === 'checking'
+                    ? 'loading'
+                    : 'idle'
+            "
+            :label="statusText"
+          />
         </div>
 
         <div v-if="updateState.status === 'downloading'" class="settings-update-progress" aria-live="polite">
-          <div class="settings-update-progress-track">
+          <div
+            class="settings-update-progress-track"
+            role="progressbar"
+            :aria-valuenow="progressPercent"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-label="t('settingsUpdate.downloading')"
+          >
             <div class="settings-update-progress-fill" :style="{ width: `${progressPercent}%` }"></div>
           </div>
           <div class="mono dim text-[12px]">{{ progressText }}</div>
         </div>
 
+        <div v-if="actionError" role="alert">{{ actionError }}</div>
+        <p v-if="updateUnavailable" class="update-next-step">
+          {{
+            locale.startsWith("zh")
+              ? "此版本无法在线更新。请从原来的 Calmnova Code 下载来源获取新版安装包；已有项目与对话不受影响。"
+              : "Online updates are unavailable for this build. Get a newer installer from your original Calmnova Code download source."
+          }}
+        </p>
+        <div v-if="updateState.checkedAt && !updateUnavailable" class="dim text-[12px]">
+          {{ t("settingsUpdate.checkedAt") }}: {{ new Date(updateState.checkedAt).toLocaleString() }}
+        </div>
         <div v-if="updateState.errorMessage" class="dim text-[12px] leading-[1.25]">
           {{ updateState.errorMessage }}
         </div>
@@ -48,11 +77,13 @@
 </template>
 
 <script setup lang="ts">
+import StatusIndicator from "../../ui/StatusIndicator.vue";
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { codexDesktop } from "../../../api/codexDesktopClient";
 import type { AppUpdateSnapshot } from "@codenexus/shared/ipc/contracts";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const DEFAULT_STATE: AppUpdateSnapshot = {
   status: "idle",
@@ -70,13 +101,21 @@ const DEFAULT_STATE: AppUpdateSnapshot = {
 
 const updateState = reactive<AppUpdateSnapshot>({ ...DEFAULT_STATE });
 const actionRunning = ref(false);
+const actionError = ref("");
 let offUpdateState: (() => void) | null = null;
 
 const applyState = (next: AppUpdateSnapshot) => {
   Object.assign(updateState, next);
 };
 
-const statusText = computed(() => t(`settingsUpdate.statuses.${updateState.status}`));
+const updateUnavailable = computed(() => ["unconfigured", "unsupported"].includes(updateState.status));
+const statusText = computed(() =>
+  updateUnavailable.value
+    ? locale.value.startsWith("zh")
+      ? "在线更新不可用"
+      : "Online update unavailable"
+    : t(`settingsUpdate.statuses.${updateState.status}`)
+);
 
 const progressPercent = computed(() => {
   const percent = Number(updateState.progress?.percent ?? 0);
@@ -84,7 +123,12 @@ const progressPercent = computed(() => {
   return Math.max(0, Math.min(100, Math.round(percent)));
 });
 
-const progressText = computed(() => t("settingsUpdate.progress", { percent: progressPercent.value }));
+const progressText = computed(() => {
+  const p = updateState.progress;
+  const amount =
+    p && p.total > 0 ? ` · ${(p.transferred / 1048576).toFixed(1)} / ${(p.total / 1048576).toFixed(1)} MB` : "";
+  return t("settingsUpdate.progress", { percent: progressPercent.value }) + amount;
+});
 
 const releaseSummary = computed(() => {
   const parts = [updateState.releaseName, updateState.releaseNotes].filter(Boolean);
@@ -95,22 +139,23 @@ const primaryActionLabel = computed(() => {
   if (actionRunning.value) return t("settingsUpdate.processing");
   if (updateState.status === "checking") return t("settingsUpdate.checking");
   if (updateState.status === "downloading") return t("settingsUpdate.downloading");
-  if (updateState.status === "available") return t("settingsUpdate.download");
+  if (updateState.updateAvailable && !updateState.downloaded) return t("settingsUpdate.download");
   if (updateState.status === "downloaded") return t("settingsUpdate.install");
   return t("settingsUpdate.check");
 });
 
 const actionDisabled = computed(() => {
   if (actionRunning.value) return true;
-  if (!updateState.isPackaged) return true;
+  if (!updateState.isPackaged || updateUnavailable.value) return true;
   return updateState.status === "checking" || updateState.status === "downloading";
 });
 
 const onPrimaryAction = async () => {
   if (actionDisabled.value) return;
   actionRunning.value = true;
+  actionError.value = "";
   try {
-    if (updateState.status === "available") {
+    if (updateState.updateAvailable && !updateState.downloaded) {
       applyState(await codexDesktop.app.downloadUpdate());
       return;
     }
@@ -119,6 +164,11 @@ const onPrimaryAction = async () => {
       return;
     }
     applyState(await codexDesktop.app.checkForUpdates());
+  } catch (error) {
+    actionError.value =
+      error instanceof Error && error.message.includes("AI task is running")
+        ? t("settingsUpdate.installBlocked")
+        : t("settingsUpdate.actionFailed");
   } finally {
     actionRunning.value = false;
   }
