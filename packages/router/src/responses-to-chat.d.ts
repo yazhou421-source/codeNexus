@@ -8,3 +8,8 @@ export function responsesToChatRequest(
   wantsStream: boolean;
   messagesForHistory: unknown[];
 };
+
+export function chatRequestDiagnostics(
+  body: Record<string, unknown>,
+  route: Record<string, unknown>,
+): Record<string, number | boolean>;

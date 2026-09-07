@@ -108,8 +108,11 @@ export function responsesToChatRequest(request, route, history) {
 export function responseRequestToChatSourceMessages(request, route, history) {
   const toolContext = buildToolContext(request.tools || [], { route });
   const priorMessages = history?.get?.(request.previous_response_id) || [];
+  const input = request.messages ?? request.input;
   const currentMessages = responseInputToChatMessages(
-    request.messages ?? request.input,
+    isDeepSeekRoute(route)
+      ? (history?.restoreAssistantReplay?.(input, route) ?? input)
+      : input,
     toolContext,
   );
 
@@ -211,6 +214,9 @@ export function responseMessageToChatMessage(item) {
     ),
   };
 
+  if (role === "assistant" && typeof item.reasoning_content === "string") {
+    message.reasoning_content = item.reasoning_content;
+  }
   if (Array.isArray(item.tool_calls)) {
     message.tool_calls = item.tool_calls;
     if (!message.content) {
@@ -860,6 +866,7 @@ function estimatedMessageTokens(message) {
   }
   let tokens = 8 + estimatedTextTokens(message.role || "");
   tokens += estimatedValueTokens(message.content);
+  tokens += estimatedValueTokens(message.reasoning_content);
   if (Array.isArray(message.tool_calls)) {
     tokens += estimatedValueTokens(message.tool_calls);
   }
@@ -1128,4 +1135,30 @@ function messageHasContent(message) {
     return message.content.length > 0;
   }
   return Boolean(message?.content);
+}
+
+function isDeepSeekRoute(route) {
+  return route.provider === "deepseek" || /^deepseek-/i.test(route.model || "");
+}
+
+// Counts only: safe for diagnostics; estimates are not provider token accounting.
+export function chatRequestDiagnostics(body, route) {
+  const messages = body.messages || [];
+  const messageTokens = estimatedMessagesTokens(messages);
+  const toolSchemaTokens = estimatedValueTokens(body.tools);
+  return {
+    contextWindow: Number(route.contextWindow || 0),
+    messageBudget: maxChatContextInputTokens(route),
+    estimatedMessageTokens: messageTokens,
+    estimatedToolSchemaTokens: toolSchemaTokens,
+    estimatedInputTokens: messageTokens + toolSchemaTokens,
+    toolOutputBytes: messages
+      .filter((m) => m.role === "tool")
+      .reduce((n, m) => n + Buffer.byteLength(String(m.content || "")), 0),
+    assistantMessages: messages.filter((m) => m.role === "assistant").length,
+    assistantWithReasoning: messages.filter(
+      (m) => m.role === "assistant" && typeof m.reasoning_content === "string",
+    ).length,
+    serviceTierForwarded: Object.hasOwn(body, "service_tier"),
+  };
 }

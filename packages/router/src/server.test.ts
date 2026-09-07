@@ -30,7 +30,9 @@ describe("EmbeddedRouterManager", () => {
     expect(manager.ownedConnection).toEqual({
       origin: started.origin,
       authToken: "router-token",
-      routes: [{ modelId: "test-model", authMode: "api_key" }],
+      routes: [
+        { modelId: "test-model", authMode: "api_key", supportsFast: false },
+      ],
     });
 
     const duplicate = await manager.start(testConfig(0));

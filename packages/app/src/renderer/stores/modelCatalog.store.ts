@@ -52,6 +52,13 @@ export const useModelCatalogStore = defineStore("modelCatalog", {
     },
   },
   actions: {
+    supportsFast(modelId: string): boolean {
+      const model = this.remoteModels.find((model) => model.model === modelId || model.id === modelId);
+      return Boolean(
+        model?.additionalSpeedTiers?.includes("fast") ||
+        model?.serviceTiers?.some((tier) => ["fast", "priority"].includes(tier.id))
+      );
+    },
     availabilityReason(id: string): "login" | "loading" | "error" | "account" | "" {
       if (["logged_out", "expired"].includes(this.lastAccountState)) return "login";
       if (this.remoteLoadedAt > 0 && this.remoteIds.includes(id)) return "";

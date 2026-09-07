@@ -1,3 +1,4 @@
+import { RouterDiagnosticLog } from "./services/RouterDiagnosticLog";
 import { repairCalmnovaCodexConfig } from "./codexConfigRepair";
 import { sharedCodexConfigPaths } from "./codexConfigProtection";
 import { app, autoUpdater as electronAutoUpdater, BrowserWindow, Menu } from "electron";
@@ -97,13 +98,19 @@ const workspacePatchService = new WorkspacePatchService();
 const runtimeThreadStateTracker = new RuntimeThreadStateTracker();
 const cacheRegistryService = new CacheRegistryService();
 const deepSeekResponsesProxyService = new DeepSeekResponsesProxyService();
+const routerDiagnosticLog = new RouterDiagnosticLog(() =>
+  join(app.getPath("userData"), "logs", "router-upstream.jsonl")
+);
 const embeddedRouterManager = new EmbeddedRouterManager(
   (level, message, error) => {
     if (level === "error") logger.error("embedded-router", message, error);
     else if (level === "warn") logger.warn("embedded-router", message, error);
     else logger.info("embedded-router", message);
   },
-  { resolveSecret: (secretRef) => providerRuntimeService?.resolveSecret(secretRef) }
+  {
+    resolveSecret: (secretRef) => providerRuntimeService?.resolveSecret(secretRef),
+    onUpstreamDiagnostic: (record) => routerDiagnosticLog.append(record),
+  }
 );
 const codexModelCatalogService = new CodexModelCatalogService();
 const codexServerManager = new CodexServerManager({

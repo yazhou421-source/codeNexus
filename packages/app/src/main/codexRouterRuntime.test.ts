@@ -1,3 +1,4 @@
+import { clearUnsupportedServiceTier } from "./codexRouterRuntime";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -147,5 +148,30 @@ describe("Codex Router process-scoped runtime", () => {
     const second = createCodexRouterRuntime(connection)!;
     expect(first.childEnv).toEqual(second.childEnv);
     expect(first.globalConfigOverrides).toEqual(second.globalConfigOverrides);
+  });
+});
+
+describe("unsupported service tier", () => {
+  it("clears inherited priority when switching to a route without Fast", () => {
+    const runtime = createCodexRouterRuntime({
+      origin: "http://127.0.0.1:1234",
+      authToken: "fixture",
+      routes: [
+        { modelId: "deepseek-v4-pro", authMode: "api_key", supportsFast: false },
+        { modelId: "gpt-fast", authMode: "codex_openai", supportsFast: true },
+      ],
+    });
+    expect(
+      clearUnsupportedServiceTier(
+        "turn/start",
+        { model: "deepseek-v4-pro", serviceTier: "priority", serviceTierForTurn: "priority" },
+        runtime
+      )
+    ).toEqual({ model: "deepseek-v4-pro", serviceTier: "default", serviceTierForTurn: "default" });
+    expect(
+      applyCodexRouterModelProvider("thread/resume", { model: "deepseek-v4-pro", serviceTier: "priority" }, runtime)
+    ).toMatchObject({ serviceTier: "default" });
+    const gpt = { model: "gpt-fast", serviceTier: "priority" };
+    expect(clearUnsupportedServiceTier("turn/start", gpt, runtime)).toBe(gpt);
   });
 });

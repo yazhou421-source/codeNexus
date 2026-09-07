@@ -5,7 +5,7 @@ import { responseToolCallFromChat } from "./tools.js";
 export async function streamChatCompletionToResponses(
   upstream,
   res,
-  { requestBody, route, converted, context = {} },
+  { requestBody, route, converted, context = {}, onComplete },
 ) {
   if (!upstream.body) {
     throw new ProductError(ProductErrorCode.INVALID_RESPONSE, {
@@ -20,6 +20,7 @@ export async function streamChatCompletionToResponses(
   const output = [];
   const toolCalls = new Map();
   let textState = null;
+  let reasoningContent = "";
   let usage;
   let sawDone = false;
   let sawFinish = false;
@@ -128,6 +129,8 @@ export async function streamChatCompletionToResponses(
       if (Number(choice?.index || 0) !== 0) continue;
       const delta = choice?.delta;
       if (!delta || typeof delta !== "object") continue;
+      if (typeof delta.reasoning_content === "string")
+        reasoningContent += delta.reasoning_content;
       const content = typeof delta.content === "string" ? delta.content : "";
       if (content) {
         firstUpstreamDeltaAt ||= Date.now();
@@ -211,19 +214,7 @@ export async function streamChatCompletionToResponses(
       output,
       usage,
     );
-    await write("response.completed", {
-      type: "response.completed",
-      response,
-    });
-    res.end("data: [DONE]\n\n");
-    logStreamMetrics(context, route, {
-      startedAt,
-      headersAt,
-      firstUpstreamDeltaAt,
-      firstDownstreamDeltaAt,
-      completedAt: Date.now(),
-    });
-    return {
+    const completed = {
       response,
       chat: {
         id: responseId,
@@ -232,6 +223,9 @@ export async function streamChatCompletionToResponses(
             message: {
               role: "assistant",
               content: textState?.text || null,
+              ...(reasoningContent
+                ? { reasoning_content: reasoningContent }
+                : {}),
               ...(toolCalls.size
                 ? {
                     tool_calls: [...toolCalls.values()].map((state) => ({
@@ -250,6 +244,21 @@ export async function streamChatCompletionToResponses(
         usage,
       },
     };
+    // Save native history before a client can consume the terminal event.
+    await onComplete?.(completed);
+    await write("response.completed", {
+      type: "response.completed",
+      response,
+    });
+    res.end("data: [DONE]\n\n");
+    logStreamMetrics(context, route, {
+      startedAt,
+      headersAt,
+      firstUpstreamDeltaAt,
+      firstDownstreamDeltaAt,
+      completedAt: Date.now(),
+    });
+    return completed;
   } catch (error) {
     await upstream.body.cancel().catch(() => undefined);
     if (context.clientSignal?.aborted) throw error;

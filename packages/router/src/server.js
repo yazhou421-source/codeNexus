@@ -1,3 +1,4 @@
+import { upstreamDiagnostic } from "./upstream-diagnostics.js";
 /*! @license Adapted from CodexBridge (https://github.com/wangzhezbz/codex-bridge).
  * Copyright (c) 2026 wangzhezbz. Licensed under the MIT License; see the package LICENSE.
  */
@@ -176,22 +177,45 @@ export function createRouterServer(config = loadConfig(), runtime = {}) {
             knownSecrets,
           ),
         );
+        const requestContext = {
+          requestId,
+          onRequestDiagnostics: runtime.onRequestDiagnostics,
+          clientAuth,
+          clientHeaders: req.headers,
+          clientSignal: clientAbort.signal,
+          knownSecrets,
+          resolveSecret: runtime.resolveSecret,
+          startedAt,
+        };
         try {
-          await handleResponsesRequest(body, route, history, res, {
-            requestId,
-            clientAuth,
-            clientHeaders: req.headers,
-            clientSignal: clientAbort.signal,
-            knownSecrets,
-            resolveSecret: runtime.resolveSecret,
-            startedAt,
-          });
+          await handleResponsesRequest(
+            body,
+            route,
+            history,
+            res,
+            requestContext,
+          );
         } catch (error) {
           if (error?.code === "client_closed_request") {
             console.warn(
               `[${new Date().toISOString()}] ${requestId} !! client closed request before upstream completed`,
             );
             return;
+          }
+          const diagnostic = upstreamDiagnostic(
+            requestId,
+            route,
+            error,
+            knownSecrets,
+          );
+          if (diagnostic) {
+            if (requestContext.requestDiagnostics)
+              diagnostic.request = requestContext.requestDiagnostics;
+            try {
+              await runtime.onUpstreamDiagnostic?.(diagnostic);
+            } catch {
+              console.warn("Router diagnostic sink unavailable");
+            }
           }
           console.error(
             requestErrorLine(requestId, route, error, knownSecrets),

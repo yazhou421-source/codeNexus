@@ -661,7 +661,9 @@ const interruptDisabled = computed(() => !isTurnRunning.value);
 const serviceTierLabel = computed(() => {
   if (appShellStore.serverConnState !== "connected") return "";
   if (configStore.loadState !== "ready") return "";
-  return configStore.snapshot.fastModeEnabled ? t("composer.fast") : t("composer.standard");
+  return modelCatalogStore.supportsFast(runtimeStore.model) && configStore.snapshot.fastModeEnabled
+    ? t("composer.fast")
+    : t("composer.standard");
 });
 const serviceTierTooltip = computed(() => {
   if (!serviceTierLabel.value) return "";
