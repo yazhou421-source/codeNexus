@@ -1,0 +1,39 @@
+{
+  "recording": "Transcribed from tool-observed live runtime results; this is not a desktop UI acceptance recording.",
+  "date": "2026-09-07",
+  "beforeSha256": "23fda44600a27cacddfc610e501c87d9971baad36f4e52a52bc2f5e0e7e94eeb",
+  "afterSha256": "23fda44600a27cacddfc610e501c87d9971baad36f4e52a52bc2f5e0e7e94eeb",
+  "officialRuntime": "/Applications/ChatGPT.app/Contents/Resources/codex",
+  "calmnovaRuntime": "/Applications/Calmnova Code.app/Contents/Resources/codex/mac-arm64/bin/codex",
+  "model": "gpt-6-astra",
+  "effort": "low",
+  "auth": "existing shared ChatGPT login; no diagnostic auth.json reads",
+  "routerOrigin": "http://127.0.0.1:60365",
+  "stages": [
+    {
+      "stage": "official-before-calmnova",
+      "status": "completed",
+      "replyIsOK": true,
+      "configUnchanged": true
+    },
+    {
+      "stage": "calmnova-production-router",
+      "status": "completed",
+      "replyIsOK": true,
+      "configUnchanged": true
+    },
+    {
+      "stage": "official-during-router",
+      "status": "completed",
+      "replyIsOK": true,
+      "configUnchanged": true
+    },
+    {
+      "stage": "official-after-router-exit",
+      "status": "completed",
+      "replyIsOK": true,
+      "configUnchanged": true
+    }
+  ],
+  "desktopAcceptance": "Historical runtime-only evidence; subsequent passed desktop acceptance is recorded in authorized-desktop-acceptance.json."
+}

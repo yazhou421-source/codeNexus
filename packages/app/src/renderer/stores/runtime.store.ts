@@ -49,7 +49,7 @@ function isComposeMode(value: unknown): value is CollaborationModeKind {
   return value === "default" || value === "plan";
 }
 
-const REASONING_EFFORT_OPTIONS = ["low", "medium", "high", "xhigh"] as const;
+const REASONING_EFFORT_OPTIONS = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"] as const;
 
 function normalizeReasoningEffort(value: unknown): string {
   const raw = String(value ?? "")
@@ -206,8 +206,14 @@ export const useRuntimeStore = defineStore("runtime", {
         const key = threadKey(threadId);
         if (!key) continue;
         threads[key] = normalizeComposeState(state);
+        if (key === APP_TIMELINE_ID) threads[key].composeInput = "";
       }
       this.composeStateByThreadId = threads;
+      if (!this.currentThreadId || this.currentThreadId === APP_TIMELINE_ID) {
+        this.clearComposeAttachments();
+        this.clearComposeFileMentions();
+        this.endHistoryRewrite();
+      }
       const currentState = this.composeStateByThreadId[threadKey(this.currentThreadId)] ?? { ...DEFAULT_COMPOSE_STATE };
       this.sandboxMode = currentState.sandboxMode;
       this.composeInput = currentState.composeInput;
@@ -412,6 +418,7 @@ export const useRuntimeStore = defineStore("runtime", {
       const key = threadKey(threadIdValue);
       const existing = this.composeStateByThreadId[key];
       const next = existing ? { ...existing } : { ...DEFAULT_COMPOSE_STATE };
+      if (key === APP_TIMELINE_ID) next.composeInput = "";
       if (!existing) this.composeStateByThreadId[key] = { ...next };
       this.sandboxMode = next.sandboxMode;
       this.composeInput = next.composeInput;
@@ -554,6 +561,10 @@ export const useRuntimeStore = defineStore("runtime", {
         this.saveThreadComposeFileMentions(this.currentThreadId);
       }
       const tid = String(threadId ?? "").trim();
+      if (!tid || tid === APP_TIMELINE_ID) {
+        this.seedThreadComposeState(APP_TIMELINE_ID);
+        this.endHistoryRewrite();
+      }
       this.currentThreadId = tid;
       // Load the target thread draft and compose settings after switching.
       this.loadThreadComposeState(tid);

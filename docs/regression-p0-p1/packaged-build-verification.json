@@ -1,0 +1,2146 @@
+[
+  {
+    "file": "dist/THIRD-PARTY-LICENSES.txt",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/main.cjs",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/preload.cjs",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/AppClosingOverlay-DbirUghi.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ApprovalDock-AU2pcBjD.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ChatPane-DI3ANrYd.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ChatPane-bBz6dB35.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/Collapsible.vue_vue_type_script_setup_true_lang-DPjAr8ux.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ComposerQueueList-T2fJc9mr.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ComposerSlashCommandList-9q1-tS-t.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/DebugTimelineSidebar-CRx-7BHY.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/DebugTimelineSidebar-oFMnXXRC.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/DetailDisclosure.vue_vue_type_script_setup_true_lang-DHC7XI8-.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/FlowchartWorkbench-BwZsVDx2.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/FlowchartWorkbench-CphWZoF6.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/GoalShutdownCountdownOverlay-B2gvMqHS.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/GoalShutdownCountdownOverlay-_TlRj0KJ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/GuardianReviewDiagnostics-By2QmRPx.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ImageSettingsSidebar-CTwXQOFd.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ImageSettingsSidebar-D2P2OYyN.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ImageWorkbench-cnVole18.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ImageWorkbench-fvF_r6AR.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ImageWorkspaceSidebar-CnSgKpfw.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ImageWorkspaceSidebar-DpA60-kK.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/LeftSidebar-BJXRRDhI.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/MarkdownPlanOutputCard-CIwTr517.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/MarkdownPlanOutputCard-DACPShD_.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/PaperSettingsSidebar-C7v6m6wC.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/PaperSettingsSidebar-Yay1bRew.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/PaperWorkbench-BbLf4DQI.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/PaperWorkbench-DO26_VA3.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/PaperWorkspaceSidebar-JS1xDqDR.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/PaperWorkspaceSidebar-wQKqao1g.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/SettingsFlowchartAiTab-R6xSna8H.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/SettingsImageGenerationTab-Dbq4NOzp.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/SettingsPage-CXQ7a_oq.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/SettingsPage-DnGzIiXa.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/SkillsList.vue_vue_type_script_setup_true_lang-BquW9-yw.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/SkillsManagerOverlay-B64YBlXa.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/StructuredFinalAnswerCard-IusD5smx.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/StructuredFinalAnswerCard.vue_vue_type_script_setup_true_lang-Dcaj9YgM.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/UserInputDock-DJhwSzcc.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/WorkspaceEditorPane-dTu72DS-.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/WorkspaceFilesSidebar-DLhXiZ5w.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/abap-BdImnpbu.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/actionscript-3-CoDkCxhg.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ada-bCR0ucgS.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/andromeeda-C4gqWexZ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/angular-html-DMxchsRu.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/angular-ts-DzOHUlBM.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/apache-Pmp26Uib.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/apex-D8_7TLub.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/apl-B4CMkyY2.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/apl-dKokRX4l.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/applescript-Co6uUVPk.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ara-BRHolxvo.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/arc-DkpX1Bu_.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/architectureDiagram-3BPJPVTR-BcGc0U0b.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/asciiarmor-Df11BRmG.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/asciidoc-Ve4PFQV2.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/asm-D_Q5rh1f.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/asn1-EdZsLKOL.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/asterisk-B-8jnY81.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/astro-CbQHKStN.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/aurora-x-D-2ljcwZ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/awk-DMzUqQB5.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ayu-dark-DYE7WIF3.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ayu-light-BA47KaF1.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ayu-mirage-32ctXXKs.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ballerina-BFfxhgS-.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/bat-BkioyH1T.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/beancount-k_qm7-4y.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/berry-uYugtg8r.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/bibtex-CHM0blh-.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/bicep-Bmn6On1c.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/bird2-D-8n_ahI.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/blade-D4QpJJKB.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/blockDiagram-GPEHLZMM-flOROO1M.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/brainfuck-C4LP7Hcl.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/bsl-BO_Y6i37.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/buildTimelineNodes-CctL9VvA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/buildTimelineNodes-Y5_MnGJ-.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/c-BIGW1oBm.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/c3-eo99z4R2.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/c4Diagram-AAUBKEIU-BI6GsaxB.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cadence-Bv_4Rxtq.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cairo-KRGpt6FW.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/catppuccin-frappe-DFWUc33u.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/catppuccin-latte-C9dUb6Cb.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/catppuccin-macchiato-DQyhUUbL.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/catppuccin-mocha-D87Tk5Gz.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/channel-7Q12rWtk.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/chunk-2J33WTMH-bNqx2H9H.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/chunk-4BX2VUAB-DDorFndz.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/chunk-55IACEB6-BiXjzoQu.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/chunk-727SXJPM-DBsw6SQR.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/chunk-AQP2D5EJ-C9oQ-XdX.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/chunk-FMBD7UC4-BZgrRskL.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/chunk-ND2GUHAM-D1f0Bfs_.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/chunk-QZHKN3VN-Bx05KX73.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/clarity-D53aC0YG.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/classDiagram-4FO5ZUOK-DTJh5lCW.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/classDiagram-v2-Q7XG4LA2-DTJh5lCW.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/clike-B9uivgTg.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/clojure-BMjYHr_A.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/clojure-P80f7IUj.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cmake-BQqOBYOt.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cmake-D1j8_8rp.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cobol-CELfDnG_.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cobol-CWcv1MsR.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/codeowners-Bp6g37R7.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/codeql-DsOJ9woJ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/coffee-Ch7k5sss.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/coffeescript-S37ZYGWr.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/common-lisp-Cg-RD9OK.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/commonlisp-DBKNyK5s.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/coq-DkFqJrB1.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cose-bilkent-S5V4N54A-Cwp4klb7.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cpp-CofmeUqb.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/crystal-SjHAIU92.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/crystal-tKQVLTB8.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/csharp-COcwbKMJ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/css-BnMrqG3P.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/css-DPfMkruS.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/csv-fuZLfV_i.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cue-D82EKSYY.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cypher-COkxafJQ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cypher-C_CwsFkJ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/cytoscape.esm-5J0xJHOV.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/d-85-TOEBH.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/d-pRatUO7H.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/dagre-BM42HDAG-BE1bcodv.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/dark-plus-C3mMm8J8.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/dart-CF10PKvl.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/dax-CEL-wOlO.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/defaultLocale-CrowFXzY.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/desktop-BmXAJ9_W.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/diagram-2AECGRRQ-B0OLGp_M.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/diagram-5GNKFQAL-CGbj8RKY.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/diagram-KO2AKTUF-DFPCjuRI.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/diagram-LMA3HP47-D-Rox_U4.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/diagram-OG6HWLK6-iVNkThL_.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/diff-D97Zzqfu.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/diff-DbItnlRl.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/docker-BcOcwvcX.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/dockerfile-BKs6k2Af.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/dotenv-Da5cRb03.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/dracula-BzJJZx-M.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/dracula-soft-BXkSAIEj.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/dream-maker-BtqSS_iP.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/dtd-DF_7sFjM.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/dylan-DwRh75JA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ebnf-CDyGwa7X.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ecl-Cabwm37j.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/edge-BkV0erSs.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/editor-ygHxNu7V.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/eiffel-CnydiIhH.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/elixir-CDX3lj18.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/elm-DbKCFpqz.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/elm-vLlmbW-K.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/emacs-lisp-C9XAeP06.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/erDiagram-TEJ5UH35-Cf9Y5jPq.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/erb-B12qg9BL.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/erlang-BNw1qcRV.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/erlang-DsQrWhSR.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/everforest-dark-BgDCqdQA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/everforest-light-C8M2exoo.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/factor-kuTfRLto.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/fcl-Kvtd6kyn.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/fennel-BYunw83y.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/fish-BvzEVeQv.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/flowDiagram-I6XJVG4X-DSZBp6JU.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/fluent-C4IJs8-o.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/forth-Ffai-XNe.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/fortran-DYz_wnZ1.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/fortran-fixed-form-CkoXwp7k.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/fortran-free-form-BxgE0vQu.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/fsharp-CXgrBDvD.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ganttDiagram-6RSMTGT7-B5JnJoze.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gas-Bneqetm1.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gdresource-BOOCDP_w.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gdscript-C5YyOfLZ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gdshader-DkwncUOv.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/genie-D0YGMca9.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gherkin-DyxjwDmM.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gherkin-heZmZLOM.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/git-commit-F4YmCXRG.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/git-rebase-r7XF79zn.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gitGraphDiagram-PVQCEYII-BQHuKccs.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/github-dark-DHJKELXO.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/github-dark-default-Cuk6v7N8.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/github-dark-dimmed-DH5Ifo-i.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/github-dark-high-contrast-E3gJ1_iC.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/github-light-DAi9KRSo.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/github-light-default-D7oLnXFd.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/github-light-high-contrast-BfjtVDDH.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gleam-BspZqrRM.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/glimmer-js-Rg0-pVw9.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/glimmer-ts-U6CK756n.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/glsl-DplSGwfg.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gn-n2N0HUVH.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gnuplot-DdkO51Og.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/go-CxLEBnE3.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/graph-D2o_JWn5.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/graphql-ChdNCCLP.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/groovy-D9Dt4D0W.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/groovy-gcz8RCvz.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gruvbox-dark-hard-CFHQjOhq.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gruvbox-dark-medium-GsRaNv29.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gruvbox-dark-soft-CVdnzihN.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gruvbox-light-hard-CH1njM8p.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gruvbox-light-medium-DRw_LuNl.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/gruvbox-light-soft-hJgmCMqR.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/guardianApprovalReview-Bml-98sk.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/hack-CaT9iCJl.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/haml-B8DHNrY2.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/handlebars-BL8al0AC.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/haskell-Cw1EW3IL.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/haskell-Df6bDoY_.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/haxe-CzTSHFRz.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/haxe-H-WmDvRZ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/hcl-BWvSN4gD.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/hjson-D5-asLiD.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/hlsl-D3lLCCz7.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/horizon-BUw7H-hv.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/horizon-bright-CUuTKBJd.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/houston-DnULxvSX.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/html-GMplVEZG.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/html-derivative-BFtXZ54Q.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/http-DBlCnlav.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/http-jrhK8wxY.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/hurl-irOxFIW8.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/hxml-Bvhsp5Yf.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/hy-DFXneXwc.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/idl-BEugSyMb.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/imba-DGztddWO.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-B7oLTclL.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-BCVd89O2.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-BCp2rp9z.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-BMskYEks.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-BkzJJGW6.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-C01h1xxy.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-CCDgAscM.css",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-CIiI4A6i.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-CNTPNLsu.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-CQyql8MI.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-CSxbkG2X.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-CYiQ51IK.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-DBORt9Fi.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-DOK4mfuX.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-DR1SBBAy.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-DSbeJRe6.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-DU_EEttX.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-DW2vvmsO.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-D_nWb3Zm.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-DmVZvmhF.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-Dstw8lQv.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-G595xV8K.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-VqWVnjbA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-XwYqxAuR.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/index-pY0kGTwX.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/infoDiagram-5YYISTIA-C_BI3KqP.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ini-BEwlwnbL.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/init-Gi6I4Gst.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ishikawaDiagram-YF4QCWOH-D2Z1AjjU.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/java-CylS5w8V.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/javascript-iXu5QeM3.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/javascript-wDzz0qaB.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/jinja-4LBKfQ-Z.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/jison-wvAkD_A8.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/journeyDiagram-JHISSGLW-CW9-vByC.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/json-Cp-IABpG.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/json5-C9tS-k6U.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/jsonc-Des-eS-w.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/jsonl-DcaNXYhu.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/jsonnet-DFQXde-d.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/jssm-C2t-YnRu.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/jsx-g9-lgVsj.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/julia-CxzCAyBv.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/julia-DuME0IfC.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/just-Cw27pwNe.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/kanagawa-dragon-CkXjmgJE.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/kanagawa-lotus-CfQXZHmo.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/kanagawa-wave-DWedfzmr.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/kanban-definition-UN3LZRKU-C24TkGfy.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/katex-Cbg2ZdjV.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/kdl-DV7GczEv.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/kotlin-BdnUsdx6.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/kusto-DZf3V79B.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/laserwave-DUszq2jm.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/latex-CWtU0Tv5.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/layout-UJbxhwF7.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/lean-BZvkOJ9d.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/less-B1dDrJ26.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/light-plus-B7mTdjB0.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/linear-DqkwS1hx.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/liquid-DYVedYrR.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/livescript-BwQOo05w.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/llvm-DjAJT7YJ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/log-2UxHyX5q.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/logo-BtOb2qkB.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/logo-dark-CR5f8QRE.png",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/logo-light-Co5-upHS.png",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/lua-BaeVxFsk.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/lua-BgMRiT3U.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/luau-C-HG3fhB.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/make-CHLpvVh8.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/markdown-BV2xOVgQ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/markdown-Cvjx9yec.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/marko-CnJfTvn9.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/material-theme-D5KoaKCx.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/material-theme-darker-BfHTSMKl.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/material-theme-lighter-B0m2ddpp.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/material-theme-ocean-CyktbL80.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/material-theme-palenight-Csfq5Kiy.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mathematica-DTrFuWx2.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/matlab-D7o27uSR.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mbox-CNhZ1qSd.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mdc-BMNejdWA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mdx-Cmh6b_Ma.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mermaid-mWjccvbQ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mermaid.core-Bj6idNhE.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/min-dark-CafNBF8u.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/min-light-CTRr51gU.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mindmap-definition-RKZ34NQL-QV0mwdyW.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mipsasm-CKIfxQSi.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mirc-CjQqDB4T.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mllike-CXdrOF99.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/modal-CC8nUgr_.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/modelica-Dc1JOy9r.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mojo-rZm6bMo-.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/monokai-D4h5O-jR.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/moonbit-_H4v1dQx.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/move-IF9eRakj.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mscgen-BA5vi2Kp.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/mumps-BT43cFF4.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/narrat-DRg8JJMk.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/nextflow-Zz6hmt5N.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/nextflow-groovy-BeH2EWoN.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/nginx-BpAMiNFr.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/nginx-DdIZxoE0.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/night-owl-C39BiMTA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/night-owl-light-CMTm3GFP.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/nim-CVrawwO9.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/nix-CwoSXNpI.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/nord-Ddv68eIx.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/nsis-LdVXkNf5.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ntriples-BfvgReVJ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/nushell-Cz2AlsmD.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/objective-c-DXmwc3jG.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/objective-cpp-CLxacb5B.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ocaml-C0hk2d4L.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/octave-Ck1zUtKM.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/odin-BBf5iR-q.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/one-dark-pro-DVMEJ2y_.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/one-light-C3Wv6jpd.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/openscad-C4EeE6gA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ordinal-Cboi1Yqb.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/oz-BzwKVEFT.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/pascal--L3eBynH.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/pascal-D93ZcfNL.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/perl-C0TMdlhV.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/perl-CdXCOZ3F.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/php-Dhbhpdrm.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/pieDiagram-4H26LBE5-DkOnrRz9.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/pig-CevX1Tat.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/pkl-u5AG7uiY.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/plastic-3e1v2bzS.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/player-iC7lBMtl.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/plsql-ChMvpjG-.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/po-BTJTHyun.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/poimandres-CS3Unz2-.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/polar-C0HS_06l.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/postcss-CXtECtnM.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/powerquery-CEu0bR-o.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/powershell-CFHJl5sT.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/powershell-Dpen1YoG.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/preload-helper-D8_b-Rn0.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/prisma-Dd19v3D-.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/prolog-CbFg5uaA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/properties-C78fOPTZ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/proto-C7zT0LnQ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/protobuf-ChK-085T.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/pug-CGlum2m_.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/pug-DeIclll2.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/puppet-BMWR74SV.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/puppet-DMA9R1ak.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/purescript-CklMAg4u.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/python-B6aJPvgy.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/python-BuPzkPfP.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/q-pXgVlZs6.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/qml-3beO22l8.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/qmldir-C8lEn-DE.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/qss-IeuSbFQv.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/quadrantDiagram-W4KKPZXB-BiEPinU9.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/r-B6wPVr8A.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/r-Dspwwk_N.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/racket-BqYA7rlc.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/raku-DXvB9xmW.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/razor-Uh8Bk_45.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/red-bN70gL4F.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/reg-C-SQnVFl.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/regexp-CDVJQ6XC.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/rel-C3B-1QV4.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/rendererCacheRegistry-B10GaSoA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/replayParsers-DJ-DIBEW.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/requirementDiagram-4Y6WPE33-CZLj3QO4.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/riscv-BM1_JUlF.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ron-D8l8udqQ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/rose-pine-dawn-DHQR4-dF.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/rose-pine-moon-D4_iv3hh.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/rose-pine-qdsjHGoJ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/rosmsg-BJDFO7_C.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/rpm-CTu-6PCP.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/rst-BrH8l1NY.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ruby-B2Rjki9n.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ruby-Dw2BHqvy.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/runtimeBridge-nSKjNVrL.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/rust-B1yitclQ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/sankeyDiagram-5OEKKPKP-D5hr96wz.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/sas-B4kiWyti.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/sas-cz2c8ADy.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/sass-Cj5Yp3dK.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/scala-C151Ov-r.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/scheme-C41bIUwD.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/scheme-C98Dy4si.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/scss-OYdSNvt2.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/sdbl-DVxCFoDh.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/sequenceDiagram-3UESZ5HK-BR1LMbyU.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/shaderlab-Dg9Lc6iA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/shell-CjFT_Tl9.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/shellscript-Yzrsuije.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/shellsession-BADoaaVG.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/sieve-C3Gn_uJK.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/simple-mode-GW_nhZxv.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/slack-dark-BthQWCQV.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/slack-ochin-DqwNpetd.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/smalltalk-BERRCDM3.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/smalltalk-CnHTOXQT.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/snazzy-light-Bw305WKR.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/solarized-dark-DXbdFlpD.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/solarized-light-L9t79GZl.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/solidity-rGO070M0.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/solr-DehyRSwq.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/soy-Brmx7dQM.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/sparql-DkYu6x3z.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/sparql-rVzFXLq3.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/splunk-BtCnVYZw.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/spreadsheet-BCZA_wO0.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/sql-BLtJtn59.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/sql-D0XecflT.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ssh-config-_ykCGR6B.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/stata-BH5u7GGu.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/stateDiagram-AJRCARHV-Cr8iuKXV.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/stateDiagram-v2-BHNVJYJU-DWWagaRp.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/stex-C3f8Ysf7.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/stylus-B533Al4x.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/stylus-BEDo0Tqx.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/surrealql-Bq5Q-fJD.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/svelte-C_ipcX3V.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/swift-BzpIVaGY.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/swift-D82vCrfD.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/symbol-CoVubm8C.png",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/synthwave-84-CbfX1IO0.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/system-verilog-CnnmHF94.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/systemd-4A_iFExJ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/talonscript-CkByrt1z.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/tasl-QIJgUcNo.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/tcl-DVfN8rqt.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/tcl-dwOrl1Do.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/templ-P3uqSqPl.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/terraform-BETggiCN.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/tex-idrVyKtj.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/textile-CnDTJFAw.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/threadHandoffDiagnostics-DxFTRSCD.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/tiddlywiki-DO-Gjzrf.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/tiki-DGYXhP31.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/timeline-definition-PNZ67QCA-DzSassQ2.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/tokyo-night-hegEt444.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/toml-Bm5Em-hy.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/toml-vGWfd6FD.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/troff-wAsdV37c.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ts-tags-eLBrqaVN.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/tsv-B_m7g4N7.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/tsx-COt5Ahok.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ttcn-CfJYG6tj.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ttcn-cfg-B9xdYoR4.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/turtle-B1tBg_DP.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/turtle-BsS91CYL.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/twig-DNn4PbVi.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/typescript-BPQ3VLAy.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/typespec-BGHnOYBU.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/typst-DHCkPAjA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/ui-BObsyKRl.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/v-BcVCzyr7.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vala-CsfeWuGM.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vb-CmGdzxic.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vb-D17OF-Vu.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vbscript-BuJXcnF6.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/velocity-D8B20fx6.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vennDiagram-CIIHVFJN-BVgKWR1N.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/verilog-BQ8w6xss.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/verilog-C6RDOZhf.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vesper-DU1UobuO.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vhdl-CeAyd5Ju.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vhdl-lSbBsy5d.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/viml-CJc9bBzg.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vitesse-black-Bkuqu6BP.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vitesse-dark-D0r3Knsf.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vitesse-light-CVO1_9PV.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vue-BOa9ocrA.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vue-DN_0RTcg.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vue-html-AaS7Mt5G.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vue-vine-CQOfvN7w.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/vyper-CDx5xZoG.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/wardley-L42UT6IY-DS3Ugu8P.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/wardleyDiagram-YWT4CUSO-CSMIuJuC.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/wasm-CG6Dc4jp.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/wasm-MzD3tlZU.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/webSearch-CXePKm67.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/webidl-ZXfAyPTL.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/wenyan-BV7otONQ.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/wgsl-Dx-B1_4e.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/wikitext-BhOHFoWU.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/wit-5i3qLPDT.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/wolfram-lXgVvXCa.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/xml-sdJ4AIDG.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/xquery-DzFWVndE.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/xsl-CtQFsRM5.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/xychartDiagram-2RQKCTM6-XlW4_DS_.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/yacas-BJ4BC0dw.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/yaml-Buea-lGh.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/z80-Hz9HOZM7.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/zenscript-DVFEvuxE.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/assets/zig-VOosw3JB.js",
+    "packagedMatchesBuild": true
+  },
+  {
+    "file": "dist/renderer/index.html",
+    "packagedMatchesBuild": true
+  }
+]

@@ -154,6 +154,14 @@ export default {
     enableCustomMode: "Enter experimental mode",
     returnAgentMode: "Return to AI Agent mode",
   },
+  modelAvailability: {
+    login: "Sign in to ChatGPT/Codex first",
+    loading: "Loading available models…",
+    error: "Unable to refresh the model list",
+    account: "Currently unavailable for this account",
+    provider: "Provider connection unavailable · Check provider settings",
+    fallback: "{model} is not available for this account. Switched to an available model.",
+  },
   providerSettings: {
     aria: "AI model service settings",
     title: "AI models",

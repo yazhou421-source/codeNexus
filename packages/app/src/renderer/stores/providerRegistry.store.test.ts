@@ -1,3 +1,5 @@
+import zhCN from "../i18n/messages/zh-CN";
+import { useModelCatalogStore } from "./modelCatalog.store";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -267,4 +269,36 @@ describe("Design V1 acceptance provider state matrix (no credentials)", () => {
       expect(appApi.listRouterProviders).not.toHaveBeenCalled();
     }
   );
+});
+
+it("Provider revision changes preserve the last successful independent account catalog", () => {
+  const models = useModelCatalogStore();
+  models.remoteIds = ["gpt-6-astra"];
+  models.remoteLoadState = "ready";
+  models.remoteLoadedAt = 123;
+  const providers = useProviderRegistryStore();
+  providers.applySnapshot(snapshot());
+  providers.applySnapshot(snapshot({ runtimeRevision: 2 }));
+  expect(models.remoteIds).toEqual(["gpt-6-astra"]);
+  expect(models.remoteLoadedAt).toBe(123);
+  expect(models.remoteLoadState).toBe("ready");
+});
+
+it("K separates provider failure from account unavailability and login messaging", () => {
+  const providers = useProviderRegistryStore();
+  const state = snapshot();
+  state.providers[0].verification = { state: "failed", verifiedAt: null, errorCode: "NETWORK_ERROR" };
+  providers.applySnapshot(state);
+  const catalog = useModelCatalogStore();
+  catalog.lastAccountState = "logged_in";
+  catalog.remoteLoadState = "ready";
+  catalog.remoteLoadedAt = 123;
+  catalog.remoteIds = ["gpt-5.6-sol"];
+  expect(providers.isKnownProviderModel("deepseek-v4-pro")).toBe(true);
+  expect(providers.isAvailableProviderModel("deepseek-v4-pro")).toBe(false);
+  expect(providerPresentation(providers.providers[0]).connection).toBe("unavailable");
+  expect(zhCN.modelAvailability.provider).toBe("服务连接不可用 · 请检查服务设置");
+  expect(zhCN.modelAvailability[catalog.availabilityReason("gpt-6-astra") as "account"]).toBe("当前账户暂不可用");
+  catalog.lastAccountState = "logged_out";
+  expect(zhCN.modelAvailability[catalog.availabilityReason("gpt-6-astra") as "login"]).toBe("请先登录 ChatGPT/Codex");
 });

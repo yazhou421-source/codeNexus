@@ -9,12 +9,9 @@ export class CodexModelCatalogService {
   private pending: Promise<Model[]> | null = null;
 
   constructor(
-    private readonly createServer = () =>
-      new CodexAppServer({
-        id: randomUUID(),
-        mode: "native",
-        experimentalApiOptIn: true,
-      })
+    private readonly createServer: (options: ConstructorParameters<typeof CodexAppServer>[0]) => CodexAppServer = (
+      options
+    ) => new CodexAppServer(options)
   ) {}
 
   list(): Promise<Model[]> {
@@ -25,7 +22,14 @@ export class CodexModelCatalogService {
   }
 
   private async load(): Promise<Model[]> {
-    const server = this.createServer();
+    const server = this.createServer({
+      id: randomUUID(),
+      mode: "native",
+      experimentalApiOptIn: true,
+      // This is an account catalog query, independent of user/Router provider selection.
+      // Both overrides are required: a stale openai_base_url alone redirects model discovery.
+      globalConfigOverrides: ["model_provider='openai'", "openai_base_url='https://chatgpt.com/backend-api/codex'"],
+    });
     try {
       await server.start();
       const account = await server.request("account/read", { refreshToken: false });
@@ -41,8 +45,11 @@ export class CodexModelCatalogService {
           limit: 200,
           includeHidden: false,
         });
+        if (!Array.isArray(result.data)) throw new Error("Invalid model catalog");
         for (const model of result.data) {
-          if (!model.hidden && model.model?.trim()) models.set(model.model, model);
+          const id = String(model?.model || model?.id || "").trim();
+          if (!id) throw new Error("Invalid model entry");
+          if (!model.hidden) models.set(id, { ...model, model: id });
         }
         cursor = result.nextCursor;
         if (!cursor) {

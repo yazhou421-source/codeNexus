@@ -1,3 +1,5 @@
+import { repairCalmnovaCodexConfig } from "./codexConfigRepair";
+import { sharedCodexConfigPaths } from "./codexConfigProtection";
 import { app, autoUpdater as electronAutoUpdater, BrowserWindow, Menu } from "electron";
 import { readFile, rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -318,6 +320,11 @@ app
       installContentSecurityPolicy();
     }
 
+    for (const path of sharedCodexConfigPaths()) {
+      const repair = await repairCalmnovaCodexConfig(path);
+      if (repair.repaired)
+        logger.info("codex-config-repair", `Removed legacy Router configuration; backup=${repair.backupPath}`);
+    }
     const userDataPath = app.getPath("userData");
     const migration = await migrateProductUserDataFailSoft(
       {

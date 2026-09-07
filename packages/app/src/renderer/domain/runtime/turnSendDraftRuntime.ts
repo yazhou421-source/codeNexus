@@ -23,7 +23,7 @@ export type TurnSendDraftRuntime = {
   cloneComposeAttachmentsForSend: (items: ComposeImageAttachment[]) => ComposeImageAttachment[];
   cloneComposeMentionsForSend: (items: ComposeWorkspaceFileMention[]) => ComposeWorkspaceFileMention[];
   runtimeStoreSendDraft: () => TurnSendDraft;
-  clearRuntimeStoreDraftAfterSend: () => void;
+  clearRuntimeStoreDraftAfterSend: () => Promise<void>;
 };
 
 export function createTurnSendDraftRuntime(deps: TurnSendDraftRuntimeDeps): TurnSendDraftRuntime {
@@ -51,12 +51,13 @@ export function createTurnSendDraftRuntime(deps: TurnSendDraftRuntimeDeps): Turn
     };
   };
 
-  const clearRuntimeStoreDraftAfterSend = () => {
+  const clearRuntimeStoreDraftAfterSend = async () => {
     const { runtimeStore } = deps;
     runtimeStore.composeInput = "";
     runtimeStore.clearComposeAttachments();
     runtimeStore.clearComposeFileMentions();
     runtimeStore.endHistoryRewrite();
+    await runtimeStore.saveThreadComposeStateNow();
   };
 
   return {

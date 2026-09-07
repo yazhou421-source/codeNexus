@@ -41,7 +41,7 @@ export const DEFAULT_LOCAL_DRAFT_STATE: LocalDraftState = {
   threads: {},
 };
 
-const REASONING_EFFORT_OPTIONS = ["low", "medium", "high", "xhigh"] as const;
+const REASONING_EFFORT_OPTIONS = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"] as const;
 
 function toRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -113,6 +113,7 @@ export function normalizeLocalDraftState(value: unknown): LocalDraftState {
     const threadId = toThreadKey(rawThreadId);
     if (!threadId) continue;
     threads[threadId] = normalizeLocalThreadComposeState(rawState);
+    if (threadId === "__app__") threads[threadId].composeInput = "";
   }
   const updatedAt = Number(root?.updatedAt);
   return {
@@ -136,7 +137,7 @@ export function upsertLocalDraftThreadState(
     updatedAt: Date.now(),
     threads: {
       ...next.threads,
-      [threadId]: normalizeLocalThreadComposeState(stateValue),
+      [threadId]: { ...normalizeLocalThreadComposeState(stateValue), ...(threadId === "__app__" ? { composeInput: "" } : {}) },
     },
   };
 }
@@ -154,6 +155,7 @@ export function mergeLocalDraftThreadStates(
     const threadId = toThreadKey(rawThreadId);
     if (!threadId) continue;
     threads[threadId] = normalizeLocalThreadComposeState(rawState);
+    if (threadId === "__app__") threads[threadId].composeInput = "";
     changed = true;
   }
 

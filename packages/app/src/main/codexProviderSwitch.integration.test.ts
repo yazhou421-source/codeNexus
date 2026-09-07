@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -57,11 +57,62 @@ describe("bundled app-server provider switching (isolated loopback, no real mode
         res.end();
       });
       let server: CodexAppServer | undefined;
+      let official: CodexAppServer | undefined;
+      const officialUpstream = createServer(upstream.listeners("request")[0] as any);
       try {
         await new Promise<void>((done, reject) => {
           upstream.once("error", reject);
           upstream.listen(0, "127.0.0.1", done);
         });
+        await new Promise<void>((done) => officialUpstream.listen(0, "127.0.0.1", done));
+        const officialPort = (officialUpstream.address() as { port: number }).port;
+        const configPath = join(codexHome, "config.toml");
+        const original = `# preserve user formatting
+model_provider = "user-provider"
+model = "gpt-5.5"
+[model_providers.user-provider]
+name = "User"
+base_url = "http://127.0.0.1:${officialPort}/official/v1"
+wire_api = "responses"
+requires_openai_auth = true
+`;
+        await writeFile(configPath, original);
+        vi.stubEnv("CODEX_HOME", codexHome);
+        vi.stubEnv("HOME", root);
+        const officialCompleted = new Set<string>();
+        official = new CodexAppServer({
+          id: "official-independent",
+          mode: "native",
+          cwd: root,
+          resolveExecutable: async () => ({
+            source: "bundled",
+            version: "0.153.2",
+            path: executable,
+            command: { kind: "direct", path: executable },
+          }),
+          onMessage(message) {
+            if (
+              "method" in message &&
+              message.method === "turn/completed" &&
+              (message.params as any).turn.status === "completed"
+            )
+              officialCompleted.add((message.params as any).turn.id);
+          },
+        });
+        await official.start();
+        const officialThread = await official.request("thread/start", { model: "gpt-5.5", cwd: root });
+        const sendOfficial = async () => {
+          const turn = await official!.request("turn/start", {
+            threadId: officialThread.thread.id,
+            input: [{ type: "text", text: "Reply OK only", text_elements: [] }],
+          });
+          await vi.waitFor(() => expect(officialCompleted.has(turn.turn.id)).toBe(true), {
+            timeout: 15_000,
+            interval: 50,
+          });
+          expect(await readFile(configPath, "utf8")).toBe(original);
+        };
+        await sendOfficial();
         const address = upstream.address() as { port: number };
         const runtime = createCodexRouterRuntime({
           origin: `http://127.0.0.1:${address.port}`,
@@ -109,14 +160,29 @@ describe("bundled app-server provider switching (isolated loopback, no real mode
             interval: 50,
           });
         }
-        expect(requests).toEqual([
+        // P0-2: the independent process stays on the user's endpoint concurrently.
+        await sendOfficial();
+        expect(requests.filter((r) => r.url !== "/official/v1/responses")).toEqual([
           { url: "/codex-auth/v1/responses", model: "gpt-5.5", authorization: "Bearer synthetic-codex-auth" },
           { url: "/v1/responses", model: "deepseek-v4-flash", authorization: "Bearer synthetic-router-token" },
           { url: "/v1/responses", model: "kimi-k2-7-code", authorization: "Bearer synthetic-router-token" },
           { url: "/codex-auth/v1/responses", model: "gpt-5.5", authorization: "Bearer synthetic-codex-auth" },
         ]);
+        // P0-1/P0-3: normal Calmnova exit leaves exact config bytes and official turns intact.
+        server.stop();
+        await sendOfficial();
+        // P0-4: losing the Router listener also has no effect on the other process.
+        upstream.closeAllConnections();
+        await new Promise<void>((done) => upstream.close(() => done()));
+        await sendOfficial();
+        expect(requests.filter((r) => r.url === "/official/v1/responses")).toHaveLength(4);
+        expect(await readFile(configPath, "utf8")).toBe(original);
       } finally {
         server?.stop();
+        official?.stop();
+        vi.unstubAllEnvs();
+        officialUpstream.closeAllConnections();
+        await new Promise<void>((done) => officialUpstream.close(() => done()));
         upstream.closeAllConnections();
         await new Promise<void>((done) => upstream.close(() => done()));
         await rm(root, { recursive: true, force: true });

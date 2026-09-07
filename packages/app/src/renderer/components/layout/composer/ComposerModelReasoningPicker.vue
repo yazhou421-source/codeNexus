@@ -78,11 +78,7 @@
                 option.description
               }}</small
               ><small v-if="option.disabled" class="model-unavailable"
-                ><CircleAlert aria-hidden="true" />{{
-                  locale.startsWith("zh")
-                    ? "当前不可用 · 请在服务设置中检查连接"
-                    : "Unavailable · Check provider settings"
-                }}</small
+                ><CircleAlert aria-hidden="true" />{{ option.description || t("modelAvailability.account") }}</small
               ></span
             >
             <span class="composer-model-reasoning-option-meta">
@@ -150,6 +146,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { ArrowLeft, Check, ChevronDown, ChevronRight, CircleAlert, Search } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
+import { useModelCatalogStore } from "../../../stores/modelCatalog.store";
 
 type SelectOption = {
   value: string;
@@ -263,8 +260,14 @@ function onListKeydown(event: KeyboardEvent) {
   event.preventDefault();
   buttons[next]?.focus();
 }
+const modelCatalog = useModelCatalogStore();
 const reasoningPickerOptions = computed<VisibleOption[]>(() =>
-  props.reasoningEffortOptions.map((option) => ({
+  (
+    modelCatalog.remoteModels
+      .find((m) => m.model === activeModel.value)
+      ?.supportedReasoningEfforts?.map((e) => ({ value: e.reasoningEffort, label: e.reasoningEffort })) ||
+    props.reasoningEffortOptions
+  ).map((option) => ({
     value: option.value,
     label: option.label,
     toneClass: `composer-select--effort is-${normalizeToneKey(option.value)}`,

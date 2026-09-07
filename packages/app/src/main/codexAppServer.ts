@@ -1,3 +1,4 @@
+import { protectCodexConfigRpc } from "./codexConfigProtection";
 import { spawn } from "node:child_process";
 import * as readline from "node:readline";
 import { existsSync, statSync } from "node:fs";
@@ -138,6 +139,7 @@ export class CodexAppServer {
   private readonly mode: ServerMode;
   private readonly cwd?: string;
   private readonly runtimeConfig: CodexAppServerRuntimeConfig | null;
+  private readonly globalConfigOverrides: readonly string[];
   private proc?: ReturnType<typeof spawn>;
   private rl?: readline.Interface;
   private stopping = false;
@@ -154,6 +156,7 @@ export class CodexAppServer {
     cwd?: string;
     experimentalApiOptIn?: boolean;
     runtimeConfig?: CodexAppServerRuntimeConfig | null;
+    globalConfigOverrides?: readonly string[];
     onMessage?: (msg: CodexIncomingMessage) => void;
     resolveExecutable?: () => Promise<CodexExecutableResolution>;
   }) {
@@ -162,6 +165,7 @@ export class CodexAppServer {
     this.cwd = opts.cwd;
     this.experimentalApiOptIn = Boolean(opts.experimentalApiOptIn);
     this.runtimeConfig = opts.runtimeConfig ?? null;
+    this.globalConfigOverrides = opts.globalConfigOverrides ?? [];
     this.onMessage = opts.onMessage;
     this.resolveExecutable = opts.resolveExecutable ?? resolveCurrentCodexExecutable;
   }
@@ -294,6 +298,7 @@ export class CodexAppServer {
     params?: CodexRpcParams<M>,
     timeoutMs = 120_000
   ): Promise<CodexRpcResult<M>> {
+    await protectCodexConfigRpc(method, params);
     if (!isValidMethod(method)) throw new Error("invalid json-rpc method");
     if (!isValidParams(params)) throw new Error(`invalid json-rpc params for method: ${method}`);
     await this.ensureRouterProviderForTurn(method, params, timeoutMs);
@@ -362,6 +367,8 @@ export class CodexAppServer {
   }
 
   notify<M extends string>(method: M, params?: CodexNotifyParams<M>): void {
+    if (["config/value/write", "config/batchWrite"].includes(method.trim()))
+      throw new Error("Configuration writes require a guarded request");
     if (!isValidMethod(method)) throw new Error("invalid json-rpc method");
     if (!isValidParams(params)) throw new Error(`invalid json-rpc params for method: ${method}`);
     const n: JsonRpcNotification = { method: method.trim(), params };
@@ -457,7 +464,7 @@ export class CodexAppServer {
     return buildCodexAppServerSpawnCommand({
       nativeCodex: this.nativeCodex,
       cwd: this.cwd,
-      globalConfigOverrides: this.runtimeConfig?.globalConfigOverrides,
+      globalConfigOverrides: [...(this.runtimeConfig?.globalConfigOverrides ?? []), ...this.globalConfigOverrides],
     });
   }
 

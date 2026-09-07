@@ -106,12 +106,11 @@ export const useProviderRegistryStore = defineStore("providerRegistry", {
   actions: {
     applySnapshot(snapshot: RouterProviderRegistrySnapshot): void {
       const safe = safeSnapshot(snapshot);
-      const revisionChanged = this.loadState !== "idle" && safe.runtimeRevision !== this.runtimeRevision;
       this.secureStorageAvailable = safe.secureStorageAvailable;
       this.runtimeRevision = safe.runtimeRevision;
       this.providers = safe.providers;
       this.loadState = "ready";
-      if (revisionChanged) useModelCatalogStore().resetRemoteModels();
+      // Provider revisions do not invalidate the independent Codex account catalog.
       this.reconcileCurrentModel();
     },
     async refresh(): Promise<void> {
@@ -178,7 +177,7 @@ export const useProviderRegistryStore = defineStore("providerRegistry", {
       this.lastFallbackFrom = "";
       if (!current || !this.isKnownProviderModel(current) || this.isAvailableProviderModel(current)) return;
       this.lastFallbackFrom = current;
-      runtimeStore.model = DEFAULT_MODEL_NAME;
+      runtimeStore.model = useModelCatalogStore().fallbackModelId || DEFAULT_MODEL_NAME;
     },
     async runProviderOperation(
       providerIdValue: string,

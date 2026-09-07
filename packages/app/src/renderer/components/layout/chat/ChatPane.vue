@@ -510,17 +510,25 @@ const sandboxModeOptions = computed(
 const modelOptions = computed(() => {
   const ids = buildModelPickerOptions({
     customIds: modelCatalogStore.customIds,
+    codexIds: modelCatalogStore.remoteIds,
     providerIds: providerRegistryStore.pickerModelIds,
     current: runtimeStore.model,
   });
   return ids.map((id) => {
     const knownProviderModel = providerRegistryStore.isKnownProviderModel(id);
-    const available = providerRegistryStore.isAvailableProviderModel(id);
+    const available = knownProviderModel
+      ? providerRegistryStore.isAvailableProviderModel(id)
+      : !modelCatalogStore.isRemoteModelUnavailable(id);
     const baseLabel = providerRegistryStore.modelLabels[id] || id;
     return {
       value: id,
-      label: knownProviderModel && !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
-      disabled: knownProviderModel && !available,
+      label: !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
+      disabled: !available,
+      description: !available
+        ? t(
+            `modelAvailability.${knownProviderModel ? "provider" : modelCatalogStore.availabilityReason(id) || "account"}`
+          )
+        : "",
     };
   });
 });
