@@ -1,0 +1,11 @@
+version: 1.0.5
+files:
+  - url: Calmnova-Code-1.0.5-arm64.zip
+    sha512: D+iH+dMzYjedST46TIXzEZdYBXcssicLi4mQpoW84pqAtvx87xeWPKKABtiQYJYVhiFkJ6UoC1h8SN+McUP7/g==
+    size: 221480237
+  - url: Calmnova-Code-1.0.5-arm64.dmg
+    sha512: PomEcwUKqWrNZA7bm2ADR4crBGoNqBBr57Y6O9xk8zKJb9Ain/gvR3lmvbewjHR8NO9tLtGeOTOi5JCFtOm+Tw==
+    size: 230175066
+path: Calmnova-Code-1.0.5-arm64.zip
+sha512: D+iH+dMzYjedST46TIXzEZdYBXcssicLi4mQpoW84pqAtvx87xeWPKKABtiQYJYVhiFkJ6UoC1h8SN+McUP7/g==
+releaseDate: '2026-09-07T09:18:18.348Z'

@@ -2,8 +2,13 @@ appId: com.calmnova.code
 productName: Calmnova Code
 executableName: Calmnova Code
 
-# No online update feed is configured for this local trial.
-publish: null
+# Production source is fixed; local dist always uses --publish never.
+publish:
+  provider: github
+  owner: yazhou421-source
+  repo: codeNexus
+  private: false
+  releaseType: draft
 
 directories:
   buildResources: build
@@ -50,6 +55,7 @@ extraResources:
     to: branding/app-icon.png
 
 mac:
+  hardenedRuntime: true
   icon: build/icon.icns
   artifactName: "Calmnova-Code-${version}-${arch}.${ext}"
   target:

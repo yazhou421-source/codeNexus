@@ -1,4 +1,5 @@
 import { RouterDiagnosticLog } from "./services/RouterDiagnosticLog";
+import { hasPendingUpdateWork } from "./services/updateActivity";
 import { repairCalmnovaCodexConfig } from "./codexConfigRepair";
 import { sharedCodexConfigPaths } from "./codexConfigProtection";
 import { app, autoUpdater as electronAutoUpdater, BrowserWindow, Menu } from "electron";
@@ -152,7 +153,7 @@ const updateService = new UpdateService(
   (payload) => {
     sendToRenderer(IPC_APP_CHANNELS.appUpdateState, payload);
   },
-  { canInstall: () => !codexServerManager.hasActiveTurns() }
+  { canInstall: () => !codexServerManager.hasActiveTurns() && !hasPendingUpdateWork() }
 );
 
 function pushHistoryUpdate(items: HistoryThread[]) {
@@ -290,6 +291,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  updateService.dispose();
   allowMainWindowClose = true;
   stopServicesForClose("before-quit", { stopProcessServices: true });
 });

@@ -3,6 +3,15 @@
     <header class="settings-card-head">
       <div class="settings-card-title">{{ t("settingsUpdate.title") }}</div>
       <div class="row settings-update-actions">
+        <button
+          v-if="updateState.status === 'error' && updateState.updateAvailable"
+          class="btn-mini"
+          type="button"
+          :disabled="actionRunning"
+          @click="onCheckAgain"
+        >
+          {{ t("settingsUpdate.check") }}
+        </button>
         <button class="btn-mini" type="button" :disabled="actionDisabled" @click="onPrimaryAction">
           {{ primaryActionLabel }}
         </button>
@@ -21,6 +30,13 @@
           <span class="mono">{{ updateState.latestVersion || t("settingsUpdate.unknown") }}</span>
         </div>
 
+        <div v-if="updateState.releaseDate" class="settings-row">
+          <span class="context-label dim">{{ t("settingsUpdate.releaseDate") }}</span>
+          <span>{{ new Date(updateState.releaseDate).toLocaleString() }}</span>
+        </div>
+        <p v-if="updateState.installMode === 'manual' && !updateUnavailable" class="dim text-[12px]">
+          {{ t("settingsUpdate.manualInstall") }}
+        </p>
         <div class="settings-row">
           <span class="context-label dim">{{ t("settingsUpdate.status") }}</span>
           <StatusIndicator
@@ -140,15 +156,30 @@ const primaryActionLabel = computed(() => {
   if (updateState.status === "checking") return t("settingsUpdate.checking");
   if (updateState.status === "downloading") return t("settingsUpdate.downloading");
   if (updateState.updateAvailable && !updateState.downloaded) return t("settingsUpdate.download");
-  if (updateState.status === "downloaded") return t("settingsUpdate.install");
+  if (updateState.status === "installing") return t("settingsUpdate.statuses.installing");
+  if (updateState.status === "downloaded")
+    return t(updateState.installMode === "manual" ? "settingsUpdate.openInstaller" : "settingsUpdate.install");
   return t("settingsUpdate.check");
 });
 
 const actionDisabled = computed(() => {
   if (actionRunning.value) return true;
   if (!updateState.isPackaged || updateUnavailable.value) return true;
-  return updateState.status === "checking" || updateState.status === "downloading";
+  return ["checking", "downloading", "installing"].includes(updateState.status);
 });
+
+const onCheckAgain = async () => {
+  if (actionRunning.value) return;
+  actionRunning.value = true;
+  actionError.value = "";
+  try {
+    applyState(await codexDesktop.app.checkForUpdates());
+  } catch {
+    actionError.value = t("settingsUpdate.actionFailed");
+  } finally {
+    actionRunning.value = false;
+  }
+};
 
 const onPrimaryAction = async () => {
   if (actionDisabled.value) return;

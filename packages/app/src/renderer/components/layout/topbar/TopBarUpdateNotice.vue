@@ -8,7 +8,6 @@
         'is-downloaded': updateState.status === 'downloaded',
       }"
       type="button"
-      :disabled="actionDisabled"
       :aria-label="ariaLabel"
       @click="onClick"
     >
@@ -19,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive } from "vue";
 import { useI18n } from "vue-i18n";
 import { Download, LoaderCircle, RotateCcw } from "lucide-vue-next";
 import { useAppShellStore } from "../../../stores/appShell.store";
@@ -43,7 +42,6 @@ const DEFAULT_STATE: AppUpdateSnapshot = {
 };
 
 const updateState = reactive<AppUpdateSnapshot>({ ...DEFAULT_STATE });
-const actionRunning = ref(false);
 let offUpdateState: (() => void) | null = null;
 
 const applyState = (next: AppUpdateSnapshot) => {
@@ -66,7 +64,7 @@ const label = computed(() => {
     return t("topbarUpdate.downloading", { percent: progressPercent.value });
   }
   if (updateState.status === "downloaded") return t("topbarUpdate.install");
-  return t("topbarUpdate.available");
+  return t("topbarUpdate.available", { version: updateState.latestVersion });
 });
 
 const ariaLabel = computed(() => {
@@ -84,24 +82,8 @@ const noticeIcon = computed(() => {
   return Download;
 });
 
-const actionDisabled = computed(() => actionRunning.value || updateState.status === "downloading");
-
-async function onClick() {
-  if (actionDisabled.value) return;
-  actionRunning.value = true;
-  try {
-    if (updateState.status === "downloaded") {
-      await codexDesktop.app.installUpdate();
-      return;
-    }
-    if (updateState.status === "available") {
-      applyState(await codexDesktop.app.downloadUpdate());
-    }
-  } catch {
-    useAppShellStore().openSettings("update");
-  } finally {
-    actionRunning.value = false;
-  }
+function onClick() {
+  useAppShellStore().openSettings("update");
 }
 
 onMounted(async () => {
