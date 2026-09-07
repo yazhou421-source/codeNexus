@@ -40,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Full verification
-        run: pnpm ci
+        run: pnpm run ci
       - name: Fetch Codex runtime
         run: pnpm --filter @codenexus/app codex:runtime:fetch -- --platform mac-arm64
       - name: Verify Codex runtime
