@@ -1,16 +1,6 @@
 <template>
   <div class="lsb-pane-content">
     <div class="lsb-pane-head">
-      <div class="lsb-pane-head-row">
-        <div class="lsb-pane-title">{{ t("threadHistory.title") }}</div>
-        <div class="lsb-head-badges">
-          <span class="lsb-head-badge is-accent mono">{{ threadsCountText }}</span>
-          <span v-if="runningThreadsCount > 0" class="lsb-head-badge is-success mono">
-            {{ t("threadHistory.runningCount", { count: runningThreadsCount }) }}
-          </span>
-        </div>
-      </div>
-
       <div class="lsb-pane-toolbar lsb-thread-toolbar">
         <button
           id="btn-add-thread"
@@ -36,6 +26,55 @@
       </div>
     </div>
 
+    <label class="history-search"
+      ><Search aria-hidden="true" /><input
+        v-model="searchQuery"
+        type="search"
+        :aria-label="locale.startsWith('zh') ? '搜索对话' : 'Search conversations'"
+        :placeholder="locale.startsWith('zh') ? '搜索对话…' : 'Search…'"
+    /></label>
+    <nav
+      v-if="!runtimeStore.workspacePath"
+      class="native-workspace-nav"
+      :aria-label="locale.startsWith('zh') ? '工作区' : 'Workspace'"
+    >
+      <span>{{ locale.startsWith("zh") ? "工作区" : "Workspace" }}</span>
+      <button
+        type="button"
+        :title="locale.startsWith('zh') ? '选择项目后浏览文件' : 'Open a project to browse files'"
+        @click="runtime.selectWorkspace()"
+      >
+        <Folder />{{ locale.startsWith("zh") ? "文件" : "Files" }}
+      </button>
+      <button
+        type="button"
+        :title="locale.startsWith('zh') ? '选择项目后打开代码' : 'Open a project to edit code'"
+        @click="runtime.selectWorkspace()"
+      >
+        <Code2 />{{ locale.startsWith("zh") ? "编辑器" : "Editor" }}
+      </button>
+      <button
+        type="button"
+        :title="locale.startsWith('zh') ? '选择项目后查看 Git 变更' : 'Open a project to review Git changes'"
+        @click="runtime.selectWorkspace()"
+      >
+        <GitBranch />Git
+      </button>
+      <button type="button" @click="appShellStore.openSettings('integrations')"><Bot />Agents</button>
+    </nav>
+    <div class="lsb-pane-head-row history-section-heading">
+      <div class="lsb-pane-title">{{ t("threadHistory.title") }}</div>
+      <div class="lsb-head-badges">
+        <span class="lsb-head-badge is-accent mono">{{ threadsCountText }}</span>
+        <span v-if="runningThreadsCount > 0" class="lsb-head-badge is-success mono">
+          {{ t("threadHistory.runningCount", { count: runningThreadsCount }) }}
+        </span>
+      </div>
+    </div>
+
+    <div v-if="searchQuery && !threadGroups.length" class="history-no-results">
+      {{ locale.startsWith("zh") ? "没有匹配的对话" : "No matching conversations" }}
+    </div>
     <div id="thread-history" class="lsb-scroll app-scrollbar">
       <div class="lsb-thread-groups" :class="{ dim: totalThreadListCount === 0 }">
         <template v-if="totalThreadListCount === 0">
@@ -97,7 +136,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { ChevronDown, Folder, RefreshCw, SquarePen } from "lucide-vue-next";
+import { Bot, ChevronDown, Code2, Folder, GitBranch, RefreshCw, Search, SquarePen } from "lucide-vue-next";
 import type { LocalThreadItem, ThreadHistoryItem } from "../../../domain/types";
 import { getRuntimeOrchestrator } from "../../../domain/runtimeOrchestrator";
 import { codexDesktop } from "../../../api/codexDesktopClient";
@@ -137,7 +176,8 @@ const appShellStore = useAppShellStore();
 const runtimeStore = useRuntimeStore();
 const threadStore = useThreadStore();
 const userInputStore = useUserInputStore();
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const searchQuery = ref("");
 
 const isRefreshingHistory = ref(false);
 const nowMs = ref(Date.now());
@@ -234,6 +274,14 @@ const threadGroups = computed<ThreadGroup[]>(() => {
     { key: string; title: string; cwdFull: string; updatedAt: number; items: ThreadListItem[] }
   >();
   for (const sourceItem of visibleThreadItems.value) {
+    const query = searchQuery.value.trim().toLowerCase();
+    if (
+      query &&
+      !`${threadStore.displayThreadTitle(sourceItem.id, sourceItem.title)} ${sourceItem.cwd || ""}`
+        .toLowerCase()
+        .includes(query)
+    )
+      continue;
     const item: ThreadListItem = {
       id: String(sourceItem.id ?? ""),
       title: threadStore.displayThreadTitle(sourceItem.id, sourceItem.title),

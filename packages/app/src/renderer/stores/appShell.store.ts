@@ -18,6 +18,11 @@ import { normalizeRegisteredMainView, shouldForceLeftSidebarVisible, type Featur
 
 export type IntegrationsDrawerTab = "skills" | "mcp";
 export type SettingsTab =
+  | "appearance"
+  | "defaults"
+  | "permissions"
+  | "skills"
+  | "mcp"
   | "global"
   | "models"
   | "profiles"

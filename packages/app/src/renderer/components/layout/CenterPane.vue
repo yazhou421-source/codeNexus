@@ -27,7 +27,9 @@
             </div>
 
             <ChatPane
-              v-else
+              v-if="!isTimelineLoading"
+              v-show="!shouldShowCenterEmptyState"
+              @content-presence="hasVisibleChatContent = $event"
               :contentEvents="contentTimelineEvents"
               :contentRevision="timelineContentRevision"
               :workspaceRoot="workspaceRoot"
@@ -316,11 +318,12 @@ const modelOptions = computed(() => {
   const ids = buildModelPickerOptions({
     customIds: modelCatalogStore.customIds,
     codexIds: modelCatalogStore.remoteIds,
-    providerIds: providerRegistryStore.availableModelIds,
+    providerIds: providerRegistryStore.pickerModelIds,
     current: runtimeStore.model,
   });
   return ids.map((id) => {
-    const knownProviderModel = providerRegistryStore.isKnownProviderModel(id);
+    const provider = providerRegistryStore.providers.find((p) => p.models.some((model) => model.id === id));
+    const knownProviderModel = Boolean(provider);
     const available = knownProviderModel
       ? providerRegistryStore.isAvailableProviderModel(id)
       : !modelCatalogStore.isRemoteModelUnavailable(id);
@@ -329,6 +332,9 @@ const modelOptions = computed(() => {
       value: id,
       label: !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
       disabled: !available,
+      description: provider
+        ? `${provider.displayName} · ${provider.models.find((model) => model.id === id)?.contextWindow || "—"} tokens`
+        : "",
     };
   });
 });
@@ -380,12 +386,11 @@ const shouldShowComposerPanel = computed(() => {
   return true;
 });
 const shouldShowQueueTray = computed(() => shouldShowComposerPanel.value && queueItems.value.length > 0);
-const shouldShowCenterEmptyState = computed(() => {
-  if (contentTimelineEvents.value.length > 0) return false;
-  if (emptyStateMode.value === "pendingThread") return true;
-  if (currentThreadId.value) return false;
-  return true;
+const hasVisibleChatContent = ref(false);
+watch(timelineKey, () => {
+  hasVisibleChatContent.value = false;
 });
+const shouldShowCenterEmptyState = computed(() => !hasVisibleChatContent.value);
 const composerDockSpacePx = computed(() => {
   if (!shouldShowComposerPanel.value) return 12;
   const dockHeight = composerDockHeightPx.value > 0 ? composerDockHeightPx.value : COMPOSER_DOCK_FALLBACK_HEIGHT_PX;

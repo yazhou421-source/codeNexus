@@ -107,11 +107,15 @@
     </div>
 
     <div
-      v-if="showTrailingThinkingEvent && trailingThinkingEvent"
+      v-if="
+        showTrailingThinkingEvent &&
+        trailingThinkingEvent &&
+        !chatRenderedRows.some((row) => row.kind === 'auxActivityGroup' && row.elapsedLive)
+      "
       :class="[CHAT_ROW_BASE_CLASS, 'chat-row--tail', 'chat-row--thinking']"
     >
       <div class="chat-thinking-line flex w-full max-w-full items-center justify-start pr-2.5">
-        <WaveText class="mono dim" :text="trailingThinkingEvent.paramsText" />
+        <StatusIndicator state="thinking" :label="trailingThinkingEvent.paramsText" />
       </div>
     </div>
 
@@ -175,7 +179,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
+import StatusIndicator from "../../ui/StatusIndicator.vue";
 import { useI18n } from "vue-i18n";
 import { Download, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-vue-next";
 import ChatTimelineViewport from "./ChatTimelineViewport.vue";
@@ -505,7 +510,7 @@ const sandboxModeOptions = computed(
 const modelOptions = computed(() => {
   const ids = buildModelPickerOptions({
     customIds: modelCatalogStore.customIds,
-    providerIds: providerRegistryStore.availableModelIds,
+    providerIds: providerRegistryStore.pickerModelIds,
     current: runtimeStore.model,
   });
   return ids.map((id) => {
@@ -519,4 +524,22 @@ const modelOptions = computed(() => {
     };
   });
 });
+const emit = defineEmits<{ "content-presence": [visible: boolean] }>();
+watch(
+  () =>
+    [
+      props.timelineKey,
+      chatRenderedRows.value.length,
+      Boolean(props.trailingThinkingEvent),
+      Boolean(props.trailingContextCompactionEvent),
+    ] as const,
+  () =>
+    emit(
+      "content-presence",
+      chatRenderedRows.value.length > 0 ||
+        Boolean(props.trailingThinkingEvent) ||
+        Boolean(props.trailingContextCompactionEvent)
+    ),
+  { immediate: true }
+);
 </script>

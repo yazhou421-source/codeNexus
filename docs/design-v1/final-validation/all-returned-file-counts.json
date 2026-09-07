@@ -1,0 +1,264 @@
+{
+  "scope": "HEAD → working tree, returned files only; untracked files use empty baseline",
+  "status": "ok",
+  "skipped": 189,
+  "allReturnedFilesMatch": true,
+  "files": [
+    {
+      "path": "packages/app/src/main/ipc/handlers/app.handlers.ts",
+      "add": 1,
+      "del": 1,
+      "gitAdd": 1,
+      "gitDel": 1,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/main/services/workspaceGitDiff.ts",
+      "add": 30,
+      "del": 2,
+      "gitAdd": 30,
+      "gitDel": 2,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/main/windows/mainWindow.ts",
+      "add": 28,
+      "del": 2,
+      "gitAdd": 28,
+      "gitDel": 2,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/App.vue",
+      "add": 152,
+      "del": 7,
+      "gitAdd": 152,
+      "gitDel": 7,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/chat/ChatAuxActivityGroup.vue",
+      "add": 156,
+      "del": 239,
+      "gitAdd": 156,
+      "gitDel": 239,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/BottomBar.vue",
+      "add": 4,
+      "del": 2,
+      "gitAdd": 4,
+      "gitDel": 2,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/CenterPane.vue",
+      "add": 13,
+      "del": 8,
+      "gitAdd": 13,
+      "gitDel": 8,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/CenterPaneEmptyState.vue",
+      "add": 96,
+      "del": 104,
+      "gitAdd": 96,
+      "gitDel": 104,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/LeftSidebar.vue",
+      "add": 12,
+      "del": 2,
+      "gitAdd": 12,
+      "gitDel": 2,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/SettingsPage.vue",
+      "add": 51,
+      "del": 59,
+      "gitAdd": 51,
+      "gitDel": 59,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/TopBar.vue",
+      "add": 8,
+      "del": 3,
+      "gitAdd": 8,
+      "gitDel": 3,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/chat/ChatPane.vue",
+      "add": 27,
+      "del": 4,
+      "gitAdd": 27,
+      "gitDel": 4,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/chat/ChatRowRenderer.vue",
+      "add": 1,
+      "del": 0,
+      "gitAdd": 1,
+      "gitDel": 0,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/composer/ComposerModelReasoningPicker.vue",
+      "add": 103,
+      "del": 9,
+      "gitAdd": 103,
+      "gitDel": 9,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/composer/ComposerPanel.vue",
+      "add": 6,
+      "del": 1,
+      "gitAdd": 6,
+      "gitDel": 1,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/composer/ComposerSandboxPicker.vue",
+      "add": 60,
+      "del": 10,
+      "gitAdd": 60,
+      "gitDel": 10,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/left-sidebar/ThreadHistoryPane.vue",
+      "add": 60,
+      "del": 12,
+      "gitAdd": 60,
+      "gitDel": 12,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/overlays/GlobalConfigDrawer.vue",
+      "add": 249,
+      "del": 228,
+      "gitAdd": 249,
+      "gitDel": 228,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/overlays/IntegrationsDrawer.vue",
+      "add": 1,
+      "del": 0,
+      "gitAdd": 1,
+      "gitDel": 0,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/settings/SettingsModelProvidersTab.vue",
+      "add": 24,
+      "del": 5,
+      "gitAdd": 24,
+      "gitDel": 5,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/settings/SettingsUpdateTab.vue",
+      "add": 32,
+      "del": 5,
+      "gitAdd": 32,
+      "gitDel": 5,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/skills/SkillsList.vue",
+      "add": 1,
+      "del": 0,
+      "gitAdd": 1,
+      "gitDel": 0,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/topbar/TopBarTurnDiffMenu.vue",
+      "add": 71,
+      "del": 49,
+      "gitAdd": 71,
+      "gitDel": 49,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/topbar/TopBarWindowControls.vue",
+      "add": 32,
+      "del": 29,
+      "gitAdd": 32,
+      "gitDel": 29,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/workspace/WorkspaceFileTreeView.vue",
+      "add": 28,
+      "del": 0,
+      "gitAdd": 28,
+      "gitDel": 0,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/workspace/WorkspaceFilesSidebar.vue",
+      "add": 35,
+      "del": 3,
+      "gitAdd": 35,
+      "gitDel": 3,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/layout/workspace/WorkspaceTreeEntryIcon.vue",
+      "add": 5,
+      "del": 25,
+      "gitAdd": 5,
+      "gitDel": 25,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/components/timeline/cards/TurnDiffSummaryCard.vue",
+      "add": 2,
+      "del": 7,
+      "gitAdd": 2,
+      "gitDel": 7,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/features/registry.ts",
+      "add": 5,
+      "del": 0,
+      "gitAdd": 5,
+      "gitDel": 0,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/features/timeline/renderModel/diff.ts",
+      "add": 55,
+      "del": 56,
+      "gitAdd": 55,
+      "gitDel": 56,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/stores/appShell.store.ts",
+      "add": 5,
+      "del": 0,
+      "gitAdd": 5,
+      "gitDel": 0,
+      "matched": true
+    },
+    {
+      "path": "packages/app/src/renderer/stores/providerRegistry.store.test.ts",
+      "add": 36,
+      "del": 0,
+      "gitAdd": 36,
+      "gitDel": 0,
+      "matched": true
+    }
+  ]
+}

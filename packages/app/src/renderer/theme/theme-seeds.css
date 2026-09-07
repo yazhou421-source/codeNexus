@@ -23,19 +23,19 @@
 :root[data-theme="light"] {
   color-scheme: light;
   --theme-seed-bg: rgb(255 255 255);
-  --theme-seed-surface-1: rgb(247 247 246);
-  --theme-seed-surface-2: rgb(240 240 239);
-  --theme-seed-surface-3: rgb(231 231 230);
+  --theme-seed-surface-1: #f8f9fb;
+  --theme-seed-surface-2: #f3f5f8;
+  --theme-seed-surface-3: #e2e6ec;
   --theme-seed-elevated: rgb(255 255 255);
-  --theme-seed-text: rgb(35 35 34);
-  --theme-seed-text-muted: rgb(111 111 108);
-  --theme-seed-border-source: rgb(35 35 34);
-  --theme-seed-shadow-source: rgb(35 35 34);
-  --theme-seed-accent: rgb(7 126 156);
+  --theme-seed-text: #111827;
+  --theme-seed-text-muted: #4b5563;
+  --theme-seed-border-source: #111827;
+  --theme-seed-shadow-source: #111827;
+  --theme-seed-accent: #6366f1;
   --theme-seed-accent-contrast: rgb(255 255 255);
-  --theme-seed-success: rgb(17 121 90);
-  --theme-seed-warning: rgb(166 88 24);
-  --theme-seed-danger: rgb(174 32 68);
+  --theme-seed-success: #10b981;
+  --theme-seed-warning: #f59e0b;
+  --theme-seed-danger: #ef4444;
 }
 
 :root[data-theme="pink"] {

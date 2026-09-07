@@ -155,16 +155,20 @@ import "./topbar/topbar.css";
 import type { MainView } from "@codenexus/shared/localSettings";
 
 const appShellStore = useAppShellStore();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const runtimeStore = useRuntimeStore();
 const workspaceFilesStore = useWorkspaceFilesStore();
 const threadStore = useThreadStore();
 const taskTitle = computed(() => {
   if (appShellStore.settingsOpen) return t("settings.pageAria");
   if (appShellStore.mainView !== "chat") return t(`topbar.${appShellStore.mainView}`);
+  const id = runtimeStore.currentThreadId || threadStore.currentThreadId;
+  if (!id) return t("threadHistory.newThread");
+  const item =
+    threadStore.threadHistory.find((item) => item.id === id) || threadStore.localThreads.find((item) => item.id === id);
   return (
-    threadStore.threadHistory.find((item) => item.id === runtimeStore.currentThreadId)?.title ||
-    t("threadHistory.newThread")
+    threadStore.displayThreadTitle(id, item?.title) ||
+    (locale.value.startsWith("zh") ? "当前对话" : "Current conversation")
   );
 });
 const diffMenuRef = ref<HTMLElement | null>(null);
@@ -177,6 +181,7 @@ function closeViewOutside(event: PointerEvent) {
   if (!viewMenuRef.value?.contains(event.target as Node)) closeViewMenu();
 }
 function closeDiffOutside(event: PointerEvent) {
+  if ((event.target as HTMLElement)?.closest?.(".panel-dialog")) return;
   if (!diffMenuRef.value?.contains(event.target as Node)) diffOpen.value = false;
 }
 function closeDiffOnEscape(event: KeyboardEvent) {

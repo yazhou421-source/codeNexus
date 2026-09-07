@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, Menu, MenuItem, shell } from "electron";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { normalizeSafeExternalUrl } from "../utils/externalUrl";
@@ -42,11 +42,14 @@ export async function createMainWindow(opts: MainWindowOptions): Promise<Browser
   const win = new BrowserWindow({
     title: "Calmnova Code",
     width: 1200,
-    minWidth: 950,
+    minWidth: 560,
     height: 780,
     autoHideMenuBar: true,
     backgroundColor: "#181818",
     frame: !useCustomTitlebar,
+    ...(process.platform === "darwin"
+      ? { titleBarStyle: "hiddenInset" as const, trafficLightPosition: { x: 12, y: 16 } }
+      : {}),
     icon: windowIcon,
     webPreferences: {
       // 预加载脚本负责暴露受控 API，渲染进程不直接访问 Node。
@@ -68,6 +71,29 @@ export async function createMainWindow(opts: MainWindowOptions): Promise<Browser
     }
   } catch (error) {
     logger.warn("window", "failed to set initial zoom factor", error);
+  }
+
+  // Native, transient zoom controls keep the renderer's responsive layout and macOS menu in sync.
+  if (process.platform === "darwin") {
+    const menu = Menu.getApplicationMenu();
+    const viewMenu = menu?.items.find((item) => item.role === "viewMenu" || item.label === "View")?.submenu;
+    if (menu && viewMenu && !viewMenu.items.some((item) => item.id === "calmnova-ui-zoom")) {
+      viewMenu.append(new MenuItem({ type: "separator" }));
+      viewMenu.append(
+        new MenuItem({
+          id: "calmnova-ui-zoom",
+          label: "UI Zoom",
+          submenu: [100, 125, 150, 200].map((percent) => ({
+            label: `${percent}%`,
+            click: (_item, focusedWindow) => {
+              const target = focusedWindow instanceof BrowserWindow ? focusedWindow : win;
+              if (!target.isDestroyed()) target.webContents.setZoomFactor(percent / 100);
+            },
+          })),
+        })
+      );
+      Menu.setApplicationMenu(menu);
+    }
   }
 
   // 禁止渲染进程自行打开新窗口；外链统一交给系统浏览器。

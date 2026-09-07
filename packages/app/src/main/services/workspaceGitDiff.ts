@@ -65,7 +65,7 @@ async function readCurrent(root: string, path: string): Promise<string | null> {
   }
 }
 
-function wholeFileDiff(path: string, before: string | null, after: string | null): string {
+function addedFileDiff(path: string, before: string | null, after: string | null): string {
   if (before === after) return "";
   const lines = (value: string | null) => (value ? value.replace(/\n$/, "").split("\n") : []);
   const oldLines = lines(before),
@@ -128,6 +128,12 @@ export async function readWorkspaceGitDiff(cwd: string): Promise<WorkspaceGitDif
         512 * 1024
       )
     ).toString();
+    const untracked = new Set(
+      status
+        .split("\0")
+        .filter((entry) => entry.startsWith("?? "))
+        .map((entry) => entry.slice(3))
+    );
     const paths = [
       ...new Set(
         status
@@ -162,7 +168,29 @@ export async function readWorkspaceGitDiff(cwd: string): Promise<WorkspaceGitDif
           }
         }
         const after = await readCurrent(workspace, full);
-        const patch = wholeFileDiff(relative(workspace, full).split(sep).join("/"), before, after);
+        // Use Git's real HEAD → working-tree hunks, including both staged and unstaged edits.
+        // Only genuinely new/unborn files need the empty-baseline representation.
+        const patch =
+          head && !untracked.has(name)
+            ? text(
+                await git(
+                  root,
+                  [
+                    "--literal-pathspecs",
+                    "diff",
+                    "--no-ext-diff",
+                    "--no-textconv",
+                    "--no-renames",
+                    "--no-color",
+                    `--relative=${relative(root, workspace).split(sep).join("/")}`,
+                    head,
+                    "--",
+                    name,
+                  ],
+                  TOTAL_LIMIT
+                )
+              )
+            : addedFileDiff(relative(workspace, full).split(sep).join("/"), before, after);
         if (Buffer.byteLength(diffText) + Buffer.byteLength(patch) > TOTAL_LIMIT) {
           skipped++;
           continue;

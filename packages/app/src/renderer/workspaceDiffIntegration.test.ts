@@ -5,7 +5,7 @@ describe("workspace Diff entry point", () => {
   it("does not label workspace changes as a turn diff for assistive technology", async () => {
     const source = await readFile(new URL("components/layout/topbar/TopBarTurnDiffMenu.vue", import.meta.url), "utf8");
     expect(source).toContain(":aria-label=\"t('topbarExtra.fileChanges')\"");
-    expect(source).toContain(':aria-label="diffHeading"');
+    expect(source).toContain(':title="diffHeading"');
     expect(source).not.toContain(":aria-label=\"t('topbarExtra.turnDiff')\"");
   });
   it("sends the workspace boundary with directory IPC reads", async () => {
@@ -22,8 +22,10 @@ describe("workspace Diff entry point", () => {
 
   it("renders only one selected Diff and retains native patches when Git has no diff", async () => {
     const source = await readFile(new URL("components/layout/topbar/TopBarTurnDiffMenu.vue", import.meta.url), "utf8");
-    expect(source.match(/<UnifiedDiffViewer /g)).toHaveLength(1);
-    expect(source).toContain("workspaceFilesStore.gitDiff.diffText || !currentTurnDiffText.value");
+    expect(source.match(/<UnifiedDiffViewer\s/g)).toHaveLength(1);
+    expect(source).toContain(
+      "selectReviewDiff(workspaceFilesStore.gitDiff, currentTurnDiffText.value, preferNative.value)"
+    );
     expect(source).toContain("preferNative");
   });
 });

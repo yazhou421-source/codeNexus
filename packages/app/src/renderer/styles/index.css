@@ -33,3 +33,5 @@
 @import "./foundation/workspace.css";
 @import "./layout/center/workspace.css";
 @import "./layout/settings-workspace.css";
+
+@import "./design-system.css";

@@ -32,8 +32,12 @@
           <header class="provider-card-head">
             <div>
               <div class="provider-card-title">{{ provider.displayName }}</div>
-              <div class="provider-card-status" :class="provider.configured ? 'is-configured' : 'is-unconfigured'">
-                {{ provider.configured ? t("providerSettings.configured") : t("providerSettings.notConfigured") }}
+              <div class="provider-card-status">
+                <span>{{ locale.startsWith("zh") ? "凭据" : "Credential" }}</span> ·
+                <StatusIndicator
+                  :state="provider.configured ? 'success' : 'idle'"
+                  :label="provider.configured ? t('providerSettings.configured') : t('providerSettings.notConfigured')"
+                />
               </div>
             </div>
             <div v-if="provider.configured" class="provider-card-actions">
@@ -58,7 +62,9 @@
           <div class="provider-credential-row">
             <template v-if="provider.configured && !editingProviderIds.has(provider.id)">
               <div class="provider-saved-key" aria-hidden="true">••••••••••••</div>
-              <span class="provider-saved-copy">{{ t("providerSettings.keySaved") }}</span>
+              <span class="provider-saved-copy">{{
+                locale.startsWith("zh") ? "密钥已安全保存" : "Credential securely saved"
+              }}</span>
               <button
                 class="btn-mini"
                 type="button"
@@ -101,7 +107,18 @@
             class="provider-verification"
             :class="`is-${provider.verification?.state || 'untested'}`"
           >
-            {{ verificationLabel(provider) }}
+            <span>{{ locale.startsWith("zh") ? "连接" : "Connection" }}</span> ·
+            <StatusIndicator :state="providerPresentation(provider).connection" :label="verificationLabel(provider)" />
+            <div class="provider-checked-at">
+              {{ locale.startsWith("zh") ? "上次检查" : "Last checked" }} ·
+              {{
+                provider.verification?.verifiedAt
+                  ? new Date(provider.verification.verifiedAt).toLocaleString()
+                  : locale.startsWith("zh")
+                    ? "暂无时间记录"
+                    : "No timestamp recorded"
+              }}
+            </div>
           </div>
 
           <div class="provider-models-title">{{ t("providerSettings.enabledModels") }}</div>
@@ -138,11 +155,13 @@ import { onMounted, reactive } from "vue";
 import { useI18n } from "vue-i18n";
 import type { RouterProviderStatus } from "@codenexus/shared/ipc/contracts";
 import { confirmModal } from "../../../ui/modal";
+import { providerPresentation } from "../../../domain/providerPresentation";
 import { useProviderRegistryStore } from "../../../stores/providerRegistry.store";
 
+import StatusIndicator from "../../ui/StatusIndicator.vue";
 import SettingsAccountStatus from "./SettingsAccountStatus.vue";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const store = useProviderRegistryStore();
 const keyDrafts = reactive<Record<string, string>>({});
 const statusByProvider = reactive<Record<string, string>>({});

@@ -1,0 +1,13 @@
+{
+  "status": "ok",
+  "skipped": 152,
+  "path": "packages/app/src/main/ipc/handlers/app.handlers.ts",
+  "renderer": {
+    "add": 1,
+    "del": 1,
+    "lineCount": 2,
+    "structured": true
+  },
+  "gitNumstat": "1\t1\tpackages/app/src/main/ipc/handlers/app.handlers.ts\n",
+  "gitStat": " packages/app/src/main/ipc/handlers/app.handlers.ts | 2 +-\n 1 file changed, 1 insertion(+), 1 deletion(-)\n"
+}

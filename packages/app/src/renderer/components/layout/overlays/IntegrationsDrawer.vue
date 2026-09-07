@@ -237,6 +237,7 @@
                           <input
                             class="skill-switch-input"
                             type="checkbox"
+                            :aria-label="server.id"
                             :checked="server.enabled"
                             :disabled="mcpPendingId === server.id || hasCcswitchConflict"
                             @click.stop

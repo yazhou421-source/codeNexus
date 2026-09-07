@@ -23,7 +23,18 @@
 
         <div class="settings-row">
           <span class="context-label dim">{{ t("settingsUpdate.status") }}</span>
-          <span class="mono">{{ statusText }}</span>
+          <StatusIndicator
+            :state="
+              updateUnavailable
+                ? 'unavailable'
+                : updateState.status === 'error'
+                  ? 'error'
+                  : updateState.status === 'checking'
+                    ? 'loading'
+                    : 'idle'
+            "
+            :label="statusText"
+          />
         </div>
 
         <div v-if="updateState.status === 'downloading'" class="settings-update-progress" aria-live="polite">
@@ -41,7 +52,14 @@
         </div>
 
         <div v-if="actionError" role="alert">{{ actionError }}</div>
-        <div v-if="updateState.checkedAt" class="dim text-[12px]">
+        <p v-if="updateUnavailable" class="update-next-step">
+          {{
+            locale.startsWith("zh")
+              ? "此版本无法在线更新。请从原来的 Calmnova Code 下载来源获取新版安装包；已有项目与对话不受影响。"
+              : "Online updates are unavailable for this build. Get a newer installer from your original Calmnova Code download source."
+          }}
+        </p>
+        <div v-if="updateState.checkedAt && !updateUnavailable" class="dim text-[12px]">
           {{ t("settingsUpdate.checkedAt") }}: {{ new Date(updateState.checkedAt).toLocaleString() }}
         </div>
         <div v-if="updateState.errorMessage" class="dim text-[12px] leading-[1.25]">
@@ -59,11 +77,13 @@
 </template>
 
 <script setup lang="ts">
+import StatusIndicator from "../../ui/StatusIndicator.vue";
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { codexDesktop } from "../../../api/codexDesktopClient";
 import type { AppUpdateSnapshot } from "@codenexus/shared/ipc/contracts";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const DEFAULT_STATE: AppUpdateSnapshot = {
   status: "idle",
@@ -88,7 +108,14 @@ const applyState = (next: AppUpdateSnapshot) => {
   Object.assign(updateState, next);
 };
 
-const statusText = computed(() => t(`settingsUpdate.statuses.${updateState.status}`));
+const updateUnavailable = computed(() => ["unconfigured", "unsupported"].includes(updateState.status));
+const statusText = computed(() =>
+  updateUnavailable.value
+    ? locale.value.startsWith("zh")
+      ? "在线更新不可用"
+      : "Online update unavailable"
+    : t(`settingsUpdate.statuses.${updateState.status}`)
+);
 
 const progressPercent = computed(() => {
   const percent = Number(updateState.progress?.percent ?? 0);
@@ -119,7 +146,7 @@ const primaryActionLabel = computed(() => {
 
 const actionDisabled = computed(() => {
   if (actionRunning.value) return true;
-  if (!updateState.isPackaged) return true;
+  if (!updateState.isPackaged || updateUnavailable.value) return true;
   return updateState.status === "checking" || updateState.status === "downloading";
 });
 

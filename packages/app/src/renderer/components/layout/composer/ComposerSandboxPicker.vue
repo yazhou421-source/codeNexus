@@ -7,7 +7,8 @@
     :disabled="disabled"
     aria-haspopup="listbox"
     :aria-expanded="open ? 'true' : 'false'"
-    :aria-label="t('composer.permission')"
+    :aria-label="`${t('composer.permission')}: ${selectedLabel}`"
+    :title="`${t('composer.permission')}: ${permissionCopy(modelValue).description}`"
     @pointerdown="onPreservePointerFocus"
     @click="onTriggerClick"
     @keydown="onTriggerKeydown"
@@ -26,7 +27,7 @@
         :data-composer-owner="interactionOwnerId || undefined"
         role="listbox"
         :aria-label="t('composer.permission')"
-        @pointerdown="onPreservePointerFocus"
+        @keydown="onListKeydown"
       >
         <button
           v-for="option in pickerOptions"
@@ -39,7 +40,12 @@
           :aria-selected="option.selected ? 'true' : 'false'"
           @click="onOptionClick(option.value)"
         >
-          <span class="composer-sandbox-option-label">{{ option.label }}</span>
+          <span class="composer-sandbox-option-copy"
+            ><span class="composer-sandbox-option-label">{{ option.label }}</span
+            ><span class="composer-sandbox-option-description">{{
+              permissionCopy(option.value).description
+            }}</span></span
+          >
           <Check v-if="option.selected" class="composer-sandbox-check" aria-hidden="true" />
         </button>
       </div>
@@ -71,7 +77,26 @@ const emit = defineEmits<{
   (event: "update:modelValue", value: SandboxMode): void;
 }>();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+function permissionCopy(value: string) {
+  const zh = locale.value.startsWith("zh");
+  if (value === "read-only")
+    return {
+      label: zh ? "只读" : "Read Only",
+      description: zh ? "只能查看项目，不修改文件。" : "View the project without modifying files.",
+    };
+  if (value === "workspace-write")
+    return {
+      label: zh ? "工作区" : "Workspace",
+      description: zh ? "可读取和修改当前工作区。" : "Read and modify files in the workspace.",
+    };
+  return {
+    label: zh ? "完全访问" : "Full Access",
+    description: zh
+      ? "可访问工作区外文件、运行命令及联网。仅用于可信任务。"
+      : "Access files outside the workspace, run commands and use the network. Trusted tasks only.",
+  };
+}
 const open = ref(false);
 const triggerRef = ref<HTMLButtonElement | null>(null);
 const popoverRef = ref<HTMLDivElement | null>(null);
@@ -79,7 +104,7 @@ const popoverStyle = ref<Record<string, string>>({});
 
 const POPOVER_GAP_PX = 6;
 const VIEWPORT_PADDING_PX = 8;
-const POPOVER_WIDTH_PX = 112;
+const POPOVER_WIDTH_PX = 280;
 
 function onPreservePointerFocus(event: PointerEvent) {
   if (props.preservePointerFocus) event.preventDefault();
@@ -100,12 +125,13 @@ const disabled = computed(() => Boolean(props.disabled));
 
 const selectedLabel = computed(() => {
   const hit = props.options.find((option) => option.value === props.modelValue);
-  return hit?.label ?? props.modelValue;
+  return hit ? permissionCopy(hit.value).label : props.modelValue;
 });
 
 const pickerOptions = computed(() =>
   props.options.map((option) => ({
     ...option,
+    label: permissionCopy(option.value).label,
     toneClass: `is-${normalizeToneKey(option.value)}`,
     selected: option.value === props.modelValue,
   }))
@@ -115,7 +141,7 @@ function updatePopoverPosition() {
   const trigger = triggerRef.value;
   if (!trigger) return;
   const rect = trigger.getBoundingClientRect();
-  const width = POPOVER_WIDTH_PX;
+  const width = Math.min(POPOVER_WIDTH_PX, window.innerWidth - VIEWPORT_PADDING_PX * 2);
   const left = Math.max(
     VIEWPORT_PADDING_PX,
     Math.min(Math.round(rect.left), window.innerWidth - width - VIEWPORT_PADDING_PX)
@@ -123,7 +149,7 @@ function updatePopoverPosition() {
   const spaceBelow = Math.max(0, window.innerHeight - VIEWPORT_PADDING_PX - rect.bottom - POPOVER_GAP_PX);
   const spaceAbove = Math.max(0, rect.top - POPOVER_GAP_PX - VIEWPORT_PADDING_PX);
   const openBelow = spaceBelow >= 120 || spaceBelow >= spaceAbove;
-  const estimatedHeight = Math.min(150, popoverRef.value?.scrollHeight || 150);
+  const estimatedHeight = Math.min(window.innerHeight - 16, popoverRef.value?.scrollHeight || 220);
   const top = openBelow
     ? rect.bottom + POPOVER_GAP_PX
     : Math.max(VIEWPORT_PADDING_PX, rect.top - POPOVER_GAP_PX - estimatedHeight);
@@ -133,6 +159,8 @@ function updatePopoverPosition() {
     left: `${Math.round(left)}px`,
     top: `${Math.round(top)}px`,
     width: `${width}px`,
+    maxHeight: `${Math.max(80, openBelow ? spaceBelow : spaceAbove)}px`,
+    overflowY: "auto",
   };
 }
 
@@ -141,11 +169,13 @@ async function openPicker() {
   open.value = true;
   await nextTick();
   updatePopoverPosition();
+  popoverRef.value?.querySelector<HTMLButtonElement>('[aria-selected="true"]')?.focus();
   window.requestAnimationFrame(() => updatePopoverPosition());
 }
 
-function closePicker() {
+function closePicker(restoreFocus = true) {
   open.value = false;
+  if (restoreFocus) triggerRef.value?.focus();
 }
 
 async function onTriggerClick() {
@@ -171,16 +201,36 @@ async function onTriggerKeydown(event: KeyboardEvent) {
   if (event.key === "Enter" || event.key === " ") {
     event.preventDefault();
     await onTriggerClick();
+    popoverRef.value?.querySelector<HTMLButtonElement>('[aria-selected="true"]')?.focus();
   }
 }
 
+function onListKeydown(event: KeyboardEvent) {
+  if (event.key === "Escape") {
+    event.stopPropagation();
+    closePicker();
+    triggerRef.value?.focus();
+    return;
+  }
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+  const buttons = Array.from(popoverRef.value?.querySelectorAll<HTMLButtonElement>("button") || []);
+  const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+  const next =
+    event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? buttons.length - 1
+        : (index + (event.key === "ArrowUp" ? -1 : 1) + buttons.length) % buttons.length;
+  event.preventDefault();
+  buttons[next]?.focus();
+}
 function onWindowPointerDownCapture(event: PointerEvent) {
   if (!open.value) return;
   const target = event.target as Node | null;
   if (!target) return;
   if (triggerRef.value?.contains(target)) return;
   if (popoverRef.value?.contains(target)) return;
-  closePicker();
+  closePicker(false);
 }
 
 function onWindowResizeOrScroll() {

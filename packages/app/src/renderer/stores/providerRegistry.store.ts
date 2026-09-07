@@ -1,3 +1,4 @@
+import { providerPresentation } from "../domain/providerPresentation";
 import { defineStore } from "pinia";
 import type { RouterProviderRegistrySnapshot, RouterProviderStatus } from "@codenexus/shared/ipc/contracts";
 import { DEFAULT_MODEL_NAME } from "@codenexus/shared/modelCatalog";
@@ -84,9 +85,14 @@ export const useProviderRegistryStore = defineStore("providerRegistry", {
   getters: {
     availableModelIds(state): string[] {
       return state.providers.flatMap((provider) =>
-        provider.configured && provider.enabled
+        providerPresentation(provider).selectable
           ? provider.models.filter((model) => model.selected).map((model) => model.id)
           : []
+      );
+    },
+    pickerModelIds(state): string[] {
+      return state.providers.flatMap((provider) =>
+        provider.configured ? provider.models.filter((model) => model.selected).map((model) => model.id) : []
       );
     },
     modelLabels(state): Record<string, string> {

@@ -1,0 +1,254 @@
+[
+  {
+    "name": "01-home-1440",
+    "file": "01-home-1440.png",
+    "label": "空白首页",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:39:45.748171+08:00",
+    "sha256": "a0ee54444969511810cd50c23f2fb5dfbb96f4e98922b06f31e7bf49047b1e18"
+  },
+  {
+    "name": "02-project-ready-1440",
+    "file": "02-project-ready-1440.png",
+    "label": "项目就绪",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:43:31.752883+08:00",
+    "sha256": "5dc1396c47e14a73efb4c9e0f8c2bd4c53ca7f73d556d83cf3251cdd20881bda"
+  },
+  {
+    "name": "03-chat-1440",
+    "file": "03-chat-1440.png",
+    "label": "AI 对话",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:46:03.729253+08:00",
+    "sha256": "a9fae5599ec4acf52e97b6afcaf7197004391b4f695348302f83d545eb5877b5"
+  },
+  {
+    "name": "04-thinking-live-1440",
+    "file": "04-thinking-live-1440.png",
+    "label": "真实 Thinking",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:44:33.270233+08:00",
+    "sha256": "36d3f90219f39b9b46899805d8d1521578afeb3ea5d2a81f7948a04634f1a0b7"
+  },
+  {
+    "name": "05-tool-live-1440",
+    "file": "05-tool-live-1440.png",
+    "label": "真实工具执行中",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:59:18.304358+08:00",
+    "sha256": "c7550473451bb0efe0b6886a2e2f477136b226e3f276ee27fced2a123059ebb2"
+  },
+  {
+    "name": "06-final-answer-1440",
+    "file": "06-final-answer-1440.png",
+    "label": "真实最终回答",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:46:16.888241+08:00",
+    "sha256": "a9fae5599ec4acf52e97b6afcaf7197004391b4f695348302f83d545eb5877b5"
+  },
+  {
+    "name": "07-editor-1440",
+    "file": "07-editor-1440.png",
+    "label": "代码编辑器",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:48:11.096775+08:00",
+    "sha256": "86d3ded765779fc3a04ad7a501c73682a79c1dc0201d471bd0593b07031a9bb7"
+  },
+  {
+    "name": "08-diff-1440",
+    "file": "08-diff-1440.png",
+    "label": "Diff 与 Git 统计",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:49:03.870867+08:00",
+    "sha256": "e433beb7f4d139f96cabb2eaa645a3cc13085962294c44d60dd6b595c87b0698"
+  },
+  {
+    "name": "09-model-menu-1440",
+    "file": "09-model-menu-1440.png",
+    "label": "模型选择",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:49:32.289081+08:00",
+    "sha256": "a6925fdf86c79e1518330eeccf6f29167cb8531ea7e0b51e1c006a582aa173ea"
+  },
+  {
+    "name": "10-permission-menu-1440",
+    "file": "10-permission-menu-1440.png",
+    "label": "权限边界",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:50:04.859327+08:00",
+    "sha256": "d73d2c566ae4cbe301787d4b42b315de256f947d23b8233990853d8b990a4e6e"
+  },
+  {
+    "name": "11-settings-general-1440",
+    "file": "11-settings-general-1440.png",
+    "label": "外观与语言",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:51:07.581999+08:00",
+    "sha256": "d271e29cbc73e4216a77ea0a7539a0a066d399f3d20494ddc3b34041e729a6f5"
+  },
+  {
+    "name": "12-settings-provider-1440",
+    "file": "12-settings-provider-1440.png",
+    "label": "服务与账户",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:51:41.539029+08:00",
+    "sha256": "61ef2f79be340bc2cfec9c494d609a282054bb996c288f3aa0dfd92660ef47fa"
+  },
+  {
+    "name": "13-settings-update-1440",
+    "file": "13-settings-update-1440.png",
+    "label": "应用更新",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2880,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:52:00.403862+08:00",
+    "sha256": "42a94c8c2f046fd205d8047673fe9926f36ab1d0e948bc177a1e990126ed663f"
+  },
+  {
+    "name": "14-workspace-1280",
+    "file": "14-workspace-1280.png",
+    "label": "工作区 · 1280",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      2560,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:52:40.901699+08:00",
+    "sha256": "dca741dff6fd0341eddebe1e68eabae7084e9cbaa38fcb4fd4c4647a672ab09c"
+  },
+  {
+    "name": "15-workspace-950",
+    "file": "15-workspace-950.png",
+    "label": "工作区 · 950",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      1899,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:53:00.836239+08:00",
+    "sha256": "f05c7d6b95595f9d7cbe03dc0c58ab2e6708c5bc942c0a224c8a657755e1809b"
+  },
+  {
+    "name": "16-workspace-700",
+    "file": "16-workspace-700.png",
+    "label": "工作区 · 700",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      1400,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:53:29.984156+08:00",
+    "sha256": "4fbf1ff86759ed11edabb9e380f16a09ccc888bda28cee04fee4817bdd169ee7"
+  },
+  {
+    "name": "17-workspace-560",
+    "file": "17-workspace-560.png",
+    "label": "工作区 · 560",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      1120,
+      1800
+    ],
+    "capturedAt": "2026-09-07T08:53:52.525422+08:00",
+    "sha256": "b5ffbd2b1b9ba3573204278d9d44ab0becccedfe45fb836108c99a3f1dad2218"
+  },
+  {
+    "name": "18-zoom-125",
+    "file": "18-zoom-125.jpg",
+    "label": "应用缩放 · 125%",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      1200,
+      711
+    ],
+    "capturedAt": "2026-09-07T08:55:09.398559+08:00",
+    "sha256": "79d88e652e0828610c6da896fb02fe88f9de3591157104193777b55698e6ce4c"
+  },
+  {
+    "name": "19-zoom-150",
+    "file": "19-zoom-150.jpg",
+    "label": "应用缩放 · 150%",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      1200,
+      711
+    ],
+    "capturedAt": "2026-09-07T08:55:10.880436+08:00",
+    "sha256": "892cb9eb1ee95c7414469786db6fa81a68feabe00764093a4980530d1a2acb1a"
+  },
+  {
+    "name": "20-zoom-200",
+    "file": "20-zoom-200.jpg",
+    "label": "应用缩放 · 200%",
+    "state": "真实 Electron 开发客户端",
+    "pixelSize": [
+      1200,
+      711
+    ],
+    "capturedAt": "2026-09-07T08:55:12.380799+08:00",
+    "sha256": "35d9b5a50ce7c58ff7287a70f5fcf2da704b9c6c52fc0bd74c882a675a46a9b8"
+  },
+  {
+    "name": "21-provider-unavailable",
+    "file": "21-provider-unavailable.png",
+    "label": "Provider 不可用 · 测试状态",
+    "state": "测试状态 · 不代表真实 Provider",
+    "pixelSize": [
+      1440,
+      884
+    ],
+    "capturedAt": "2026-09-07T08:38:37.046409+08:00",
+    "sha256": "92a061d6b32084ed4c3f54563f2b897e89f67abda8e69a63a9c6d4cbe5ef595e"
+  }
+]

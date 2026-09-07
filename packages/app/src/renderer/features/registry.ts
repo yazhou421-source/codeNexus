@@ -11,6 +11,11 @@ import {
 
 export type FeatureMainView = Exclude<MainView, "chat">;
 export type CoreSettingsTab =
+  | "appearance"
+  | "defaults"
+  | "permissions"
+  | "skills"
+  | "mcp"
   | "global"
   | "models"
   | "profiles"

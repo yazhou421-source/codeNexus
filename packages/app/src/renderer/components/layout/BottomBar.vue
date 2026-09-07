@@ -9,7 +9,9 @@
         <span class="bottom-bar__conn-icon" aria-hidden="true">
           <span class="bottom-bar__conn-dot"></span>
         </span>
-        <span class="bottom-bar__conn-text">{{ connectionLabel }}</span>
+        <span class="bottom-bar__conn-text"
+          >{{ locale.startsWith("zh") ? "本地运行时" : "Local Runtime" }} · {{ connectionLabel }}</span
+        >
       </div>
 
       <div class="bottom-bar__clock mono dim" :aria-label="t('bottomBar.currentTime', { time: timeText })">
@@ -26,7 +28,7 @@ import CodexProfileSwitch from "./controls/CodexProfileSwitch.vue";
 import { useAppShellStore } from "../../stores/appShell.store";
 
 const appShellStore = useAppShellStore();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const isCustomMode = computed(() => appShellStore.runtimeMode === "custom");
 

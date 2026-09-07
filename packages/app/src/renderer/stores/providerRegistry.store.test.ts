@@ -20,6 +20,7 @@ import type { RouterProviderRegistrySnapshot } from "@codenexus/shared/ipc/contr
 import { DEFAULT_MODEL_NAME } from "@codenexus/shared/modelCatalog";
 import { useRuntimeStore } from "./runtime.store";
 import { useProviderRegistryStore } from "./providerRegistry.store";
+import { providerPresentation } from "../domain/providerPresentation";
 
 function snapshot(overrides: Partial<RouterProviderRegistrySnapshot> = {}): RouterProviderRegistrySnapshot {
   return {
@@ -217,4 +218,53 @@ describe("providerRegistry store", () => {
     await expect(store.testConnection("deepseek")).rejects.toThrow("safe failure");
     expect(store.providers[0].verification).toMatchObject({ state: "failed", errorCode: "INVALID_API_KEY" });
   });
+});
+
+describe("Design V1 acceptance provider state matrix (no credentials)", () => {
+  it.each([
+    ["Configured + Available", true, "verified", null, true],
+    ["Configured + Unavailable", true, "failed", "PROVIDER_UNAVAILABLE", false],
+    ["Configured + Validation Failed", true, "failed", "INVALID_API_KEY", false],
+    ["Not Configured", false, "untested", null, false],
+    ["Checking", true, "testing", null, false],
+  ] as const)(
+    "%s keeps credential, connection, timestamp and model availability consistent",
+    (_label, configured, state, errorCode, available) => {
+      const store = useProviderRegistryStore();
+      store.applySnapshot(
+        snapshot({
+          providers: [
+            {
+              ...snapshot().providers[0],
+              configured,
+              verification: { state, errorCode, verifiedAt: state === "verified" ? "2026-09-07T00:00:00Z" : null },
+            },
+          ],
+        })
+      );
+      const provider = store.providers[0];
+      expect(provider.configured).toBe(configured);
+      expect(provider.verification).toEqual({
+        state,
+        errorCode,
+        verifiedAt: state === "verified" ? "2026-09-07T00:00:00Z" : null,
+      });
+      expect(providerPresentation(provider)).toEqual({
+        credential: configured ? "success" : "idle",
+        connection:
+          state === "verified"
+            ? "success"
+            : state === "failed"
+              ? "unavailable"
+              : state === "testing"
+                ? "loading"
+                : "idle",
+        lastChecked: state === "verified" ? "2026-09-07T00:00:00Z" : null,
+        selectable: available,
+      });
+      expect(store.isAvailableProviderModel("deepseek-v4-pro")).toBe(available);
+      expect(store.pickerModelIds.includes("deepseek-v4-pro")).toBe(configured);
+      expect(appApi.listRouterProviders).not.toHaveBeenCalled();
+    }
+  );
 });

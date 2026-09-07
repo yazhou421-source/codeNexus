@@ -302,7 +302,7 @@ export function registerAppHandlers(deps: {
   ipcMain.handle(IPC_APP_CHANNELS.appLocalSettingsPatch, async (_evt, args: { patch: UserLocalSettingsPatch }) => {
     const settings = await localSettingsService.patch(args?.patch ?? {});
     const win = getWindowOrNull();
-    if (win) {
+    if (win && args?.patch?.ui && "fontSizePreset" in args.patch.ui) {
       try {
         win.webContents.setZoomFactor(resolveUiFontSizeZoomFactor(settings.ui.fontSizePreset));
       } catch {}

@@ -6,6 +6,7 @@ export type ParsedDiff = {
   lines: DiffLine[];
   truncated: boolean;
   isUnified: boolean;
+  stats: { add: number; del: number };
 };
 
 export type DiffLineStats = {
@@ -20,66 +21,63 @@ const parsedDiffCache = new Map<string, ParsedDiff>();
 
 // 解析 unified diff 文本为行模型，供 Vue 列表直接渲染。
 export function parseUnifiedDiffLines(diffText: string): ParsedDiff {
-  const text = String(diffText ?? "");
-  const rawLines = text.split(/\r?\n/);
+  const rawLines = String(diffText ?? "").split(/\r?\n/);
   const lines: DiffLine[] = [];
-  let truncated = false;
-  let isUnified = false;
-
-  let inHunk = false;
-  let oldNo = 0;
-  let newNo = 0;
-
-  // 超过上限后停止继续解析，防止超大 diff 卡界面。
+  const stats = { add: 0, del: 0 };
+  let truncated = false,
+    isUnified = false;
+  let oldNo = 0,
+    newNo = 0,
+    oldRemaining = 0,
+    newRemaining = 0;
   const push = (line: DiffLine) => {
-    lines.push(line);
-    if (lines.length >= MAX_DIFF_LINES) truncated = true;
+    if (line.kind === "add") stats.add += 1;
+    if (line.kind === "del") stats.del += 1;
+    if (lines.length < MAX_DIFF_LINES) lines.push(line);
+    else truncated = true;
   };
-
   for (let i = 0; i < rawLines.length; i += 1) {
-    if (truncated) break;
     const line = rawLines[i] ?? "";
-
-    if (line.startsWith("@@")) {
-      const m = /@@\s*-(\d+)(?:,(\d+))?\s*\+(\d+)(?:,(\d+))?\s*@@/.exec(line);
-      if (m) {
-        isUnified = true;
-        inHunk = true;
-        oldNo = Math.max(0, Number.parseInt(m[1] || "0", 10));
-        newNo = Math.max(0, Number.parseInt(m[3] || "0", 10));
-      }
+    const hunk = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
+    if (hunk) {
+      isUnified = true;
+      oldNo = Number(hunk[1]);
+      newNo = Number(hunk[3]);
+      oldRemaining = Number(hunk[2] ?? 1);
+      newRemaining = Number(hunk[4] ?? 1);
       push({ kind: "hunk", oldNo: null, newNo: null, text: line });
       continue;
     }
-
-    if (/^(diff |index |--- |\+\+\+ )/.test(line)) {
-      push({ kind: "meta", oldNo: null, newNo: null, text: line });
-      continue;
+    // Hunk contents take priority over header-like content (e.g. an added '++ title').
+    if (oldRemaining || newRemaining) {
+      if (line.startsWith("+") && newRemaining > 0) {
+        push({ kind: "add", oldNo: null, newNo: newNo++, text: line });
+        newRemaining--;
+        continue;
+      }
+      if (line.startsWith("-") && oldRemaining > 0) {
+        push({ kind: "del", oldNo: oldNo++, newNo: null, text: line });
+        oldRemaining--;
+        continue;
+      }
+      if (line.startsWith(" ") && oldRemaining > 0 && newRemaining > 0) {
+        push({ kind: "ctx", oldNo: oldNo++, newNo: newNo++, text: line });
+        oldRemaining--;
+        newRemaining--;
+        continue;
+      }
+      if (line.startsWith("\\ No newline")) {
+        push({ kind: "meta", oldNo: null, newNo: null, text: line });
+        continue;
+      }
+      oldRemaining = 0;
+      newRemaining = 0;
     }
-
-    if (inHunk && line.startsWith("+") && !line.startsWith("+++")) {
-      push({ kind: "add", oldNo: null, newNo, text: line });
-      newNo += 1;
-      continue;
-    }
-
-    if (inHunk && line.startsWith("-") && !line.startsWith("---")) {
-      push({ kind: "del", oldNo, newNo: null, text: line });
-      oldNo += 1;
-      continue;
-    }
-
-    if (inHunk) {
-      push({ kind: "ctx", oldNo, newNo, text: line });
-      oldNo += 1;
-      newNo += 1;
-      continue;
-    }
-
-    push({ kind: "ctx", oldNo: i + 1, newNo: null, text: line });
+    const metadata =
+      isUnified || /^(diff |index |--- |\+\+\+ |new file |deleted file |rename |\\ No newline)/.test(line);
+    push({ kind: metadata ? "meta" : "ctx", oldNo: metadata ? null : i + 1, newNo: null, text: line });
   }
-
-  return { lines, truncated, isUnified };
+  return { lines, truncated, isUnified, stats };
 }
 
 // 读取/写入解析缓存，避免同一 diff 反复 parse。
@@ -119,12 +117,7 @@ export function getDiffLineStats(diffText: string, fileKind = ""): DiffLineStats
   if (!text.trim()) return { add: 0, del: 0, lineCount: 0, structured: false };
 
   const parsed = getParsedDiffCached(text);
-  let add = 0;
-  let del = 0;
-  for (const line of parsed.lines) {
-    if (line.kind === "add") add += 1;
-    else if (line.kind === "del") del += 1;
-  }
+  const { add, del } = parsed.stats;
 
   if (add > 0 || del > 0 || parsed.isUnified) {
     return { add, del, lineCount: add + del, structured: true };
@@ -162,4 +155,10 @@ export function getParsedDiffCacheStats(): { items: number; bytes: number; updat
 
 export function clearParsedDiffCache(): void {
   parsedDiffCache.clear();
+}
+
+/** Select one explicit baseline; never double count native turn changes inside a HEAD diff. */
+export function selectReviewDiff(workspace: { status: string; diffText: string }, turn: string, preferNative = false) {
+  const isWorkspace = workspace.status === "ok" && Boolean(workspace.diffText || !turn) && (!preferNative || !turn);
+  return { isWorkspace, diffText: isWorkspace ? workspace.diffText : turn };
 }

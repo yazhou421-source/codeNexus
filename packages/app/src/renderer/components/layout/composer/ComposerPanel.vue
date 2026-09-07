@@ -95,14 +95,19 @@
                 class="btn-mini composer-mode-button"
                 type="button"
                 :class="['is-agent', composeMode === 'default' ? 'is-active' : '']"
+                :aria-pressed="composeMode === 'default'"
+                :title="t('composer.execute')"
                 @click="emit('set-compose-mode', 'default')"
               >
-                <Bot class="composer-mode-icon" aria-hidden="true" /><span>{{ t("composer.execute") }}</span>
+                <Bot class="composer-mode-icon" aria-hidden="true" /><span>Agent</span>
               </button>
               <button
                 class="btn-mini composer-mode-button"
                 type="button"
                 :class="['is-plan', composeMode === 'plan' ? 'is-active' : '']"
+                :aria-label="t('composer.plan')"
+                :title="t('composer.plan')"
+                :aria-pressed="composeMode === 'plan'"
                 @click="emit('set-compose-mode', 'plan')"
               >
                 <ListTodo class="composer-mode-icon" aria-hidden="true" /><span>{{ t("composer.plan") }}</span>

@@ -1,6 +1,16 @@
 <template>
   <aside class="sidebar sidebar-left">
-    <div class="sidebar-brand"><BrandLogo kind="symbol" /><span>Calmnova Code</span></div>
+    <div class="sidebar-brand">
+      <BrandLogo kind="symbol" /><span>Calmnova Code</span
+      ><button
+        class="btn-icon workspace-drawer-close"
+        type="button"
+        :aria-label="t('common.close')"
+        @click="appShellStore.setLeftSidebarVisible(false, { save: false })"
+      >
+        <X />
+      </button>
+    </div>
     <div class="lsb-shell lsb-shell--threads-only">
       <section class="lsb-pane-frame" data-pane="threads">
         <ThreadHistoryPane />
@@ -13,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { Settings } from "lucide-vue-next";
+import { Settings, X } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 import BrandLogo from "../brand/BrandLogo.vue";
 import { useAppShellStore } from "../../stores/appShell.store";
