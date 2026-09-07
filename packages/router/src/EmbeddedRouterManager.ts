@@ -1,3 +1,4 @@
+import type { RouterServerRuntime } from "./server.js";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import {
@@ -35,6 +36,7 @@ export type EmbeddedRouterLog = (
 ) => void;
 
 export type EmbeddedRouterManagerOptions = {
+  onUpstreamDiagnostic?: RouterServerRuntime["onUpstreamDiagnostic"];
   healthProbeTimeoutMs?: number;
   resolveSecret?: RouterSecretResolver;
 };
@@ -44,6 +46,7 @@ export type EmbeddedRouterOwnedConnection = {
   authToken: string;
   routes: ReadonlyArray<{
     modelId: string;
+    supportsFast?: boolean;
     authMode: "api_key" | "codex_openai";
   }>;
 };
@@ -63,6 +66,7 @@ export class EmbeddedRouterManager {
   private activeConfig: RouterConfig | null = null;
   private state: LifecycleState = "idle";
   private readonly healthProbeTimeoutMs: number;
+  private readonly onUpstreamDiagnostic?: RouterServerRuntime["onUpstreamDiagnostic"];
   private readonly resolveSecret?: RouterSecretResolver;
 
   constructor(
@@ -74,6 +78,7 @@ export class EmbeddedRouterManager {
       500,
     );
     this.resolveSecret = options.resolveSecret;
+    this.onUpstreamDiagnostic = options.onUpstreamDiagnostic;
   }
 
   get running(): boolean {
@@ -112,6 +117,7 @@ export class EmbeddedRouterManager {
     const port = normalizedPort(config.port);
     this.activeConfig = config;
     const server = createRouterServer(config, {
+      onUpstreamDiagnostic: this.onUpstreamDiagnostic,
       getConfig: () => this.activeConfig ?? config,
       resolveSecret: this.resolveSecret,
     });
@@ -411,6 +417,13 @@ function routeAuthMetadata(
 ): EmbeddedRouterOwnedConnection["routes"] {
   return config.models.map((model) => ({
     modelId: model.id,
+    supportsFast:
+      (Array.isArray(model.additionalSpeedTiers) &&
+        model.additionalSpeedTiers.includes("fast")) ||
+      (Array.isArray(model.serviceTiers) &&
+        model.serviceTiers.some((tier) =>
+          ["fast", "priority"].includes(tier?.id),
+        )),
     authMode: model.authMode === "codex_openai" ? "codex_openai" : "api_key",
   }));
 }

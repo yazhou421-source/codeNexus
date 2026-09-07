@@ -11,6 +11,7 @@ import {
 } from "./codexExecutableResolver";
 import {
   applyCodexRouterModelProvider,
+  clearUnsupportedServiceTier,
   codexRouterModelProviderForModel,
   type CodexAppServerRuntimeConfig,
 } from "./codexRouterRuntime";
@@ -303,7 +304,11 @@ export class CodexAppServer {
     if (!isValidParams(params)) throw new Error(`invalid json-rpc params for method: ${method}`);
     await this.ensureRouterProviderForTurn(method, params, timeoutMs);
     const id: JsonRpcId = this.nextId++;
-    const routedParams = applyCodexRouterModelProvider(method, params, this.runtimeConfig);
+    const routedParams = clearUnsupportedServiceTier(
+      method,
+      applyCodexRouterModelProvider(method, params, this.runtimeConfig),
+      this.runtimeConfig
+    );
     const req: JsonRpcRequest = {
       id,
       method: method.trim(),

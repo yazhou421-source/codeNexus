@@ -9,6 +9,7 @@ export type CodexAppServerRuntimeConfig = {
   childEnv: Readonly<Record<string, string>>;
   sensitiveValues: readonly string[];
   localTokenModelIds: ReadonlySet<string>;
+  standardTierModelIds?: ReadonlySet<string>;
 };
 
 function tomlString(value: string): string {
@@ -62,6 +63,9 @@ export function createCodexRouterRuntime(
     childEnv: { [CODEX_ROUTER_TOKEN_ENV]: connection.authToken },
     sensitiveValues: [connection.authToken],
     localTokenModelIds,
+    standardTierModelIds: new Set(
+      connection.routes.filter((route) => route.supportsFast === false).map((route) => route.modelId)
+    ),
   };
 }
 
@@ -86,6 +90,7 @@ export function applyCodexRouterModelProvider(
 
   return {
     ...record,
+    ...(runtime.standardTierModelIds?.has(model) ? { serviceTier: "default" } : {}),
     modelProvider: codexRouterModelProviderForModel(model, runtime),
   };
 }
@@ -97,4 +102,16 @@ export function codexRouterModelProviderForModel(
   const modelId = typeof model === "string" ? model.trim() : "";
   if (!runtime || !modelId) return null;
   return runtime.localTokenModelIds.has(modelId) ? CODEX_ROUTER_PROVIDER_ID : CODEX_ROUTER_CODEX_AUTH_PROVIDER_ID;
+}
+
+/** Explicit default clears a stale thread/global Fast setting for unsupported models. */
+export function clearUnsupportedServiceTier(
+  method: string,
+  params: unknown,
+  runtime: CodexAppServerRuntimeConfig | null
+): unknown {
+  if (method !== "turn/start" || !params || typeof params !== "object" || Array.isArray(params)) return params;
+  const record = params as Record<string, unknown>;
+  if (!runtime?.standardTierModelIds?.has(String(record.model || ""))) return params;
+  return { ...record, serviceTier: "default", serviceTierForTurn: "default" };
 }

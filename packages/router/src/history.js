@@ -41,6 +41,42 @@ export class ResponseHistory {
     this.trim();
   }
 
+  // Codex replays Responses output items without previous_response_id. Restore
+  // only an exact output sequence that this Router produced on the same route.
+  // This also rejoins commentary + tool calls into the original Chat message.
+  restoreAssistantReplay(input, route) {
+    if (!Array.isArray(input)) return input;
+    const candidates = [];
+    for (const [id, response] of this.responses) {
+      const meta = this.responseMeta.get(id);
+      if (meta?.routeId !== route.id || meta?.upstreamModel !== route.model)
+        continue;
+      const assistant = this.entries.get(id)?.at(-1);
+      if (
+        assistant?.role !== "assistant" ||
+        typeof assistant.reasoning_content !== "string"
+      )
+        continue;
+      const output = response.output || [];
+      if (output.length) candidates.push({ output, assistant });
+    }
+    const restored = [];
+    for (let index = 0; index < input.length; ) {
+      const match = candidates.find(({ output }) =>
+        output.every((item, offset) =>
+          replayItemMatches(item, input[index + offset]),
+        ),
+      );
+      if (match) {
+        restored.push(cloneJson(match.assistant));
+        index += match.output.length;
+      } else {
+        restored.push(input[index++]);
+      }
+    }
+    return restored;
+  }
+
   getResponse(responseId) {
     if (!responseId || !this.responses.has(responseId)) {
       return null;
@@ -166,4 +202,26 @@ function trimContentFields(value, maxChars) {
 
 function byteSize(value) {
   return Buffer.byteLength(JSON.stringify(value ?? null), "utf8");
+}
+
+function replayItemMatches(original, replay) {
+  if (!replay || original.type !== replay.type) return false;
+  // Require stable upstream identity AND unchanged semantic content. Never use
+  // fuzzy text matching across conversations or accept client reasoning as ours.
+  if (original.type === "message") {
+    return (
+      original.id === replay.id &&
+      original.role === replay.role &&
+      JSON.stringify(original.content?.map((p) => [p.type, p.text])) ===
+        JSON.stringify(replay.content?.map((p) => [p.type, p.text]))
+    );
+  }
+  return (
+    ["function_call", "custom_tool_call"].includes(original.type) &&
+    original.call_id === replay.call_id &&
+    original.name === replay.name &&
+    original.namespace === replay.namespace &&
+    original.arguments === replay.arguments &&
+    original.input === replay.input
+  );
 }

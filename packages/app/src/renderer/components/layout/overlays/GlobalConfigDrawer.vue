@@ -132,10 +132,13 @@
                     <div
                       id="service-tier-toggle"
                       class="service-tier-segment"
-                      :class="{ 'is-fast': configStore.draft.fastModeEnabled, 'is-disabled': globalControlsDisabled }"
+                      :class="{
+                        'is-fast': effectiveFastMode,
+                        'is-disabled': globalControlsDisabled || !modelSupportsFast,
+                      }"
                       role="radiogroup"
                       :aria-label="t('globalConfig.serviceTier')"
-                      :aria-disabled="globalControlsDisabled ? 'true' : 'false'"
+                      :aria-disabled="globalControlsDisabled || !modelSupportsFast ? 'true' : 'false'"
                       @keydown.left.prevent="onServiceTierArrowKey(false)"
                       @keydown.right.prevent="onServiceTierArrowKey(true)"
                       @keydown.up.prevent="onServiceTierArrowKey(false)"
@@ -147,9 +150,9 @@
                         type="button"
                         class="service-tier-option mono"
                         role="radio"
-                        :aria-checked="!configStore.draft.fastModeEnabled ? 'true' : 'false'"
-                        :tabindex="configStore.draft.fastModeEnabled ? -1 : 0"
-                        :disabled="globalControlsDisabled"
+                        :aria-checked="!effectiveFastMode ? 'true' : 'false'"
+                        :tabindex="effectiveFastMode ? -1 : 0"
+                        :disabled="globalControlsDisabled || !modelSupportsFast"
                         @click="setServiceTier(false)"
                       >
                         {{ t("globalConfig.standard") }}
@@ -159,9 +162,9 @@
                         type="button"
                         class="service-tier-option mono"
                         role="radio"
-                        :aria-checked="configStore.draft.fastModeEnabled ? 'true' : 'false'"
-                        :tabindex="configStore.draft.fastModeEnabled ? 0 : -1"
-                        :disabled="globalControlsDisabled"
+                        :aria-checked="effectiveFastMode ? 'true' : 'false'"
+                        :tabindex="effectiveFastMode ? 0 : -1"
+                        :disabled="globalControlsDisabled || !modelSupportsFast"
                         @click="setServiceTier(true)"
                       >
                         {{ t("globalConfig.fast") }}
@@ -1304,8 +1307,11 @@ const onModelAutoCompactTokenLimitInput = (event: Event) => {
   configStore.setDraft({ modelAutoCompactTokenLimit: normalizeOptionalPositiveIntegerInput(target?.value ?? "") });
 };
 
+const modelSupportsFast = computed(() => modelCatalogStore.supportsFast(configStore.draft.model));
+const effectiveFastMode = computed(() => modelSupportsFast.value && configStore.draft.fastModeEnabled);
+
 const setServiceTier = (fastModeEnabled: boolean) => {
-  if (globalControlsDisabled.value) return;
+  if (globalControlsDisabled.value || !modelSupportsFast.value) return;
   configStore.setDraft({ fastModeEnabled });
 };
 

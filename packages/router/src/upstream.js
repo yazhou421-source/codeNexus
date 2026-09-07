@@ -1,3 +1,5 @@
+import { upstreamDiagnostic } from "./upstream-diagnostics.js";
+import { chatRequestDiagnostics } from "./responses-to-chat.js";
 /*! @license Adapted from CodexBridge (https://github.com/wangzhezbz/codex-bridge).
  * Copyright (c) 2026 wangzhezbz. Licensed under the MIT License; see the package LICENSE.
  */
@@ -419,6 +421,16 @@ export async function proxyChatCompletions(
   context = {},
 ) {
   const converted = responsesToChatRequest(requestBody, route, history);
+  context.requestDiagnostics = chatRequestDiagnostics(converted.body, route);
+  try {
+    context.onRequestDiagnostics?.({
+      requestId: context.requestId || "req",
+      route: route.id,
+      ...context.requestDiagnostics,
+    });
+  } catch {
+    /* Diagnostics must not affect requests. */
+  }
   const guard = inspectToolContinuation(
     responseInputToChatMessages(
       requestBody.messages ?? requestBody.input,
@@ -681,17 +693,19 @@ async function proxyNativeStreamingChatCompletions({
     route,
     converted,
     context,
-  });
-  history.record(streamed.response.id, [
-    ...messagesForHistory,
-    assistantHistoryMessageFromChat(streamed.chat),
-  ]);
-  history.recordResponse(streamed.response, {
-    api: "chat_completions",
-    routeId: route.id || "",
-    upstreamModel: route.model || "",
-    upstreamKnown: false,
-    toolGuardState: stateWithAssistant(toolGuardState, streamed.chat),
+    onComplete: (streamed) => {
+      history.record(streamed.response.id, [
+        ...messagesForHistory,
+        assistantHistoryMessageFromChat(streamed.chat),
+      ]);
+      history.recordResponse(streamed.response, {
+        api: "chat_completions",
+        routeId: route.id || "",
+        upstreamModel: route.model || "",
+        upstreamKnown: false,
+        toolGuardState: stateWithAssistant(toolGuardState, streamed.chat),
+      });
+    },
   });
   logUsage(context, route, streamed.chat.usage);
 }
@@ -1713,7 +1727,15 @@ export function upstreamErrorLogPreview(error, knownSecrets = []) {
   if (!(error instanceof UpstreamHttpError) || !error.bodyText) {
     return "";
   }
-  return ` body=${safeText(redactSensitiveText(error.bodyText, knownSecrets), 500)}`;
+  const diagnostic = upstreamDiagnostic(
+    "req",
+    { id: "upstream" },
+    error,
+    knownSecrets,
+  );
+  if (!diagnostic) return "";
+  const { code, type, param, message } = diagnostic;
+  return ` body=${JSON.stringify({ error: { code, type, param, message } })}`;
 }
 
 function networkErrorMessage(cause, upstreamUrl, route = {}, proxyLabel = "") {
