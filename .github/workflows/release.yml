@@ -46,20 +46,35 @@ jobs:
       - name: Verify Codex runtime
         run: pnpm --filter @codenexus/app codex:runtime:verify -- --platform mac-arm64
       - name: Package (never publish from electron-builder)
+        shell: bash
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Empty credentials deliberately produce the documented ad-hoc bootstrap.
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' && 'true' || 'false' }}
         run: |
+          # GitHub creates empty env vars for missing secrets; builder requires absence.
+          for credential in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [[ -z "${!credential}" ]]; then unset "$credential"; fi
+          done
           args=(--config electron-builder.yml --mac dmg zip --arm64 --publish never)
-          if [[ -n "$CSC_LINK" ]]; then args+=(-c.forceCodeSigning=true); fi
+          export CSC_IDENTITY_AUTO_DISCOVERY=false
+          notarize=false
+          if [[ -n "${CSC_LINK:-}" ]]; then
+            export CSC_IDENTITY_AUTO_DISCOVERY=true
+            args+=(-c.forceCodeSigning=true)
+            if [[ -n "${APPLE_ID:-}" && -n "${APPLE_APP_SPECIFIC_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-}" ]]; then
+              notarize=true
+            fi
+          fi
+          args+=("-c.mac.notarize=$notarize")
           pnpm --filter @codenexus/app exec electron-builder "${args[@]}"
-          if [[ -n "$CSC_LINK" ]]; then
+          if [[ -n "${CSC_LINK:-}" ]]; then
             codesign --verify --deep --strict "packages/app/release/mac-arm64/Calmnova Code.app"
+          fi
+          # A successful builder run with complete credentials has awaited notarization.
+          if [[ "$notarize" == true ]]; then
             xcrun stapler validate "packages/app/release/mac-arm64/Calmnova Code.app"
           fi
       - name: Verify names, version, size and SHA-512
