@@ -1,3 +1,4 @@
+import { assertNotSharedCodexConfig } from "../../codexConfigProtection";
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, Notification, shell } from "electron";
 import { execFile } from "node:child_process";
 import { appendFile, mkdir, readFile, readdir, realpath, stat, unlink, writeFile } from "node:fs/promises";
@@ -235,6 +236,7 @@ export function registerAppHandlers(deps: {
     async (_evt, args: { path: string; content: string; encoding?: AppTextEncoding }) => {
       const filePath = resolveLocalFilePath(args?.path ?? "");
       if (!filePath) throw new Error("app:writeTextFile requires path");
+      await assertNotSharedCodexConfig(filePath);
       const content = String(args?.content ?? "");
       const encoding = args?.encoding === "UTF-8 BOM" ? "UTF-8 BOM" : "UTF-8";
       await mkdir(dirname(filePath), { recursive: true });
@@ -246,6 +248,7 @@ export function registerAppHandlers(deps: {
   ipcMain.handle(IPC_APP_CHANNELS.appDeleteFile, async (_evt, args: { path: string }) => {
     const filePath = resolveLocalFilePath(args?.path ?? "");
     if (!filePath) throw new Error("app:deleteFile requires path");
+    await assertNotSharedCodexConfig(filePath);
     const info = await stat(filePath);
     if (!info.isFile()) throw new Error("app:deleteFile path is not a file");
     await unlink(filePath);
@@ -281,6 +284,7 @@ export function registerAppHandlers(deps: {
   ipcMain.handle(IPC_APP_CHANNELS.appGetFileMetadata, async (evt, args: { path: string }) => {
     const lease = await deps.workspaceAccess.path(evt, args?.path);
     const filePath = lease.path;
+    await assertNotSharedCodexConfig(filePath);
     const info = await stat(filePath);
     lease.assertCurrent();
     return {
@@ -351,6 +355,7 @@ export function registerAppHandlers(deps: {
       const apiKey = String(args?.apiKey ?? "").trim();
       const customPath = String(args?.filePath ?? "").trim();
       const authPath = customPath || join(homedir(), ".codex", "auth.json");
+      await assertNotSharedCodexConfig(authPath);
       let existing: Record<string, unknown> = {};
       try {
         existing = tryParseObjectJson(await readFile(authPath, "utf8"));

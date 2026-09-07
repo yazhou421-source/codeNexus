@@ -26,6 +26,11 @@ describe("signed-in Codex model catalog", () => {
     expect((await h.service.list()).map((model) => model.model)).toEqual(["gpt-6-astra", "gpt-5.5"]);
     expect(h.server.request).toHaveBeenCalledWith("model/list", { cursor: "page2", limit: 200, includeHidden: false });
     expect(h.server.stop).toHaveBeenCalledOnce();
+    expect(h.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        globalConfigOverrides: ["model_provider='openai'", "openai_base_url='https://chatgpt.com/backend-api/codex'"],
+      })
+    );
   });
   it("does not invent Astra if the account does not return it", async () => {
     const h = harness([{ data: [{ model: "gpt-5.5" }], nextCursor: null }]);
@@ -45,5 +50,10 @@ describe("signed-in Codex model catalog", () => {
     expect(result.every((entry) => entry.status === "rejected")).toBe(true);
     expect(h.create).toHaveBeenCalledOnce();
     expect(h.server.stop).toHaveBeenCalledOnce();
+    expect(h.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        globalConfigOverrides: ["model_provider='openai'", "openai_base_url='https://chatgpt.com/backend-api/codex'"],
+      })
+    );
   });
 });

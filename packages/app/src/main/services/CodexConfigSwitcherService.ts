@@ -1,3 +1,4 @@
+import { assertNotSharedCodexConfig } from "../codexConfigProtection";
 import { copyFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
@@ -234,6 +235,7 @@ export class CodexConfigSwitcherService {
   }
 
   async restoreBackup(backupIdValue: string): Promise<CodexConfigSwitcherMutationResult> {
+    await assertNotSharedCodexConfig(this.codexConfigPathValue);
     const backupId = normalizeText(backupIdValue);
     if (!backupId) throw new Error("backupId is required");
     const current = await this.readStateFromDisk();

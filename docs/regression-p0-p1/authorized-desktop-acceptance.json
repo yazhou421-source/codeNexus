@@ -1,0 +1,114 @@
+{
+  "startedAt": "2026-09-07T03:30:11.065653+00:00",
+  "beforeSha256": "d4bafa80748ef27f5c9b3d6544a82008f966591ff76b8228f1bfcb74d58ddc5c",
+  "authorization": "User explicitly allowed local DevTools read-only account/catalog status diagnostics.",
+  "officialDesktop": "User confirmed successful official desktop messages before, during and after Calmnova; tool did not operate official desktop.",
+  "calmnovaBuild": "packages/app/release/regression-p0-p1-final/mac-arm64/Calmnova Code.app",
+  "startup": "User handled keychain prompt; final packaged desktop opened successfully.",
+  "accountState": "logged_in",
+  "remoteLoadState": "ready",
+  "remoteLoadedAt": 1788752179116,
+  "modelIds": [
+    "gpt-6-astra",
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "gpt-5.6-luna",
+    "gpt-5.5",
+    "gpt-5.4-mini",
+    "gpt-5.3-codex-spark"
+  ],
+  "modelCount": 7,
+  "desktopMessage": {
+    "model": "gpt-6-astra",
+    "effort": "low",
+    "access": "read-only",
+    "prompt": "reply only: OK",
+    "result": "OK",
+    "threadSuffix": "c83896a3"
+  },
+  "draftChecks": {
+    "startupComposerEmpty": true,
+    "acceptedSendClearsComposer": true,
+    "newThreadEmptyWithOriginalDraft": true,
+    "originalThreadDraftRestored": true,
+    "newThreadPreservesAstraLowReadOnly": true,
+    "testDraftRemoved": true
+  },
+  "settingsChecks": [
+    "Default model page opened: 7 available models; refresh executed.",
+    "Provider DeepSeek Flash toggled off then restored on.",
+    "Legacy imported Router profile at port 15722 enable attempted: blocked with process-scoped error confirmed in local console."
+  ],
+  "normalQuitAt": "2026-09-07T03:39:46.045003+00:00",
+  "afterQuitSha256": "d4bafa80748ef27f5c9b3d6544a82008f966591ff76b8228f1bfcb74d58ddc5c",
+  "followup": "Visible Router rejection feedback fixed and verified in final package; nine-step desktop acceptance passed.",
+  "finalNineSteps": {
+    "beforeSha256": "d4bafa80748ef27f5c9b3d6544a82008f966591ff76b8228f1bfcb74d58ddc5c",
+    "officialInitial": {
+      "result": "OK",
+      "source": "User explicitly confirmed successful response and official window remains open",
+      "confirmedAt": "2026-09-07T03:40:56.563877+00:00"
+    },
+    "preLaunchSha256": "d4bafa80748ef27f5c9b3d6544a82008f966591ff76b8228f1bfcb74d58ddc5c",
+    "calmnova": {
+      "result": "OK",
+      "model": "gpt-6-astra",
+      "effort": "low",
+      "permission": "read-only",
+      "threadSuffix": "a86de89f",
+      "uiSentAt": "2026-09-07 11:42:17 +08:00",
+      "source": "Native Calmnova desktop UI observed"
+    },
+    "duringSha256": "d4bafa80748ef27f5c9b3d6544a82008f966591ff76b8228f1bfcb74d58ddc5c",
+    "officialDuring": {
+      "result": "OK",
+      "source": "User confirmed: 成功返回了",
+      "confirmedAt": "2026-09-07T03:49:42.620152+00:00"
+    },
+    "calmnovaNormalQuitAt": "2026-09-07T03:49:42.620229+00:00",
+    "afterQuitSha256": "d4bafa80748ef27f5c9b3d6544a82008f966591ff76b8228f1bfcb74d58ddc5c",
+    "specifiedGrepMatchCount": 0,
+    "router15722ConnectResult": 1,
+    "router15722ConnectResultNote": "Sandbox EPERM; not used as port evidence.",
+    "routerAfterQuit": "lsof -nP -iTCP:15722 -sTCP:LISTEN: no output, exit 1 (no listener).",
+    "officialAfterQuit": {
+      "result": "OK",
+      "source": "User explicitly confirmed: 退出后官方成功返回 OK",
+      "confirmedAt": "2026-09-07T03:50:56.333348+00:00"
+    },
+    "finalSha256": "d4bafa80748ef27f5c9b3d6544a82008f966591ff76b8228f1bfcb74d58ddc5c",
+    "beforeEqualsAfter": true,
+    "finalSpecifiedGrep": "No output; exit 1 (no matches).",
+    "status": "passed"
+  },
+  "finalBuildChecks": {
+    "packagedBuildMatches": 536,
+    "restartedHomepageComposerEmpty": true,
+    "restartedPreferences": "gpt-6-astra / low / read-only",
+    "legacyRouterEnable": "Rejected with persistent page error and existing toast; official config unchanged"
+  },
+  "finalProcessEndpointObservation": [
+    {
+      "pid": 1855,
+      "parentPid": 1814,
+      "routerEndpointOverrides": [
+        "http://127.0.0.1:15722/codex-auth/v1",
+        "http://127.0.0.1:15722/v1"
+      ],
+      "officialCatalogEndpointPresent": false
+    },
+    {
+      "pid": 1860,
+      "parentPid": 1814,
+      "routerEndpointOverrides": [
+        "http://127.0.0.1:15722/codex-auth/v1",
+        "http://127.0.0.1:15722/v1"
+      ],
+      "officialCatalogEndpointPresent": false
+    }
+  ],
+  "finalProcessParent": {
+    "pid": 1814,
+    "executable": "packages/app/release/regression-p0-p1-final/mac-arm64/Calmnova Code.app/Contents/MacOS/Calmnova Code"
+  }
+}

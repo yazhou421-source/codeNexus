@@ -154,6 +154,14 @@ export default {
     enableCustomMode: "进入实验模式",
     returnAgentMode: "返回 AI Agent 模式",
   },
+  modelAvailability: {
+    login: "请先登录 ChatGPT/Codex",
+    loading: "正在读取可用模型…",
+    error: "模型列表暂时无法刷新",
+    account: "当前账户暂不可用",
+    provider: "服务连接不可用 · 请检查服务设置",
+    fallback: "{model} 当前未对该账户开放，已切换到可用模型。",
+  },
   providerSettings: {
     aria: "AI 模型服务设置",
     title: "AI 模型",

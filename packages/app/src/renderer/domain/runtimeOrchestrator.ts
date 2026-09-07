@@ -1,3 +1,5 @@
+import { useModelCatalogStore } from "../stores/modelCatalog.store";
+import { useProviderRegistryStore } from "../stores/providerRegistry.store";
 import type { Pinia } from "pinia";
 import { codexDesktop } from "../api/codexDesktopClient";
 import { showToast } from "../ui/toast";
@@ -787,6 +789,22 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
     const composeAttachments = cloneComposeAttachmentsForSend(draft.composeAttachments);
     const composeFileMentions = cloneComposeMentionsForSend(draft.composeFileMentions);
     const requestedModel = String(draft.model ?? runtimeStore.model ?? "").trim();
+    const catalog = useModelCatalogStore();
+    const providers = useProviderRegistryStore();
+    const providerModel = providers.isKnownProviderModel(requestedModel);
+    if (
+      providerModel
+        ? !providers.isAvailableProviderModel(requestedModel)
+        : catalog.isRemoteModelUnavailable(requestedModel)
+    ) {
+      showToast({
+        kind: "warn",
+        message: translate(
+          `modelAvailability.${providerModel ? "provider" : catalog.availabilityReason(requestedModel) || "account"}`
+        ),
+      });
+      return false;
+    }
     const requestedReasoningEffort = String(draft.reasoningEffort ?? runtimeStore.reasoningEffort ?? "").trim();
     const requestedSandboxMode = String(draft.sandboxMode ?? runtimeStore.sandboxMode ?? "").trim();
     const requestedComposeMode = draft.composeMode ?? runtimeStore.composeMode;
@@ -832,7 +850,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
       const nextCount = Number.isFinite(prevCount) ? Math.max(0, Math.round(prevCount)) + 1 : 1;
       runtimeStore.setPendingThreadInitSendCount(threadId, nextCount);
 
-      if (clearRuntimeDraftOnAccept) clearRuntimeStoreDraftAfterSend();
+      if (clearRuntimeDraftOnAccept) await clearRuntimeStoreDraftAfterSend();
 
       const localUserEventId = `local:user:${Date.now()}:${Math.random().toString(16).slice(2)}`;
       const localUserMessageId = `local-user-msg:${Date.now()}:${Math.random().toString(16).slice(2)}`;
@@ -932,7 +950,7 @@ export function initRuntimeOrchestrator(pinia: Pinia): RuntimeOrchestrator {
 
     clearThreadLocalContextCompactionEvents(threadId);
 
-    if (clearRuntimeDraftOnAccept) clearRuntimeStoreDraftAfterSend();
+    if (clearRuntimeDraftOnAccept) await clearRuntimeStoreDraftAfterSend();
 
     const running = threadStore.runningThreadIds.has(threadId);
     if (running && mode === "auto") {

@@ -270,6 +270,8 @@
 </template>
 
 <script setup lang="ts">
+import { importableCodexConfig } from "../../../domain/importableCodexConfig";
+import { isCalmnovaRouterProvider, isCalmnovaCodexEndpoint } from "@codenexus/shared/codexConfigOwnership";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import {
@@ -653,7 +655,12 @@ async function applyProfile(id: string) {
     });
     return;
   }
-  await runtime.applyCodexProfile(id);
+  errorText.value = "";
+  try {
+    await runtime.applyCodexProfile(id);
+  } catch (error) {
+    errorText.value = error instanceof Error ? error.message : String(error);
+  }
 }
 
 async function duplicateProfile(profile: CodexProviderProfile) {
@@ -786,7 +793,7 @@ async function readCodexConfig(): Promise<Record<string, unknown> | null> {
     method: "config/read",
     params: { includeLayers: true, ...(cwd ? { cwd } : {}) },
   });
-  return readRecord((result as any)?.config);
+  return importableCodexConfig(result);
 }
 
 async function loadDefaultCodexPaths() {
@@ -806,7 +813,7 @@ async function autoImportCurrentCodexConfig() {
   const providers = readRecord(config.model_providers);
   const provider = readRecord(providers?.[providerId]);
   const baseUrl = String(provider?.base_url ?? "").trim();
-  if (!baseUrl) return;
+  if (!baseUrl || isCalmnovaRouterProvider(providerId) || isCalmnovaCodexEndpoint(baseUrl)) return;
   const exists = profilesStore.profiles.some((item) => item.modelProviderId === providerId || item.id === providerId);
   if (exists) return;
   const auth = await codexDesktop.app.readCodexAuthApiKey().catch(() => null);

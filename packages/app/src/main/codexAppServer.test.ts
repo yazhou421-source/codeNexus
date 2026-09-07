@@ -6,6 +6,24 @@ import { CodexAppServer, buildCodexAppServerSpawnCommand, redactCodexChildValue 
 import type { CodexAppServerRuntimeConfig } from "./codexRouterRuntime";
 
 describe("Codex app-server spawn configuration", () => {
+  it("keeps account catalog overrides process-scoped and distinct from Router thread routing", () => {
+    const server = new CodexAppServer({
+      id: "catalog",
+      mode: "native",
+      globalConfigOverrides: ["model_provider='openai'", "openai_base_url='https://chatgpt.com/backend-api/codex'"],
+    });
+    (server as any).nativeCodex = { kind: "direct", path: "/opt/codex" };
+    expect((server as any).getSpawnCommand().args).toEqual([
+      "-c",
+      "model_provider='openai'",
+      "-c",
+      "openai_base_url='https://chatgpt.com/backend-api/codex'",
+      "app-server",
+      "--listen",
+      "stdio://",
+    ]);
+    expect((server as any).runtimeConfig).toBeNull();
+  });
   it("identifies the desktop client as Calmnova Code during initialize", async () => {
     const server = new CodexAppServer({ id: "identity", mode: "native" });
     const request = vi.fn(async () => ({}));

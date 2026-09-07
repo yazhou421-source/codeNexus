@@ -16,8 +16,8 @@ function normalizeRemoteModelIds(models: unknown): string[] {
   const seen = new Set<string>();
   const ids: string[] = [];
   for (const item of list) {
-    const id = normalizeModelId((item as any)?.model ?? (item as any)?.id);
-    if (!id || item.hidden || seen.has(id)) continue;
+    const id = normalizeModelId((item as any)?.model || (item as any)?.id);
+    if (!id || item?.hidden || seen.has(id)) continue;
     seen.add(id);
     ids.push(id);
   }
@@ -32,6 +32,7 @@ export const useModelCatalogStore = defineStore("modelCatalog", {
     remoteLoadState: "idle" as RemoteLoadState,
     remoteErrorText: "" as string,
     remoteIds: [] as string[],
+    remoteModels: [] as Model[],
     generation: 0,
     lastAccountState: "unknown" as string,
     retryAttempt: 0,
@@ -39,11 +40,44 @@ export const useModelCatalogStore = defineStore("modelCatalog", {
     remoteLoadedAt: 0 as number,
   }),
   getters: {
+    fallbackModelId(state): string {
+      return (
+        state.remoteModels.find((m) => m.isDefault && !m.hidden)?.model ||
+        (state.remoteIds.includes("gpt-5.6-sol") ? "gpt-5.6-sol" : state.remoteIds[0]) ||
+        ""
+      );
+    },
     availableModelIds(state): string[] {
       return buildAvailableModelIds(state.customIds, [], state.remoteIds);
     },
   },
   actions: {
+    availabilityReason(id: string): "login" | "loading" | "error" | "account" | "" {
+      if (["logged_out", "expired"].includes(this.lastAccountState)) return "login";
+      if (this.remoteLoadedAt > 0 && this.remoteIds.includes(id)) return "";
+      if (this.remoteLoadState === "error") return "error";
+      if (["idle", "loading"].includes(this.remoteLoadState)) return "loading";
+      return "account";
+    },
+    reconcileSelection(
+      current: string,
+      effort: string
+    ): { model: string; reasoningEffort: string; replaced: boolean } | null {
+      // Only a complete, successful account response authorizes changing a selection.
+      if (this.remoteLoadState !== "ready" || !this.remoteLoadedAt || this.lastAccountState !== "logged_in")
+        return null;
+      const model = this.remoteIds.includes(current) ? current : this.fallbackModelId;
+      if (!model) return null;
+      const metadata = this.remoteModels.find((m) => m.model === model);
+      const efforts = metadata?.supportedReasoningEfforts?.map((o) => o.reasoningEffort) ?? [];
+      const reasoningEffort =
+        !efforts.length || efforts.includes(effort as never)
+          ? effort
+          : efforts.includes(metadata!.defaultReasoningEffort)
+            ? metadata!.defaultReasoningEffort
+            : efforts[0];
+      return { model, reasoningEffort, replaced: model !== current };
+    },
     initLocalSettings() {
       const cached = getCachedUserLocalSettings();
       this.customIds = normalizeCustomModelIds(cached.settings.models?.customIds);
@@ -59,6 +93,7 @@ export const useModelCatalogStore = defineStore("modelCatalog", {
       this.remoteLoadState = "idle";
       this.remoteErrorText = "";
       this.remoteIds = [];
+      this.remoteModels = [];
       this.remoteLoadedAt = 0;
       this.retryAttempt = 0;
     },
@@ -100,6 +135,9 @@ export const useModelCatalogStore = defineStore("modelCatalog", {
         if (!Array.isArray(result.data) || result.nextCursor) throw new Error("Incomplete model catalog");
         if (generation !== this.generation) return false;
         this.remoteIds = normalizeRemoteModelIds(result.data);
+        this.remoteModels = result.data
+          .filter((m) => m && !m.hidden)
+          .map((m) => ({ ...m, model: normalizeModelId(m.model || m.id) }));
         this.remoteLoadState = "ready";
         this.remoteLoadedAt = Date.now();
         this.retryAttempt = 0;

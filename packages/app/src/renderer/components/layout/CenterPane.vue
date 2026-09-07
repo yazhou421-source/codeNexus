@@ -332,9 +332,13 @@ const modelOptions = computed(() => {
       value: id,
       label: !available ? `${baseLabel} · ${t("providerSettings.unavailable")}` : baseLabel,
       disabled: !available,
-      description: provider
-        ? `${provider.displayName} · ${provider.models.find((model) => model.id === id)?.contextWindow || "—"} tokens`
-        : "",
+      description: !available
+        ? t(`modelAvailability.${provider ? "provider" : modelCatalogStore.availabilityReason(id) || "account"}`)
+        : provider
+          ? `${provider.displayName} · ${provider.models.find((model) => model.id === id)?.contextWindow || "—"} tokens`
+          : modelCatalogStore.availabilityReason(id)
+            ? t(`modelAvailability.${modelCatalogStore.availabilityReason(id)}`)
+            : "",
     };
   });
 });
@@ -645,6 +649,7 @@ const sendTitle = computed(() => {
   return isTurnRunning.value ? t("composer.sendQueuedWhenRunning") : t("composer.sendMessage");
 });
 const sendDisabled = computed(() => {
+  if (modelOptions.value.find((o) => o.value === runtimeStore.model)?.disabled) return true;
   return (
     !hasMeaningfulComposeText(runtimeStore.composeInput) &&
     runtimeStore.composeAttachments.length === 0 &&
@@ -1207,6 +1212,32 @@ watch(
     if (state === "error" && modelCatalogStore.retryAttempt <= 1)
       showToast({ kind: "error", message: t("globalConfig.remoteModels.error"), timeoutMs: 8000 });
   }
+);
+
+watch(
+  () => [
+    modelCatalogStore.remoteLoadedAt,
+    modelCatalogStore.remoteLoadState,
+    modelCatalogStore.lastAccountState,
+    runtimeStore.model,
+    runtimeStore.reasoningEffort,
+  ],
+  () => {
+    if (providerRegistryStore.isKnownProviderModel(runtimeStore.model)) return;
+    const previous = runtimeStore.model;
+    const next = modelCatalogStore.reconcileSelection(previous, runtimeStore.reasoningEffort);
+    if (!next) return;
+    runtimeStore.model = next.model;
+    runtimeStore.reasoningEffort = next.reasoningEffort;
+    if (next.replaced)
+      showToast({
+        kind: "info",
+        message: t("modelAvailability.fallback", {
+          model: modelCatalogStore.remoteModels.find((m) => m.model === previous)?.displayName || previous,
+        }),
+      });
+  },
+  { immediate: true }
 );
 
 function refreshAccountModelChoices() {

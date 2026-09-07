@@ -126,3 +126,83 @@ describe("dynamic account model choices", () => {
     expect(store.remoteLoadState).toBe("error");
   });
 });
+
+describe("authoritative selection recovery", () => {
+  it("G/H prefers server default and corrects unsupported effort without hardcoded authorization", async () => {
+    const store = useModelCatalogStore();
+    store.lastAccountState = "logged_in";
+    api.listAccountModels.mockResolvedValue({
+      data: [
+        {
+          model: "gpt-5.6-sol",
+          supportedReasoningEfforts: [{ reasoningEffort: "low" }],
+          defaultReasoningEffort: "low",
+        },
+        {
+          model: "account-recommended",
+          isDefault: true,
+          supportedReasoningEfforts: [{ reasoningEffort: "medium" }],
+          defaultReasoningEffort: "medium",
+        },
+      ],
+      nextCursor: null,
+    });
+    await store.refreshRemoteModels();
+    expect(store.reconcileSelection("gpt-6-astra", "ultra")).toEqual({
+      model: "account-recommended",
+      reasoningEffort: "medium",
+      replaced: true,
+    });
+  });
+  it("uses Sol only if returned; otherwise the first returned model", async () => {
+    const store = useModelCatalogStore();
+    store.lastAccountState = "logged_in";
+    api.listAccountModels.mockResolvedValueOnce(catalog("other", "gpt-5.6-sol")).mockResolvedValue(catalog("other"));
+    await store.refreshRemoteModels();
+    expect(store.fallbackModelId).toBe("gpt-5.6-sol");
+    await store.refreshRemoteModels();
+    expect(store.fallbackModelId).toBe("other");
+  });
+  it("I/J never replaces selection during failure, loading or logout", async () => {
+    const store = useModelCatalogStore();
+    store.lastAccountState = "logged_in";
+    api.listAccountModels.mockResolvedValueOnce(catalog("gpt-6-astra")).mockRejectedValue(new Error("timeout"));
+    await store.refreshRemoteModels();
+    await store.refreshRemoteModels();
+    expect(store.reconcileSelection("old", "low")).toBeNull();
+    expect(store.availabilityReason("gpt-6-astra")).toBe("");
+    expect(store.availabilityReason("old")).toBe("error");
+    await store.accountStatusChanged("logged_out");
+    expect(store.availabilityReason("gpt-6-astra")).toBe("login");
+    expect(store.reconcileSelection("gpt-6-astra", "low")).toBeNull();
+  });
+  it("L treats hidden as picker visibility, never silently enables a hidden entry", async () => {
+    const store = useModelCatalogStore();
+    store.lastAccountState = "logged_in";
+    api.listAccountModels.mockResolvedValue({
+      data: [{ model: "hidden", hidden: true, isDefault: true }, { id: "visible" }],
+      nextCursor: null,
+    });
+    await store.refreshRemoteModels();
+    expect(store.remoteIds).toEqual(["visible"]);
+    expect(store.fallbackModelId).toBe("visible");
+    expect(store.availabilityReason("hidden")).toBe("account");
+  });
+  it("M late pre-login response cannot overwrite a newer successful generation", async () => {
+    let finish!: (value: ReturnType<typeof catalog>) => void;
+    api.listAccountModels
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          })
+      )
+      .mockResolvedValue(catalog("gpt-6-astra"));
+    const store = useModelCatalogStore();
+    const old = store.refreshRemoteModels();
+    await store.accountStatusChanged("logged_in");
+    finish(catalog("stale"));
+    await old;
+    expect(store.remoteIds).toEqual(["gpt-6-astra"]);
+  });
+});

@@ -1,3 +1,4 @@
+import { isCalmnovaRouterProvider, isCalmnovaCodexEndpoint } from "@codenexus/shared/codexConfigOwnership";
 import { codexDesktop } from "../../api/codexDesktopClient";
 import type { useCodexProfilesStore } from "../../stores/codexProfiles.store";
 import type { ConfigWriteChange } from "../serverInterop";
@@ -96,6 +97,9 @@ export function createCodexProfileRuntime(deps: CodexProfileRuntimeDeps): CodexP
 
     codexProfilesStore.applyingProfileId = id;
     try {
+      if (isCalmnovaRouterProvider(profile.modelProviderId) || isCalmnovaCodexEndpoint(profile.baseUrl)) {
+        throw new Error("Router configuration is process-scoped. Use AI provider settings.");
+      }
       const deepSeekProxy =
         profile.providerKind === "deepseek-chat"
           ? await codexDesktop.app.prepareDeepSeekProxy({ upstreamBaseUrl: profile.baseUrl })
