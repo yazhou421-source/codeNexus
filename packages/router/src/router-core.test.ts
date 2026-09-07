@@ -553,7 +553,7 @@ describe("Embedded Router API", () => {
     });
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(JSON.stringify(body)).toContain("stopped repeated tool loop");
+    expect(body.stop_reason).toBe("tool_loop_guard");
     expect(body.output).not.toContainEqual(
       expect.objectContaining({ type: "function_call" }),
     );
@@ -605,10 +605,192 @@ describe("Embedded Router API", () => {
     const body = await response.text();
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/event-stream");
-    expect(upstreamRequestBody).toMatchObject({ stream: false });
-    expect(body).toContain("stopped repeated tool loop");
+    expect(upstreamRequestBody).toBeUndefined();
+    expect(body).toContain("tool_loop_guard");
     expect(body).not.toContain('"type":"function_call"');
     expect(body).toContain("response.completed");
+  });
+
+  it.each([false, true])(
+    "allows the fourth tool after three distinct calls (stream=%s)",
+    async (stream) => {
+      const { origin } = await stackWithUpstream(toolCallUpstream);
+      const response = await postJson(origin, {
+        model: "test-model",
+        stream,
+        tools: [readFileTool()],
+        input: [
+          userMessage("survey"),
+          ...["ls", "find", "package.json"].flatMap((path, i) => [
+            { ...toolCall(`c${i}`), arguments: JSON.stringify({ path }) },
+            { ...toolOutput(`c${i}`), output: `new information ${i}` },
+          ]),
+        ],
+      });
+      const body = await response.text();
+      expect(body).toContain('"type":"function_call"');
+      expect(body).not.toContain("tool_pause");
+    },
+  );
+
+  it.each([false, true])(
+    "preserves incremental context through eight reads and a final answer (stream=%s)",
+    async (stream) => {
+      const received: Record<string, any>[] = [];
+      const { origin } = await stackWithUpstream(async (request, response) => {
+        received.push(await readRequestJson(request));
+        const i = received.length;
+        const message =
+          i <= 8
+            ? {
+                role: "assistant",
+                tool_calls: [
+                  {
+                    id: `c${i}`,
+                    index: 0,
+                    type: "function",
+                    function: {
+                      name: "read_file",
+                      arguments: JSON.stringify({ path: `file${i}` }),
+                    },
+                  },
+                ],
+              }
+            : { role: "assistant", content: "Survey complete" };
+        if (stream) {
+          response.writeHead(200, { "content-type": "text/event-stream" });
+          response.end(
+            chatSse({
+              id: `chatcmpl_step${i}`,
+              choices: [
+                {
+                  index: 0,
+                  delta: message,
+                  finish_reason: i <= 8 ? "tool_calls" : "stop",
+                },
+              ],
+            }) + "data: [DONE]\n\n",
+          );
+        } else {
+          response.writeHead(200, { "content-type": "application/json" });
+          response.end(
+            JSON.stringify({ id: `chatcmpl_step${i}`, choices: [{ message }] }),
+          );
+        }
+      });
+      let previous: string | undefined;
+      for (let i = 0; i <= 8; i++) {
+        const response = await postJson(origin, {
+          model: "test-model",
+          stream,
+          tools: [readFileTool()],
+          previous_response_id: previous,
+          input: i
+            ? [{ ...toolOutput(`c${i}`), output: `new information ${i}` }]
+            : "survey",
+        });
+        const raw = await response.text();
+        const body = stream
+          ? JSON.parse(
+              raw
+                .split("\n")
+                .find(
+                  (line) =>
+                    line.startsWith("data: ") &&
+                    line.includes('"type":"response.completed"'),
+                )!
+                .slice(6),
+            ).response
+          : JSON.parse(raw);
+        expect(body.stop_reason).toBeUndefined();
+        previous = body.id;
+        if (i < 8)
+          expect(
+            body.output.some((item: any) => item.type === "function_call"),
+          ).toBe(true);
+        else expect(body.output_text).toBe("Survey complete");
+      }
+      expect(received).toHaveLength(9);
+      expect(JSON.stringify(received.at(-1))).toContain("new information 8");
+    },
+  );
+
+  it("stops before another upstream request, preserves latest output and resumes without replaying the survey", async () => {
+    const received: Record<string, any>[] = [];
+    const { origin } = await stackWithUpstream(async (request, response) => {
+      received.push(await readRequestJson(request));
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          id: "chatcmpl_resumed",
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: "Analysis from retained results",
+              },
+            },
+          ],
+        }),
+      );
+    });
+    const paused = await (
+      await postJson(origin, {
+        model: "test-model",
+        tools: [readFileTool()],
+        input: [
+          userMessage("read-only survey"),
+          ...[1, 2, 3].flatMap((i) => [
+            toolCall(`c${i}`),
+            { ...toolOutput(`c${i}`), output: "latest retained result" },
+          ]),
+        ],
+      })
+    ).json();
+    expect(paused.stop_reason).toBe("tool_loop_guard");
+    expect(paused.metadata.stop_reason).toBe("tool_loop_guard");
+    expect(received).toHaveLength(0);
+    const resumed = await (
+      await postJson(origin, {
+        model: "test-model",
+        tools: [readFileTool()],
+        previous_response_id: paused.id,
+        input: "从最新工具结果继续当前任务，不重复已经完成的检查。",
+      })
+    ).json();
+    expect(received).toHaveLength(1);
+    expect(JSON.stringify(received[0].messages)).toContain(
+      "latest retained result",
+    );
+    expect(JSON.stringify(received[0].messages)).toContain("read-only survey");
+    expect(resumed.output_text).toBe("Analysis from retained results");
+    expect(resumed.stop_reason).toBeUndefined();
+  });
+
+  it("enforces the default absolute ceiling for different progressing calls", async () => {
+    let upstreamCalls = 0;
+    const { origin } = await stackWithUpstream((req, res) => {
+      upstreamCalls++;
+      toolCallUpstream(req, res);
+    });
+    const body = await (
+      await postJson(origin, {
+        model: "test-model",
+        tools: [readFileTool()],
+        input: [
+          userMessage("survey"),
+          ...Array.from({ length: 16 }, (_, i) => [
+            {
+              ...toolCall(`c${i}`),
+              arguments: JSON.stringify({ path: `file${i}` }),
+            },
+            { ...toolOutput(`c${i}`), output: `new ${i}` },
+          ]).flat(),
+        ],
+      })
+    ).json();
+    expect(body.stop_reason).toBe("tool_limit_reached");
+    expect(upstreamCalls).toBe(0);
   });
 
   it("returns a safe cached product error after a provider 429", async () => {

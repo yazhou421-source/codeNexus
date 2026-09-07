@@ -16,6 +16,7 @@ import {
   interactivePluginKindForRequest,
   responseRequestToChatSourceMessages,
   responsesToChatRequest,
+  responseInputToChatMessages,
 } from "./responses-to-chat.js";
 import {
   assistantHistoryMessageFromResponse,
@@ -31,7 +32,12 @@ import {
 } from "./image-generation.js";
 import { fetchInitWithProxy, proxyLogLabel } from "./proxy.js";
 import { markRouteRateLimited, waitForRouteCapacity } from "./rate-limit.js";
-import { isResponseToolCallItem, isResponseToolOutputItem } from "./tools.js";
+import { isResponseToolOutputItem } from "./tools.js";
+import {
+  inspectToolContinuation,
+  stateWithAssistant,
+  toolPauseChat,
+} from "./tool-loop-guard.js";
 import { redactSensitiveText } from "./redaction.js";
 
 const CHATGPT_CODEX_BASE_URL = "https://chatgpt.com/backend-api/codex";
@@ -39,7 +45,6 @@ const FAILURE_CACHE_MAX_ENTRIES = 200;
 const FAILURE_CACHE_DEFAULT_TTL_MS = 30_000;
 const FAILURE_CACHE_FATAL_TTL_MS = 120_000;
 const FAILURE_CACHE_TRANSIENT_TTL_MS = 15_000;
-const DEFAULT_CHAT_TOOL_CONTINUATION_TURNS = 2;
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 300_000;
 
 const recentUpstreamFailures = new Map();
@@ -414,7 +419,50 @@ export async function proxyChatCompletions(
   context = {},
 ) {
   const converted = responsesToChatRequest(requestBody, route, history);
-  const toolContinuationTurns = chatToolContinuationTurns(requestBody, history);
+  const guard = inspectToolContinuation(
+    responseInputToChatMessages(
+      requestBody.messages ?? requestBody.input,
+      converted.toolContext,
+    ),
+    history?.getResponseMeta?.(requestBody.previous_response_id)
+      ?.toolGuardState,
+    route,
+  );
+  if (guard.stop) {
+    const chat = toolPauseChat(guard.stop);
+    const response = chatResponseToResponse(
+      chat,
+      requestBody.model || route.id,
+      converted.toolContext,
+    );
+    response.stop_reason = guard.stop.reason;
+    response.metadata = {
+      stop_reason: guard.stop.reason,
+      tool_guard: guard.stop,
+    };
+    history.record(response.id, [
+      ...converted.messagesForHistory,
+      assistantHistoryMessageFromChat(chat),
+    ]);
+    history.recordResponse(response, {
+      api: "chat_completions",
+      routeId: route.id || "",
+      upstreamKnown: false,
+      localFallback: guard.stop.reason,
+      stopReason: guard.stop.reason,
+      toolGuardState: guard.state,
+    });
+    if (converted.wantsStream) {
+      res.writeHead(200, {
+        "content-type": "text/event-stream; charset=utf-8",
+        "cache-control": "no-cache",
+        connection: "keep-alive",
+      });
+      res.end(responseToSse(response));
+    } else jsonResponse(res, 200, response);
+    return;
+  }
+  const toolGuardState = guard.state;
   const upstreamUrl = joinUpstreamUrl(route.baseUrl, "/chat/completions");
   logRoute(context, route, upstreamUrl);
   let messagesForHistory = converted.messagesForHistory;
@@ -428,7 +476,7 @@ export async function proxyChatCompletions(
       converted,
       upstreamUrl,
       messagesForHistory,
-      toolContinuationTurns,
+      toolGuardState,
     });
   }
   let upstream;
@@ -486,8 +534,8 @@ export async function proxyChatCompletions(
     context,
   );
   logUsage(context, route, adjustedUpstream.usage);
-  let chatForHistory = adjustedUpstream;
-  let response = chatResponseToResponse(
+  const chatForHistory = adjustedUpstream;
+  const response = chatResponseToResponse(
     adjustedUpstream,
     requestBody.model || route.id,
     converted.toolContext,
@@ -498,22 +546,6 @@ export async function proxyChatCompletions(
       ),
     },
   );
-  let localFallback = "";
-  if (shouldStopChatToolContinuation(response, route, toolContinuationTurns)) {
-    console.warn(
-      `[${new Date().toISOString()}] ${context.requestId || "req"} ` +
-        `!! tool-loop-guard route=${route.id} turns=${toolContinuationTurns} ` +
-        `max=${maxChatToolContinuationTurns(route)}`,
-    );
-    chatForHistory = localToolLoopGuardChat(route, toolContinuationTurns);
-    response = chatResponseToResponse(
-      chatForHistory,
-      requestBody.model || route.id,
-      converted.toolContext,
-      { stripReasoningTags: false },
-    );
-    localFallback = "tool_loop_guard";
-  }
 
   history.record(response.id, [
     ...messagesForHistory,
@@ -524,10 +556,7 @@ export async function proxyChatCompletions(
     routeId: route.id || "",
     upstreamModel: route.model || "",
     upstreamKnown: false,
-    toolContinuationTurns: responseHasRunnableToolCall(response)
-      ? toolContinuationTurns
-      : 0,
-    ...(localFallback ? { localFallback } : {}),
+    toolGuardState: stateWithAssistant(toolGuardState, chatForHistory),
   });
 
   if (converted.wantsStream) {
@@ -553,36 +582,8 @@ async function proxyNativeStreamingChatCompletions({
   converted,
   upstreamUrl,
   messagesForHistory,
-  toolContinuationTurns,
+  toolGuardState,
 }) {
-  // Once the existing tool-loop limit has been exceeded, inspect one buffered
-  // response so a further tool call can be replaced by the established local
-  // guard before any irreversible streaming events reach Codex. A normal text
-  // answer is still returned unchanged; only this pathological tail is buffered.
-  if (toolContinuationTurns > maxChatToolContinuationTurns(route)) {
-    const guardedBody = { ...converted.body, stream: false };
-    delete guardedBody.stream_options;
-    const guarded = await callJsonUpstream(
-      upstreamUrl,
-      route,
-      guardedBody,
-      context,
-      { trackRateLimit: false },
-    );
-    return sendBufferedChatAsStream({
-      requestBody,
-      route,
-      history,
-      res,
-      context,
-      converted,
-      messagesForHistory,
-      toolContinuationTurns,
-      upstream: guarded,
-      localFallback: "streaming_tool_loop_guard_check",
-    });
-  }
-
   let upstream;
   try {
     upstream = await callStreamingUpstream(
@@ -628,7 +629,7 @@ async function proxyNativeStreamingChatCompletions({
         context,
         converted,
         messagesForHistory,
-        toolContinuationTurns,
+        toolGuardState,
         upstream: buffered,
         localFallback: "streaming_unsupported",
       });
@@ -669,7 +670,7 @@ async function proxyNativeStreamingChatCompletions({
       context,
       converted,
       messagesForHistory,
-      toolContinuationTurns,
+      toolGuardState,
       upstream: parsed,
       localFallback: "streaming_json_fallback",
     });
@@ -690,9 +691,7 @@ async function proxyNativeStreamingChatCompletions({
     routeId: route.id || "",
     upstreamModel: route.model || "",
     upstreamKnown: false,
-    toolContinuationTurns: responseHasRunnableToolCall(streamed.response)
-      ? toolContinuationTurns
-      : 0,
+    toolGuardState: stateWithAssistant(toolGuardState, streamed.chat),
   });
   logUsage(context, route, streamed.chat.usage);
 }
@@ -705,7 +704,7 @@ function sendBufferedChatAsStream({
   context,
   converted,
   messagesForHistory,
-  toolContinuationTurns,
+  toolGuardState,
   upstream,
   localFallback,
 }) {
@@ -715,22 +714,13 @@ function sendBufferedChatAsStream({
     converted,
     context,
   );
-  let chatForHistory = adjusted;
-  let response = chatResponseToResponse(
+  const chatForHistory = adjusted;
+  const response = chatResponseToResponse(
     adjusted,
     requestBody.model || route.id,
     converted.toolContext,
     { stripReasoningTags: shouldStripReasoningTags(route) },
   );
-  if (shouldStopChatToolContinuation(response, route, toolContinuationTurns)) {
-    chatForHistory = localToolLoopGuardChat(route, toolContinuationTurns);
-    response = chatResponseToResponse(
-      chatForHistory,
-      requestBody.model || route.id,
-      converted.toolContext,
-    );
-    localFallback = "tool_loop_guard";
-  }
   history.record(response.id, [
     ...messagesForHistory,
     assistantHistoryMessageFromChat(chatForHistory),
@@ -740,9 +730,7 @@ function sendBufferedChatAsStream({
     routeId: route.id || "",
     upstreamModel: route.model || "",
     upstreamKnown: false,
-    toolContinuationTurns: responseHasRunnableToolCall(response)
-      ? toolContinuationTurns
-      : 0,
+    toolGuardState: stateWithAssistant(toolGuardState, chatForHistory),
     localFallback,
   });
   logUsage(context, route, adjusted.usage);
@@ -752,22 +740,6 @@ function sendBufferedChatAsStream({
     connection: "keep-alive",
   });
   res.end(responseToSse(response));
-}
-
-function chatToolContinuationTurns(requestBody, history) {
-  const currentTurns = responseToolOutputContinuationGroups(
-    requestBody?.messages ?? requestBody?.input,
-  );
-  if (currentTurns <= 0) {
-    return 0;
-  }
-  const previousMeta =
-    history?.getResponseMeta?.(requestBody?.previous_response_id) || {};
-  const previousTurns = Number(previousMeta.toolContinuationTurns || 0);
-  return (
-    (Number.isFinite(previousTurns) && previousTurns > 0 ? previousTurns : 0) +
-    currentTurns
-  );
 }
 
 function requestHasResponseToolOutput(requestBody = {}) {
@@ -813,57 +785,6 @@ function responseInputItems(input) {
     return [];
   }
   return Array.isArray(input) ? input : [input];
-}
-
-function shouldStopChatToolContinuation(
-  response,
-  route,
-  toolContinuationTurns,
-) {
-  return (
-    toolContinuationTurns > maxChatToolContinuationTurns(route) &&
-    responseHasRunnableToolCall(response)
-  );
-}
-
-function maxChatToolContinuationTurns(route = {}) {
-  const value = Number(
-    route.maxToolContinuationTurns ?? route.max_tool_continuation_turns,
-  );
-  if (Number.isFinite(value) && value >= 0) {
-    return Math.floor(value);
-  }
-  return DEFAULT_CHAT_TOOL_CONTINUATION_TURNS;
-}
-
-function responseHasRunnableToolCall(response) {
-  return (
-    Array.isArray(response?.output) &&
-    response.output.some(isResponseToolCallItem)
-  );
-}
-
-function localToolLoopGuardChat(route, toolContinuationTurns) {
-  const displayName = route.displayName || route.id || "the current model";
-  return {
-    id: `chatcmpl_tool_loop_guard_${Date.now().toString(36)}_${Math.random()
-      .toString(36)
-      .slice(2, 8)}`,
-    object: "chat.completion",
-    choices: [
-      {
-        message: {
-          role: "assistant",
-          content:
-            `CodexBridge stopped repeated tool loop：已停止 ${displayName} 的重复工具调用。连续 ` +
-            `${toolContinuationTurns} 轮工具结果后，模型仍要求继续调用工具。` +
-            "最新工具结果已保留，但本轮不会再继续请求上游，避免重复调用和浪费 token。 " +
-            "请发送一个明确的下一步继续。",
-        },
-      },
-    ],
-    usage: null,
-  };
 }
 
 function enforceInteractivePluginBootstrap(

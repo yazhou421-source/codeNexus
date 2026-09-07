@@ -15,6 +15,8 @@ export type RouterModelRoute = {
   apiKeyEnv?: string;
   /** Whether this route accepts native Chat Completions SSE. Defaults to true. */
   streaming?: boolean;
+  /** Finite continuation hard ceiling; defaults to 16. */
+  maxToolContinuationTurns?: number;
   /** Whether stream_options.include_usage is accepted. Defaults to true. */
   streamUsage?: boolean;
   [key: string]: unknown;
@@ -33,6 +35,8 @@ export type RouterConfig = {
     decompressedBytes?: number;
   };
   defaultModel?: string;
+  maxToolContinuationTurns?: number;
+  providerToolContinuationLimits?: Record<string, number>;
   catalog?: Record<string, unknown>;
   models: RouterModelRoute[];
   __path?: string;

@@ -1,7 +1,44 @@
 <template>
   <div :class="[CHAT_ROW_BASE_CLASS, 'chat-row--assistant']">
     <div class="chat-bubble chat-bubble-assistant w-full max-w-full min-w-0">
-      <MarkdownPlanOutputCard v-if="isPlanDelta" :rawText="event.paramsText" :forceCollapsed="shouldCollapsePlan">
+      <section v-if="toolPause" class="tool-pause-card" role="status" aria-live="polite">
+        <StatusIndicator state="warning" :label="zh ? '任务已暂停' : 'Task paused'" />
+        <p>
+          {{
+            zh
+              ? "工具调用达到安全保护条件。最新工具结果已保留。"
+              : "Tool calls reached a safety condition. The latest results are preserved."
+          }}
+        </p>
+        <button
+          type="button"
+          class="tool-pause-continue"
+          :disabled="isTurnRunning || continuing || continued"
+          @click="continueAnalysis"
+        >
+          {{
+            continuing
+              ? zh
+                ? "正在继续…"
+                : "Continuing…"
+              : continued
+                ? zh
+                  ? "已继续"
+                  : "Continued"
+                : zh
+                  ? "继续分析"
+                  : "Continue analysis"
+          }}
+        </button>
+        <p v-if="continueFailed" role="alert">
+          {{ zh ? "暂未能继续，请重试或查看任务状态。" : "Unable to continue. Retry or check the task status." }}
+        </p>
+        <details>
+          <summary>{{ zh ? "技术详情" : "Technical details" }}</summary>
+          <p>{{ toolPause.reason }} · {{ toolPause.detail }} · {{ toolPause.rounds }} / {{ toolPause.limit }}</p>
+        </details>
+      </section>
+      <MarkdownPlanOutputCard v-else-if="isPlanDelta" :rawText="event.paramsText" :forceCollapsed="shouldCollapsePlan">
         <template v-if="execState" #headerActions>
           <ChatPlanDeltaActions
             :execState="execState"
@@ -62,7 +99,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, defineComponent, h } from "vue";
+import { computed, defineAsyncComponent, defineComponent, h, ref } from "vue";
+import { parseToolPause } from "../../domain/toolPause";
+import { getRuntimeOrchestrator } from "../../domain/runtimeOrchestrator";
+import StatusIndicator from "../ui/StatusIndicator.vue";
 import { useI18n } from "vue-i18n";
 import AgentMarkdownContent from "../ui/AgentMarkdownContent.vue";
 import ChatPlanDeltaActions from "./ChatPlanDeltaActions.vue";
@@ -118,7 +158,25 @@ const props = defineProps<{
   sandboxModeOptions: readonly OptionInput[];
 }>();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const zh = computed(() => locale.value.startsWith("zh"));
+const toolPause = computed(() => parseToolPause(props.event.paramsText));
+const continuing = ref(false);
+const continued = ref(false);
+const continueFailed = ref(false);
+async function continueAnalysis() {
+  if (continuing.value || continued.value || props.isTurnRunning) return;
+  continuing.value = true;
+  continueFailed.value = false;
+  try {
+    continued.value = await getRuntimeOrchestrator().continueToolPausedTurn(props.event.threadId, props.event.id);
+    continueFailed.value = !continued.value;
+  } catch {
+    continueFailed.value = true;
+  } finally {
+    continuing.value = false;
+  }
+}
 const isPlanDelta = computed(() => props.event.method === "item/plan/delta");
 const assistantDisplayText = computed(() => stripInlineMemoryCitation(props.event.paramsText));
 const planActionDisabled = computed(() => props.isTurnRunning || Boolean(props.execState?.executing));
@@ -251,5 +309,32 @@ defineEmits<{
   overflow-wrap: anywhere;
   color: var(--ui-code-text);
   font-size: 11px;
+}
+</style>
+
+<style scoped>
+.tool-pause-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.tool-pause-card p {
+  margin: 0;
+}
+.tool-pause-continue {
+  justify-self: start;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.tool-pause-continue:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.tool-pause-card details {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 </style>
