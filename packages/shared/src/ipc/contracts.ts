@@ -525,6 +525,7 @@ export type AppUpdateStatus =
   | "not_available"
   | "downloading"
   | "downloaded"
+  | "installing"
   | "error";
 
 export type AppUpdateProgress = {
@@ -540,6 +541,8 @@ export type AppUpdateSnapshot = {
   latestVersion: string | null;
   releaseName: string | null;
   releaseNotes: string | null;
+  releaseDate?: string | null;
+  installMode?: "automatic" | "manual";
   updateAvailable: boolean;
   downloaded: boolean;
   progress: AppUpdateProgress | null;

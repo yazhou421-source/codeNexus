@@ -11,7 +11,7 @@ describe("Calmnova Code packaging identity", () => {
 
     expect(packageJson.name).toBe("@codenexus/app");
     expect(packageJson.productName).toBe("Calmnova Code");
-    expect(packageJson.version).toBe("1.0.4");
+    expect(packageJson.version).toBe("1.0.5");
     expect(builder).toContain("appId: com.calmnova.code");
     expect(builder).toContain("productName: Calmnova Code");
     expect(builder).not.toContain("win:");
@@ -21,7 +21,9 @@ describe("Calmnova Code packaging identity", () => {
     expect(builder).toContain('"!node_modules{,/**/*}"');
     expect(builder).toContain('"!**/*.map"');
     expect(packageJson.scripts.dist).toContain("--mac dmg zip --arm64 --publish never");
-    expect(builder).toContain("publish: null");
+    expect(builder).toContain("provider: github");
+    expect(builder).toContain("owner: yazhou421-source");
+    expect(builder).toContain("repo: codeNexus");
     expect(builder).not.toContain("owner: QinQinChina");
     expect(builder).toContain("licenses/CodeNexus-LICENSE.txt");
     expect(builder).toContain("licenses/CodexBridge-LICENSE.txt");

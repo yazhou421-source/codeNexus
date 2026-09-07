@@ -1,3 +1,4 @@
+import { protectUpdateWork } from "../../services/updateActivity";
 import { ipcMain } from "electron";
 import { execFile } from "node:child_process";
 import { isAbsolute, relative, resolve, sep } from "node:path";
@@ -152,7 +153,7 @@ export function registerWorkspaceHandlers(deps: {
     IPC_WORKSPACE_CHANNELS.workspaceReverseDiffApply,
     async (_evt, args: { cwd: string; diffText: string }) => {
       // 正式执行反向补丁，回退工作区文件内容。
-      return await workspacePatchService.applyReverseDiff(args);
+      return await protectUpdateWork(() => workspacePatchService.applyReverseDiff(args));
     }
   );
 

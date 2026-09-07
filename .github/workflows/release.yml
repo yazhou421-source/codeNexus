@@ -1,53 +1,93 @@
 name: Release
 
 on:
-  workflow_dispatch:
+  push:
+    tags: ["v*"]
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   macos-arm64:
-    name: Build macOS arm64 artifacts
+    if: github.repository == 'yazhou421-source/codeNexus' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-14
-
+    environment: release
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 10.32.1
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
+      - name: Require stable tag to match package version
+        run: node packages/app/scripts/verify-update-release.mjs --tag "$GITHUB_REF_NAME"
+      - name: Refuse an existing release, including a draft
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.repos.getReleaseByTag({ ...context.repo, tag: context.ref.replace('refs/tags/', '') });
+              core.setFailed('Release already exists; refusing to overwrite it.');
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Build app
-        run: pnpm run build
-
-      - name: Prepare bundled Codex runtime
+      - name: Full verification
+        run: pnpm ci
+      - name: Fetch Codex runtime
         run: pnpm --filter @codenexus/app codex:runtime:fetch -- --platform mac-arm64
-
-      - name: Verify bundled Codex runtime
+      - name: Verify Codex runtime
         run: pnpm --filter @codenexus/app codex:runtime:verify -- --platform mac-arm64
-
-      - name: Verify generated Codex protocol
-        run: pnpm codex:types:check
-
-      - name: Package local trial (publishing disabled until a feed is configured)
-        run: pnpm --filter @codenexus/app exec electron-builder --config electron-builder.yml --mac dmg zip --arm64 --publish never
-
-      - name: Save trial artifacts
+      - name: Package (never publish from electron-builder)
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Empty credentials deliberately produce the documented ad-hoc bootstrap.
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' && 'true' || 'false' }}
+        run: |
+          args=(--config electron-builder.yml --mac dmg zip --arm64 --publish never)
+          if [[ -n "$CSC_LINK" ]]; then args+=(-c.forceCodeSigning=true); fi
+          pnpm --filter @codenexus/app exec electron-builder "${args[@]}"
+          if [[ -n "$CSC_LINK" ]]; then
+            codesign --verify --deep --strict "packages/app/release/mac-arm64/Calmnova Code.app"
+            xcrun stapler validate "packages/app/release/mac-arm64/Calmnova Code.app"
+          fi
+      - name: Verify names, version, size and SHA-512
+        run: node packages/app/scripts/verify-update-release.mjs --assets packages/app/release --tag "$GITHUB_REF_NAME"
+      - name: Save verified artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Calmnova-macOS-arm64
+          name: Calmnova-${{ github.ref_name }}-macOS-arm64
+          if-no-files-found: error
           path: |
             packages/app/release/*.dmg
             packages/app/release/*.zip
+            packages/app/release/*.blockmap
+            packages/app/release/latest-mac.yml
+      - name: Create draft only (creation fails if a release already exists)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createRelease({
+              ...context.repo,
+              tag_name: context.ref.replace('refs/tags/', ''),
+              target_commitish: context.sha,
+              name: `Calmnova Code ${context.ref.replace('refs/tags/v', '')}`,
+              draft: true,
+              prerelease: false,
+              generate_release_notes: true
+            });
+      - name: Upload without overwriting assets; leave draft for human review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" packages/app/release/*.dmg packages/app/release/*.zip packages/app/release/*.blockmap packages/app/release/latest-mac.yml --repo "$GITHUB_REPOSITORY"

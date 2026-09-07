@@ -1,3 +1,4 @@
+import { protectUpdateWork } from "../../services/updateActivity";
 import { assertNotSharedCodexConfig } from "../../codexConfigProtection";
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, Notification, shell } from "electron";
 import { execFile } from "node:child_process";
@@ -234,14 +235,16 @@ export function registerAppHandlers(deps: {
   ipcMain.handle(
     IPC_APP_CHANNELS.appWriteTextFile,
     async (_evt, args: { path: string; content: string; encoding?: AppTextEncoding }) => {
-      const filePath = resolveLocalFilePath(args?.path ?? "");
-      if (!filePath) throw new Error("app:writeTextFile requires path");
-      await assertNotSharedCodexConfig(filePath);
-      const content = String(args?.content ?? "");
-      const encoding = args?.encoding === "UTF-8 BOM" ? "UTF-8 BOM" : "UTF-8";
-      await mkdir(dirname(filePath), { recursive: true });
-      await writeFile(filePath, encodeUtf8Text(content, encoding));
-      return { ok: true };
+      return protectUpdateWork(async () => {
+        const filePath = resolveLocalFilePath(args?.path ?? "");
+        if (!filePath) throw new Error("app:writeTextFile requires path");
+        await assertNotSharedCodexConfig(filePath);
+        const content = String(args?.content ?? "");
+        const encoding = args?.encoding === "UTF-8 BOM" ? "UTF-8 BOM" : "UTF-8";
+        await mkdir(dirname(filePath), { recursive: true });
+        await writeFile(filePath, encodeUtf8Text(content, encoding));
+        return { ok: true };
+      });
     }
   );
 
@@ -550,7 +553,7 @@ export function registerAppHandlers(deps: {
   });
 
   ipcMain.handle(IPC_APP_CHANNELS.appUpdateInstall, async () => {
-    updateService.quitAndInstall();
+    await updateService.quitAndInstall();
     return { ok: true as const };
   });
 
